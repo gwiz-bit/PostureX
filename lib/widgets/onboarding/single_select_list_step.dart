@@ -92,17 +92,23 @@ class _OptionRow extends StatelessWidget {
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              option.label,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                option.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            if (option.trailing != null) option.trailing!,
+            if (option.trailing != null) ...[
+              const SizedBox(width: 12),
+              option.trailing!,
+            ],
           ],
         ),
       ),

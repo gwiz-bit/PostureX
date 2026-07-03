@@ -1,4 +1,5 @@
 import 'onboarding_profile.dart';
+import 'workout_plan.dart';
 
 /// App-wide holder for the signed-in user's profile.
 /// A lightweight static session (no backend) — populated once onboarding
@@ -13,7 +14,7 @@ class UserSession {
   static const _defaultAge = 26;
   static const _defaultWeeklyGoal = 4;
   static const _defaultFitnessLevel = 'Regular';
-  static const _defaultFocusAreas = {'Back', 'Core', 'Legs'};
+  static const _defaultFocusAreas = {'Full body'};
 
   static String name = _defaultName;
   static int heightCm = _defaultHeightCm;
@@ -26,6 +27,13 @@ class UserSession {
   static bool isSignedIn = false;
   static bool hasCompletedOnboarding = false;
 
+  static WorkoutPlan plan = WorkoutPlan.generate(
+    workoutDays: const {},
+    weeklyGoal: _defaultWeeklyGoal,
+    focusAreas: _defaultFocusAreas,
+    fitnessLevel: _defaultFitnessLevel,
+  );
+
   static void completeOnboarding({
     required String name,
     required OnboardingProfile profile,
@@ -37,6 +45,12 @@ class UserSession {
     weeklyGoal = profile.workoutsPerWeek;
     fitnessLevel = profile.fitnessLevel;
     focusAreas = profile.focusAreas.isEmpty ? {'Full body'} : profile.focusAreas;
+    plan = WorkoutPlan.generate(
+      workoutDays: profile.workoutDays,
+      weeklyGoal: weeklyGoal,
+      focusAreas: focusAreas,
+      fitnessLevel: fitnessLevel,
+    );
     isSignedIn = true;
     hasCompletedOnboarding = true;
   }
@@ -45,6 +59,12 @@ class UserSession {
   /// as signed in under the Google account's display name.
   static void signInWithGoogle({String name = 'Google User'}) {
     UserSession.name = name;
+    plan = WorkoutPlan.generate(
+      workoutDays: const {},
+      weeklyGoal: weeklyGoal,
+      focusAreas: focusAreas,
+      fitnessLevel: fitnessLevel,
+    );
     isSignedIn = true;
     hasCompletedOnboarding = true;
   }
@@ -57,6 +77,12 @@ class UserSession {
     weeklyGoal = _defaultWeeklyGoal;
     fitnessLevel = _defaultFitnessLevel;
     focusAreas = {..._defaultFocusAreas};
+    plan = WorkoutPlan.generate(
+      workoutDays: const {},
+      weeklyGoal: _defaultWeeklyGoal,
+      focusAreas: _defaultFocusAreas,
+      fitnessLevel: _defaultFitnessLevel,
+    );
     isSignedIn = false;
     hasCompletedOnboarding = false;
   }

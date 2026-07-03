@@ -10,7 +10,7 @@ import '../../widgets/onboarding/single_select_card_step.dart';
 import '../../widgets/onboarding/single_select_list_step.dart';
 import '../../widgets/onboarding/workout_days_step.dart';
 import '../../widgets/onboarding/workout_frequency_step.dart';
-import '../main_shell.dart';
+import 'plan_generating_screen.dart';
 
 /// Post-signup questionnaire that collects the fitness profile used to
 /// personalize Home/Progress/Profile — mirrors the multi-step onboarding
@@ -46,7 +46,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _profile.reminderEnabled = reminderEnabled;
     UserSession.completeOnboarding(name: widget.name, profile: _profile);
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainShell()),
+      MaterialPageRoute(builder: (_) => const PlanGeneratingScreen()),
     );
   }
 

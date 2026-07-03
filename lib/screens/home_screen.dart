@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_session.dart';
+import '../models/workout_plan.dart';
 import '../theme/app_theme.dart';
 import '../widgets/icon_badge.dart';
+import '../widgets/plan_calendar.dart';
 import '../widgets/score_ring.dart';
 import '../widgets/section_card.dart';
 import '../widgets/weekly_bar_chart.dart';
@@ -131,6 +133,41 @@ class HomeScreen extends StatelessWidget {
               const WeeklyBarChart(data: _weekData),
             ],
           ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Expanded(
+              child: Text(
+                'Training Plan',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Week ${UserSession.plan.weekIndexFor(DateTime.now()) + 1} of ${WorkoutPlan.totalWeeks}',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Tap a day to see that session',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
+        const SizedBox(height: 14),
+        SectionCard(
+          child: PlanCalendar(plan: UserSession.plan),
         ),
         const SizedBox(height: 24),
         const Text(
