@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/section_card.dart';
 
 class _Routine {
-  const _Routine({required this.name, required this.subtitle, required this.icon});
+  const _Routine({
+    required this.name,
+    required this.subtitle,
+    required this.icon,
+    this.useLogo = false,
+  });
 
   final String name;
   final String subtitle;
   final IconData icon;
+  final bool useLogo;
 }
 
 class WorkoutScreen extends StatelessWidget {
@@ -30,6 +37,7 @@ class WorkoutScreen extends StatelessWidget {
       name: 'Strength Foundations',
       subtitle: 'Deadlift · OHP · Hip Thrust',
       icon: Icons.fitness_center_rounded,
+      useLogo: true,
     ),
   ];
 
@@ -118,7 +126,10 @@ class WorkoutScreen extends StatelessWidget {
               onTap: () {},
               child: Row(
                 children: [
-                  IconBadge(icon: routine.icon),
+                  IconBadge(
+                    icon: routine.icon,
+                    customIcon: routine.useLogo ? const AppLogo() : null,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(

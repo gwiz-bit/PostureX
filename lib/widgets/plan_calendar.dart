@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/workout_plan.dart';
 import '../theme/app_theme.dart';
+import 'app_logo.dart';
 
 /// 4-week (Sun-Sat rows) calendar grid for a [WorkoutPlan]. Workout days are
 /// highlighted; tapping any day opens a sheet with that day's session.
@@ -204,7 +205,7 @@ class _DayDetailSheet extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
                     children: [
-                      const Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 18),
+                      const AppLogo(size: 18, color: AppColors.primary),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(

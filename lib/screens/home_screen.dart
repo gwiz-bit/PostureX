@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/user_session.dart';
 import '../models/workout_plan.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/plan_calendar.dart';
 import '../widgets/score_ring.dart';
@@ -188,7 +189,7 @@ class HomeScreen extends StatelessWidget {
           onTap: () {},
           child: Row(
             children: [
-              const IconBadge(icon: Icons.fitness_center_rounded),
+              const IconBadge(customIcon: AppLogo()),
               const SizedBox(width: 14),
               const Expanded(
                 child: Column(

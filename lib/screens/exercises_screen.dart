@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
@@ -11,12 +12,14 @@ class _Exercise {
     required this.icon,
     required this.category,
     required this.level,
+    this.useLogo = false,
   });
 
   final String name;
   final IconData icon;
   final String category;
   final String level;
+  final bool useLogo;
 }
 
 class ExercisesScreen extends StatefulWidget {
@@ -48,6 +51,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
       icon: Icons.fitness_center_rounded,
       category: 'Push',
       level: 'Intermediate',
+      useLogo: true,
     ),
     _Exercise(
       name: 'Standing Overhead Press',
@@ -130,7 +134,10 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
               onTap: () {},
               child: Row(
                 children: [
-                  IconBadge(icon: exercise.icon),
+                  IconBadge(
+                    icon: exercise.icon,
+                    customIcon: exercise.useLogo ? const AppLogo() : null,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(

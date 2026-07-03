@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/app_logo.dart';
 import 'exercises_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -28,7 +29,7 @@ class _MainShellState extends State<MainShell> {
   static const _items = [
     _NavItemData(icon: Icons.home_rounded, label: 'Home'),
     _NavItemData(icon: Icons.video_library_rounded, label: 'Exercises'),
-    _NavItemData(icon: Icons.fitness_center_rounded, label: 'Workout'),
+    _NavItemData(icon: Icons.fitness_center_rounded, label: 'Workout', isLogo: true),
     _NavItemData(icon: Icons.bar_chart_rounded, label: 'Progress'),
     _NavItemData(icon: Icons.person_rounded, label: 'Profile'),
   ];
@@ -67,10 +68,11 @@ class _MainShellState extends State<MainShell> {
 }
 
 class _NavItemData {
-  const _NavItemData({required this.icon, required this.label});
+  const _NavItemData({required this.icon, required this.label, this.isLogo = false});
 
   final IconData icon;
   final String label;
+  final bool isLogo;
 }
 
 class _NavItem extends StatelessWidget {
@@ -98,7 +100,9 @@ class _NavItem extends StatelessWidget {
                 color: selected ? AppColors.primaryMuted : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(data.icon, color: color, size: 22),
+              child: data.isLogo
+                  ? AppLogo(size: 22, color: color)
+                  : Icon(data.icon, color: color, size: 22),
             ),
             const SizedBox(height: 4),
             Text(

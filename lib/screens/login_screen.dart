@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/user_session.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/google_sign_in_button.dart';
 import '../widgets/or_divider.dart';
@@ -65,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: AppColors.primaryMuted,
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: const Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 28),
+                  child: const AppLogo(size: 28, color: AppColors.primary),
                 ),
               ),
               const SizedBox(height: 28),

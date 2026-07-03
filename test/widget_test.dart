@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:posturex/main.dart';
 import 'package:posturex/screens/main_shell.dart';
 import 'package:posturex/theme/app_theme.dart';
+import 'package:posturex/widgets/app_logo.dart';
 
 void main() {
   testWidgets('App launches to the Login screen and can navigate to Register', (
@@ -130,7 +131,7 @@ void main() {
     await tester.tap(find.text('${DateTime.now().day}').first);
     await tester.pumpAndSettle();
 
-    final hasWorkoutIcon = find.byIcon(Icons.fitness_center_rounded).evaluate().isNotEmpty;
+    final hasWorkoutIcon = find.byType(AppLogo).evaluate().isNotEmpty;
     final hasRestIcon = find.byIcon(Icons.self_improvement_rounded).evaluate().isNotEmpty;
     expect(hasWorkoutIcon || hasRestIcon, isTrue);
   });

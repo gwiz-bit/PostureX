@@ -7,12 +7,14 @@ import '../theme/app_theme.dart';
 class IconBadge extends StatelessWidget {
   const IconBadge({
     super.key,
-    required this.icon,
+    this.icon,
+    this.customIcon,
     this.size = 44,
     this.iconSize = 22,
-  });
+  }) : assert(icon != null || customIcon != null, 'Provide icon or customIcon');
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? customIcon;
   final double size;
   final double iconSize;
 
@@ -25,7 +27,7 @@ class IconBadge extends StatelessWidget {
         color: AppColors.primaryMuted,
         borderRadius: BorderRadius.circular(size * 0.32),
       ),
-      child: Icon(icon, color: AppColors.primary, size: iconSize),
+      child: customIcon ?? Icon(icon, color: AppColors.primary, size: iconSize),
     );
   }
 }
