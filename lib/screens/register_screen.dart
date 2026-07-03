@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/info_tip_card.dart';
-import 'main_shell.dart';
+import 'onboarding/onboarding_flow.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -30,8 +30,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainShell()),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OnboardingFlow(name: _nameController.text.trim()),
+      ),
     );
   }
 

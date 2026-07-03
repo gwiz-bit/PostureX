@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
@@ -37,9 +38,9 @@ class ProfileScreen extends StatelessWidget {
                   child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 44),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Athlete',
-                  style: TextStyle(
+                Text(
+                  UserSession.name,
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -47,7 +48,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'REGULAR',
+                  UserSession.fitnessLevel.toUpperCase(),
                   style: TextStyle(
                     color: AppColors.primary,
                     fontSize: 12,
@@ -81,12 +82,20 @@ class ProfileScreen extends StatelessWidget {
           SectionCard(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Column(
-              children: const [
-                _InfoRow(icon: Icons.straighten_rounded, label: 'Height', value: '178 cm'),
-                Divider(color: AppColors.border, height: 1),
-                _InfoRow(icon: Icons.monitor_weight_outlined, label: 'Weight', value: '75 kg'),
-                Divider(color: AppColors.border, height: 1),
-                _InfoRow(icon: Icons.cake_outlined, label: 'Age', value: '26 yrs'),
+              children: [
+                _InfoRow(
+                  icon: Icons.straighten_rounded,
+                  label: 'Height',
+                  value: '${UserSession.heightCm} cm',
+                ),
+                const Divider(color: AppColors.border, height: 1),
+                _InfoRow(
+                  icon: Icons.monitor_weight_outlined,
+                  label: 'Weight',
+                  value: '${UserSession.weightKg} kg',
+                ),
+                const Divider(color: AppColors.border, height: 1),
+                _InfoRow(icon: Icons.cake_outlined, label: 'Age', value: '${UserSession.age} yrs'),
               ],
             ),
           ),
@@ -104,16 +113,16 @@ class ProfileScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Column(
               children: [
-                const _InfoRow(
+                _InfoRow(
                   icon: Icons.flag_outlined,
                   label: 'Weekly Goal',
-                  value: '4 sessions',
+                  value: '${UserSession.weeklyGoal} sessions',
                 ),
                 const Divider(color: AppColors.border, height: 1),
-                const _InfoRow(
+                _InfoRow(
                   icon: Icons.bolt_outlined,
                   label: 'Experience',
-                  value: 'Regular',
+                  value: UserSession.fitnessLevel,
                 ),
                 const Divider(color: AppColors.border, height: 1),
                 Padding(
@@ -132,10 +141,9 @@ class ProfileScreen extends StatelessWidget {
                         alignment: WrapAlignment.end,
                         spacing: 6,
                         runSpacing: 6,
-                        children: const [
-                          TagChip(label: 'Back', color: AppColors.primary),
-                          TagChip(label: 'Core', color: AppColors.primary),
-                          TagChip(label: 'Legs', color: AppColors.primary),
+                        children: [
+                          for (final area in UserSession.focusAreas)
+                            TagChip(label: area, color: AppColors.primary),
                         ],
                       ),
                     ],

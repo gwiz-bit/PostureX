@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/score_ring.dart';
@@ -195,9 +196,9 @@ class _Header extends StatelessWidget {
               style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 2),
-            const Text(
-              'Athlete',
-              style: TextStyle(
+            Text(
+              UserSession.name,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
