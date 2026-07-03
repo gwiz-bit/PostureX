@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/google_sign_in_button.dart';
 import '../widgets/info_tip_card.dart';
+import '../widgets/or_divider.dart';
 import 'onboarding/onboarding_flow.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -33,6 +35,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => OnboardingFlow(name: _nameController.text.trim()),
+      ),
+    );
+  }
+
+  void _continueWithGoogle() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const OnboardingFlow(name: 'Google User'),
       ),
     );
   }
@@ -142,6 +152,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
+              ),
+              const SizedBox(height: 24),
+              const OrDivider(),
+              const SizedBox(height: 24),
+              GoogleSignInButton(
+                label: 'Sign up with Google',
+                onPressed: _continueWithGoogle,
               ),
               const SizedBox(height: 24),
               Row(

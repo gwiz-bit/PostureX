@@ -4,6 +4,7 @@ import '../models/user_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -152,8 +153,68 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            onTap: () => _confirmLogOut(context),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                  SizedBox(width: 12),
+                  Text(
+                    'Log out',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _confirmLogOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Log out?',
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          "You'll need to log in again to access your posture data.",
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    UserSession.logOut();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
     );
   }
 }

@@ -49,13 +49,14 @@ class _MainShellState extends State<MainShell> {
             borderRadius: BorderRadius.circular(24),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               for (var i = 0; i < _items.length; i++)
-                _NavItem(
-                  data: _items[i],
-                  selected: i == _index,
-                  onTap: () => setState(() => _index = i),
+                Expanded(
+                  child: _NavItem(
+                    data: _items[i],
+                    selected: i == _index,
+                    onTap: () => setState(() => _index = i),
+                  ),
                 ),
             ],
           ),
@@ -87,7 +88,7 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -102,6 +103,8 @@ class _NavItem extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               data.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color,
                 fontSize: 11,

@@ -9,16 +9,24 @@ void main() {
   testWidgets('App launches to the Login screen and can navigate to Register', (
     WidgetTester tester,
   ) async {
+    // Use a tall surface so the whole login form (incl. the Google button
+    // and "Sign up" link below it) is mounted without needing to scroll.
+    tester.view.physicalSize = const Size(500, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(const PostureXApp());
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Log in'), findsWidgets);
+    expect(find.text('Continue with Google'), findsOneWidget);
 
     await tester.tap(find.text('Sign up'));
     await tester.pumpAndSettle();
 
     expect(find.text('Create your account'), findsOneWidget);
+    expect(find.text('Sign up with Google'), findsOneWidget);
   });
 
   testWidgets('Registering navigates into the onboarding questionnaire', (
@@ -72,5 +80,34 @@ void main() {
 
     expect(find.text('Exercises'), findsWidgets);
     expect(find.text('Back Squat'), findsOneWidget);
+  });
+
+  testWidgets('Logging out from Profile returns to the Login screen', (
+    WidgetTester tester,
+  ) async {
+    // Use a tall surface so the Log out row at the bottom of Profile is
+    // mounted without needing to scroll a lazy ListView first.
+    tester.view.physicalSize = const Size(500, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.dark, home: const MainShell()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Profile'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Log out'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Log out?'), findsOneWidget);
+
+    await tester.tap(find.text('Log out').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
   });
 }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_session.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/google_sign_in_button.dart';
+import '../widgets/or_divider.dart';
 import 'main_shell.dart';
 import 'register_screen.dart';
 
@@ -34,6 +37,13 @@ class _LoginScreenState extends State<LoginScreen> {
   void _goToRegister() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const RegisterScreen()),
+    );
+  }
+
+  void _continueWithGoogle() {
+    UserSession.signInWithGoogle();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const MainShell()),
     );
   }
 
@@ -131,6 +141,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+              const OrDivider(),
+              const SizedBox(height: 24),
+              GoogleSignInButton(onPressed: _continueWithGoogle),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
