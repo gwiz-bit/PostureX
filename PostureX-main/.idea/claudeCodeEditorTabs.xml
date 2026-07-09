@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ClaudeCodeEditorTabs">
+    <option name="activeSessionId" value="d342358b-59be-4195-a764-360d57936c1d" />
+    <option name="openSessionIds">
+      <list>
+        <option value="8c4a8244-f387-4c0e-8c09-1fb44243f1de" />
+        <option value="d342358b-59be-4195-a764-360d57936c1d" />
+      </list>
+    </option>
+    <option name="sessionPaths">
+      <map>
+        <entry key="8c4a8244-f387-4c0e-8c09-1fb44243f1de" value="/sessions/new" />
+        <entry key="d342358b-59be-4195-a764-360d57936c1d" value="/sessions/f9199a0f-16a6-4cfc-aa2a-7527feaf398d" />
+      </map>
+    </option>
+    <option name="sessionTitles">
+      <map>
+        <entry key="8c4a8244-f387-4c0e-8c09-1fb44243f1de" value="Claude Code" />
+        <entry key="d342358b-59be-4195-a764-360d57936c1d" value="Sửa lại file code main sao cho hết lỗi đã" />
+      </map>
+    </option>
+  </component>
+</project>
