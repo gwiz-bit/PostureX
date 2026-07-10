@@ -9,6 +9,7 @@ import '../utils/workout_stats.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
 import 'login_screen.dart';
+import 'subscription_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -228,6 +229,41 @@ class ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Premium',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  const Icon(Icons.workspace_premium_outlined, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Subscribe',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
