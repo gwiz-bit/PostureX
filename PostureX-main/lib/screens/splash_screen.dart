@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_session.dart';
+import '../services/api_client.dart';
+import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import 'login_screen.dart';
+import 'main_shell.dart';
 
 /// First screen shown on launch — animates the PostureX mark and wordmark
 /// in, then hands off to [LoginScreen] automatically after a short pause.
@@ -31,16 +35,50 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     curve: const Interval(0, 0.3, curve: Curves.easeOut),
   );
 
+  // Kicked off in parallel with the entrance animation so a stored session
+  // (if any) is ready to check by the time the animation completes.
+  late final Future<bool> _sessionRestored = _restoreSession();
+
   @override
   void initState() {
     super.initState();
     _controller.addStatusListener(_onStatusChanged);
   }
 
-  void _onStatusChanged(AnimationStatus status) {
+  /// Attempts to restore a persisted backend session. Any failure (no
+  /// stored token, expired/invalid token, network error, or — in the
+  /// widget-test harness — a MissingPluginException from secure storage
+  /// having no platform implementation) is treated the same: fall back to
+  /// the Login screen, exactly like a fresh install.
+  Future<bool> _restoreSession() async {
+    try {
+      final stored = await TokenStorage.readSession();
+      if (stored == null) return false;
+
+      UserSession.accessToken = stored.accessToken;
+      final profile = await ApiClient.instance
+          .fetchMe()
+          .timeout(const Duration(seconds: 5));
+      UserSession.applyAuthSession(
+        userId: profile.id,
+        email: profile.email,
+        fullName: profile.fullName,
+        accessToken: stored.accessToken,
+      );
+      UserSession.hasCompletedOnboarding = true;
+      return true;
+    } catch (_) {
+      UserSession.accessToken = null;
+      return false;
+    }
+  }
+
+  void _onStatusChanged(AnimationStatus status) async {
     if (status != AnimationStatus.completed || !mounted) return;
+    final restored = await _sessionRestored;
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => restored ? const MainShell() : const LoginScreen()),
     );
   }
 
