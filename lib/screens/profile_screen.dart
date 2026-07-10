@@ -1,19 +1,70 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_session.dart';
+import '../services/api_client.dart';
+import '../services/api_exception.dart';
+import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
+import '../utils/workout_stats.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
 import 'login_screen.dart';
+import 'subscription_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => ProfileScreenState();
+}
+
+class ProfileScreenState extends State<ProfileScreen> {
+  WorkoutStats _stats = const WorkoutStats(
+    sessionCount: 0,
+    totalReps: 0,
+    averageAccuracy: null,
+    bestAccuracy: null,
+  );
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  /// Public so [MainShell] can force a fresh fetch when this tab is
+  /// selected — `IndexedStack` keeps this widget's state alive across tab
+  /// switches, so [initState] only runs once and a workout logged after
+  /// the first load would otherwise never show up here.
+  Future<void> reload() => _load();
+
+  Future<void> _load() async {
+    try {
+      final profile = await ApiClient.instance.fetchMe();
+      if (profile.fullName != null && profile.fullName!.trim().isNotEmpty) {
+        UserSession.name = profile.fullName!;
+      }
+      final workouts = await ApiClient.instance.fetchWorkouts();
+      if (!mounted) return;
+      setState(() {
+        _stats = computeStats(workouts);
+        _isLoading = false;
+      });
+    } catch (_) {
+      // Offline or session expired — keep showing whatever UserSession
+      // already holds locally rather than blocking the screen.
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       bottom: false,
-      child: ListView(
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         children: [
           const Text(
@@ -39,13 +90,23 @@ class ProfileScreen extends StatelessWidget {
                   child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 44),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  UserSession.name,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      UserSession.name,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _editProfile(context),
+                      icon: const Icon(Icons.edit_rounded, color: AppColors.textSecondary, size: 18),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -62,12 +123,29 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 22),
           Row(
-            children: const [
-              Expanded(child: _StatTile(value: '4', label: 'Sessions')),
-              SizedBox(width: 12),
-              Expanded(child: _StatTile(value: '14', label: 'Sets')),
-              SizedBox(width: 12),
-              Expanded(child: _StatTile(value: '80', label: 'Posture')),
+            children: [
+              Expanded(
+                child: _StatTile(
+                  value: _isLoading ? '—' : '${_stats.sessionCount}',
+                  label: 'Sessions',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatTile(
+                  value: _isLoading ? '—' : '${_stats.totalReps}',
+                  label: 'Reps',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatTile(
+                  value: _isLoading || _stats.averageAccuracy == null
+                      ? '—'
+                      : '${_stats.averageAccuracy!.round()}',
+                  label: 'Posture',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -154,6 +232,41 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          const Text(
+            'Premium',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  const Icon(Icons.workspace_premium_outlined, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Subscribe',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           SectionCard(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             onTap: () => _confirmLogOut(context),
@@ -176,8 +289,78 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
+  }
+
+  Future<void> _editProfile(BuildContext context) async {
+    final nameController = TextEditingController(text: UserSession.name);
+    final passwordController = TextEditingController();
+    String? errorText;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surfaceElevated,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            'Edit profile',
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(labelText: 'Full name'),
+              ),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'New password (optional)',
+                ),
+              ),
+              if (errorText != null) ...[
+                const SizedBox(height: 8),
+                Text(errorText!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  final profile = await ApiClient.instance.updateMe(
+                    fullName: nameController.text.trim(),
+                    password: passwordController.text.isEmpty ? null : passwordController.text,
+                  );
+                  UserSession.name = profile.fullName ?? UserSession.name;
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop(true);
+                } on ApiException catch (e) {
+                  setDialogState(() => errorText = e.message);
+                } catch (_) {
+                  setDialogState(() => errorText = 'Could not reach the server.');
+                }
+              },
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (saved == true && mounted) setState(() {});
   }
 
   Future<void> _confirmLogOut(BuildContext context) async {
@@ -211,7 +394,13 @@ class ProfileScreen extends StatelessWidget {
 
     if (confirmed != true || !context.mounted) return;
 
+    try {
+      await TokenStorage.clear();
+    } catch (_) {
+      // Best-effort — still log the user out locally either way.
+    }
     UserSession.logOut();
+    if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,

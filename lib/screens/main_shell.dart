@@ -18,12 +18,15 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
-  static const _screens = [
-    HomeScreen(),
-    ExercisesScreen(),
-    WorkoutScreen(),
-    ProgressScreen(),
-    ProfileScreen(),
+  final _progressKey = GlobalKey<ProgressScreenState>();
+  final _profileKey = GlobalKey<ProfileScreenState>();
+
+  late final _screens = [
+    const HomeScreen(),
+    const ExercisesScreen(),
+    const WorkoutScreen(),
+    ProgressScreen(key: _progressKey),
+    ProfileScreen(key: _profileKey),
   ];
 
   static const _items = [
@@ -33,6 +36,16 @@ class _MainShellState extends State<MainShell> {
     _NavItemData(icon: Icons.bar_chart_rounded, label: 'Progress'),
     _NavItemData(icon: Icons.person_rounded, label: 'Profile'),
   ];
+
+  /// `IndexedStack` keeps every tab's state alive, so switching to a tab
+  /// never re-runs its `initState` — without this, data fetched (or
+  /// changed, e.g. a newly logged workout) after a tab's first load would
+  /// never show up when coming back to it.
+  void _onTabTap(int i) {
+    setState(() => _index = i);
+    if (i == 3) _progressKey.currentState?.reload();
+    if (i == 4) _profileKey.currentState?.reload();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +69,7 @@ class _MainShellState extends State<MainShell> {
                   child: _NavItem(
                     data: _items[i],
                     selected: i == _index,
-                    onTap: () => setState(() => _index = i),
+                    onTap: () => _onTabTap(i),
                   ),
                 ),
             ],
