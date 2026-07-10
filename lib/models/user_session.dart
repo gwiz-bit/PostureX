@@ -27,6 +27,12 @@ class UserSession {
   static bool isSignedIn = false;
   static bool hasCompletedOnboarding = false;
 
+  /// Populated once the app authenticates against the real backend
+  /// (see ApiClient/TokenStorage). `null` means no backend session yet.
+  static String? accessToken;
+  static int? userId;
+  static String? email;
+
   static WorkoutPlan plan = WorkoutPlan.generate(
     workoutDays: const {},
     weeklyGoal: _defaultWeeklyGoal,
@@ -55,18 +61,22 @@ class UserSession {
     hasCompletedOnboarding = true;
   }
 
-  /// Mock Google sign-in — no real OAuth/backend, just marks the session
-  /// as signed in under the Google account's display name.
-  static void signInWithGoogle({String name = 'Google User'}) {
-    UserSession.name = name;
-    plan = WorkoutPlan.generate(
-      workoutDays: const {},
-      weeklyGoal: weeklyGoal,
-      focusAreas: focusAreas,
-      fitnessLevel: fitnessLevel,
-    );
+  /// Applies a real backend session obtained via ApiClient.login/register +
+  /// fetchMe. Does not touch onboarding-only fields (height/weight/etc.) —
+  /// those have no backend equivalent and stay whatever they already are.
+  static void applyAuthSession({
+    required int userId,
+    required String email,
+    required String? fullName,
+    required String accessToken,
+  }) {
+    UserSession.userId = userId;
+    UserSession.email = email;
+    UserSession.accessToken = accessToken;
+    if (fullName != null && fullName.trim().isNotEmpty) {
+      UserSession.name = fullName;
+    }
     isSignedIn = true;
-    hasCompletedOnboarding = true;
   }
 
   static void logOut() {
@@ -85,5 +95,8 @@ class UserSession {
     );
     isSignedIn = false;
     hasCompletedOnboarding = false;
+    accessToken = null;
+    userId = null;
+    email = null;
   }
 }

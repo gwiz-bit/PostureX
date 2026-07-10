@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/onboarding_profile.dart';
 import '../../models/user_session.dart';
+import '../../services/api_client.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/onboarding/checkbox_list_step.dart';
 import '../../widgets/onboarding/multi_select_chip_step.dart';
@@ -45,9 +46,28 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _profile.workoutDays = days;
     _profile.reminderEnabled = reminderEnabled;
     UserSession.completeOnboarding(name: widget.name, profile: _profile);
+    _saveProfileToBackend(_profile);
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const PlanGeneratingScreen()),
     );
+  }
+
+  /// Persists the subset of onboarding answers the backend has columns for
+  /// (see ProfileUpdate/UserProfiles+Goals). Fire-and-forget: onboarding
+  /// still completes locally even if this fails (e.g. offline) — the data
+  /// already lives in UserSession for the current run.
+  Future<void> _saveProfileToBackend(OnboardingProfile profile) async {
+    try {
+      await ApiClient.instance.updateProfile(
+        gender: profile.gender,
+        heightCm: profile.heightCm.toDouble(),
+        weightKg: profile.currentWeightKg.toDouble(),
+        fitnessLevel: profile.fitnessLevel,
+        weeklyGoal: profile.workoutsPerWeek,
+      );
+    } catch (_) {
+      // Best-effort — see doc comment above.
+    }
   }
 
   @override

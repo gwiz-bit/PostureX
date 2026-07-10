@@ -4,6 +4,8 @@ import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/section_card.dart';
+import 'analyze_session_screen.dart';
+import 'upload_video_screen.dart';
 
 class _Routine {
   const _Routine({
@@ -40,6 +42,16 @@ class WorkoutScreen extends StatelessWidget {
       useLogo: true,
     ),
   ];
+
+  /// Every entry point launches the same squat analyzer — the backend only
+  /// registers a "squat" analyzer today (see AnalyzeSessionScreen), so all
+  /// four buttons are honest about analyzing squat rather than implying
+  /// per-routine exercise coverage that doesn't exist yet.
+  void _startAnalyzeSession(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AnalyzeSessionScreen(exercise: 'squat')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +99,7 @@ class WorkoutScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _startAnalyzeSession(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.onPrimary,
@@ -102,6 +114,15 @@ class WorkoutScreen extends StatelessWidget {
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const UploadVideoScreen()),
+                ),
+                style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+                icon: const Icon(Icons.upload_file_rounded, size: 18),
+                label: const Text('Upload a video instead'),
               ),
             ],
           ),
@@ -123,7 +144,7 @@ class WorkoutScreen extends StatelessWidget {
           for (final routine in _routines) ...[
             SectionCard(
               padding: const EdgeInsets.all(16),
-              onTap: () {},
+              onTap: () => _startAnalyzeSession(context),
               child: Row(
                 children: [
                   IconBadge(

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_session.dart';
+import '../services/api_client.dart';
+import '../services/api_exception.dart';
+import '../services/google_auth_service.dart';
+import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/auth_text_field.dart';
@@ -8,6 +12,7 @@ import '../widgets/google_sign_in_button.dart';
 import '../widgets/or_divider.dart';
 import '../admin/screens/home_screen.dart' as admin;
 import 'main_shell.dart';
+import 'otp_verification_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,6 +27,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool _isSubmitting = false;
+  String? _errorMessage;
+  bool _needsVerification = false;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -29,18 +38,92 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  /// Known, fixed backend error strings (Vietnamese) mapped to English to
+  /// match the rest of the UI. Anything else falls back to a generic
+  /// message rather than showing an unmapped Vietnamese string.
+  static const _unverifiedEmailDetail =
+      'Email chưa được xác thực. Vui lòng nhập mã OTP đã gửi tới email.';
+
+  String _friendlyMessage(ApiException e) {
+    switch (e.message) {
+      case 'Email hoặc mật khẩu không đúng.':
+        return 'Incorrect email or password.';
+      case 'Tài khoản không tồn tại.':
+        return 'This account no longer exists.';
+      case _unverifiedEmailDetail:
+        return 'Your email is not verified yet.';
+      default:
+        return 'Something went wrong. Please try again.';
+    }
+  }
+
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Local-only shortcut into the (mock-data) admin app — kept ahead of
+    // the real API call since the admin app is out of scope for backend
+    // integration.
     if (_emailController.text.trim() == 'admin@gmail.com' &&
         _passwordController.text == '123456') {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const admin.HomeScreen()),
       );
-    } else {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+      _needsVerification = false;
+    });
+
+    try {
+      final email = _emailController.text.trim();
+      final auth = await ApiClient.instance.login(
+        email: email,
+        password: _passwordController.text,
+      );
+      UserSession.accessToken = auth.accessToken;
+      final profile = await ApiClient.instance.fetchMe();
+      UserSession.applyAuthSession(
+        userId: profile.id,
+        email: profile.email,
+        fullName: profile.fullName,
+        accessToken: auth.accessToken,
+      );
+      try {
+        await TokenStorage.saveSession(
+          accessToken: auth.accessToken,
+          userId: profile.id,
+          email: profile.email,
+        );
+      } catch (_) {
+        // Persisting the session is best-effort — the user stays logged in
+        // for this run even if secure storage is unavailable.
+      }
+      UserSession.hasCompletedOnboarding = true;
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainShell()),
       );
+    } on ApiException catch (e) {
+      setState(() {
+        _errorMessage = _friendlyMessage(e);
+        _needsVerification = e.message == _unverifiedEmailDetail;
+      });
+    } catch (_) {
+      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _goToOtpVerification() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OtpVerificationScreen(email: _emailController.text.trim()),
+      ),
+    );
   }
 
   void _goToRegister() {
@@ -49,11 +132,47 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _continueWithGoogle() {
-    UserSession.signInWithGoogle();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainShell()),
-    );
+  Future<void> _continueWithGoogle() async {
+    if (_isSubmitting) return;
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final idToken = await GoogleAuthService.signInAndGetIdToken();
+      if (idToken == null) return; // user dismissed the account picker
+
+      final auth = await ApiClient.instance.loginWithGoogle(idToken: idToken);
+      UserSession.accessToken = auth.accessToken;
+      final profile = await ApiClient.instance.fetchMe();
+      UserSession.applyAuthSession(
+        userId: profile.id,
+        email: profile.email,
+        fullName: profile.fullName,
+        accessToken: auth.accessToken,
+      );
+      try {
+        await TokenStorage.saveSession(
+          accessToken: auth.accessToken,
+          userId: profile.id,
+          email: profile.email,
+        );
+      } catch (_) {
+        // Persisting the session is best-effort, same as the email/password flow.
+      }
+      UserSession.hasCompletedOnboarding = true;
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainShell()),
+      );
+    } on ApiException catch (e) {
+      setState(() => _errorMessage = e.message);
+    } catch (_) {
+      setState(() => _errorMessage = 'Could not sign in with Google. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -132,11 +251,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+              if (_errorMessage != null) ...[
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                ),
+                if (_needsVerification) ...[
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: _goToOtpVerification,
+                    child: const Text(
+                      'Verify now',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+              ],
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _submit,
+                  onPressed: _isSubmitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.onPrimary,
@@ -144,10 +284,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text(
-                    'Log in',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            valueColor: AlwaysStoppedAnimation(AppColors.onPrimary),
+                          ),
+                        )
+                      : const Text(
+                          'Log in',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
                 ),
               ),
               const SizedBox(height: 24),
