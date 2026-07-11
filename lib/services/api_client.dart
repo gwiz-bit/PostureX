@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import '../models/app_notification.dart';
 import '../models/auth_response.dart';
 import '../models/profile_data.dart';
+import '../models/subscription.dart';
 import '../models/user_profile.dart';
 import '../models/video.dart';
 import '../models/workout.dart';
@@ -227,5 +229,56 @@ class ApiClient {
   Future<Video> fetchVideo(int id) async {
     final json = await _get('/api/v1/videos/$id', auth: true);
     return Video.fromJson(json as Map<String, dynamic>);
+  }
+
+  // --- Notifications ------------------------------------------------------
+
+  Future<List<AppNotification>> fetchNotifications() async {
+    final json = await _get('/api/v1/notifications', auth: true);
+    return (json as List)
+        .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Số thông báo chưa đọc — cho badge trên icon chuông ở Home.
+  Future<int> fetchUnreadCount() async {
+    final json = await _get('/api/v1/notifications/unread-count', auth: true);
+    return (json as Map<String, dynamic>)['unread'] as int;
+  }
+
+  Future<AppNotification> markNotificationRead(int id) async {
+    final json = await _patch('/api/v1/notifications/$id/read', auth: true);
+    return AppNotification.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await _patch('/api/v1/notifications/read-all', auth: true);
+  }
+
+  // --- Subscriptions & payments -------------------------------------------
+
+  /// Giá là thông tin công khai — endpoint này không cần token.
+  Future<List<SubscriptionPlan>> fetchPlans() async {
+    final json = await _get('/api/v1/subscriptions/plans');
+    return (json as List)
+        .map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Gói đang dùng — `null` nếu user chưa mua gói nào.
+  Future<UserSubscription?> fetchMySubscription() async {
+    final json = await _get('/api/v1/subscriptions/me', auth: true);
+    if (json == null) return null;
+    return UserSubscription.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Tạo đơn chờ thanh toán và lấy URL VNPay để mở trong WebView.
+  Future<Checkout> checkout(int planId) async {
+    final json = await _post(
+      '/api/v1/subscriptions/checkout',
+      auth: true,
+      body: {'plan_id': planId},
+    );
+    return Checkout.fromJson(json as Map<String, dynamic>);
   }
 }

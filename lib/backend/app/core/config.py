@@ -46,6 +46,21 @@ class Settings(BaseSettings):
     # when verifying ID tokens from the Flutter app's google_sign_in flow.
     GOOGLE_CLIENT_ID: str = ""
 
+    # VNPay — lay TmnCode/HashSecret o https://sandbox.vnpayment.vn
+    VNPAY_TMN_CODE: str = ""
+    VNPAY_HASH_SECRET: str = ""
+    VNPAY_PAY_URL: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+    # VNPay redirect trinh duyet cua nguoi dung ve day sau khi thanh toan.
+    # Tren emulator, WebView cua app goi duoc 10.0.2.2 (= localhost cua may host).
+    # Doi sang IP LAN neu test tren dien thoai that.
+    VNPAY_RETURN_URL: str = "http://10.0.2.2:9000/api/v1/payments/vnpay/return"
+
+    @property
+    def vnpay_configured(self) -> bool:
+        """False khi chua dien TmnCode/HashSecret — route checkout se bao 503
+        thay vi dung URL rac roi de VNPay tu choi voi loi kho hieu."""
+        return bool(self.VNPAY_TMN_CODE and self.VNPAY_HASH_SECRET)
+
     def get_database_url(self) -> str:
         """Tao async connection URL cho MySQL qua aiomysql."""
         user = urllib.parse.quote_plus(self.DB_USER)
