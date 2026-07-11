@@ -14,6 +14,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Kotlin mặc định lấy JVM target theo JDK đang chạy (21), lệch với Java ở
+    // trên (17) và Gradle sẽ bỏ build. Ghim Kotlin về 17 cho khớp.
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.posturex"
