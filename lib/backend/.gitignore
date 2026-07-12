@@ -19,6 +19,11 @@ ENV/
 # Environment secrets
 .env
 
+# Khoa service account Firebase (FCM push) — commit len la ai cung gui push
+# duoc cho toan bo nguoi dung cua app.
+firebase-service-account.json
+*-firebase-adminsdk-*.json
+
 # IDE
 .vscode/
 .idea/

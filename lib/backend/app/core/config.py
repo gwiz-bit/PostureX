@@ -55,11 +55,35 @@ class Settings(BaseSettings):
     # Doi sang IP LAN neu test tren dien thoai that.
     VNPAY_RETURN_URL: str = "http://10.0.2.2:9000/api/v1/payments/vnpay/return"
 
+    # Firebase Cloud Messaging — push notification (BE-13).
+    # Lay file khoa: Firebase Console > Project settings > Service accounts >
+    # Generate new private key. KHONG commit file nay.
+    FCM_CREDENTIALS_FILE: str = ""
+    FCM_PROJECT_ID: str = ""
+
+    # Job dinh ky (BE-13). Gio tinh theo mui gio Viet Nam.
+    REMINDERS_ENABLED: bool = True
+    # Nhac nghi giai lao — cac moc trong gio lam viec. Doi thanh "9,11,14,16"
+    # trong .env neu muon nhac day hon.
+    BREAK_REMINDER_HOURS: str = "10,15"
+    # Tong ket hang ngay — 20h toi, luc nguoi dung da tap xong.
+    DAILY_SUMMARY_HOUR: int = 20
+
     @property
     def vnpay_configured(self) -> bool:
         """False khi chua dien TmnCode/HashSecret — route checkout se bao 503
         thay vi dung URL rac roi de VNPay tu choi voi loi kho hieu."""
         return bool(self.VNPAY_TMN_CODE and self.VNPAY_HASH_SECRET)
+
+    @property
+    def fcm_configured(self) -> bool:
+        """False khi chua co khoa Firebase — push bi bo qua trong im lang.
+
+        Co y KHONG kiem tra file co ton tai that khong: kiem tra I/O trong mot
+        property se chay lai moi lan gui push. Thieu file that thi
+        service_account.Credentials se nem loi ro rang ngay lan gui dau tien.
+        """
+        return bool(self.FCM_CREDENTIALS_FILE and self.FCM_PROJECT_ID)
 
     def get_database_url(self) -> str:
         """Tao async connection URL cho MySQL qua aiomysql."""

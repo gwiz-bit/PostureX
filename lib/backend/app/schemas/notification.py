@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class NotificationOut(BaseModel):
@@ -18,3 +18,10 @@ class NotificationOut(BaseModel):
 
 class UnreadCountOut(BaseModel):
     unread: int
+
+
+class DeviceTokenIn(BaseModel):
+    """Token FCM app gửi lên sau khi Firebase cấp."""
+
+    token: str = Field(min_length=1, max_length=255)
+    platform: str | None = Field(default=None, max_length=20)

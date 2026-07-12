@@ -1,9 +1,25 @@
 """CRUD operations cho bảng Notifications."""
 
+from datetime import datetime
+
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
+from app.services.notifier import dispatch_push
+
+# Nhãn `Type` — dùng chung giữa nơi tạo (scheduler, route) và app (chọn icon).
+TYPE_WORKOUT = "workout"
+TYPE_PAYMENT = "payment"
+TYPE_BREAK = "break"
+TYPE_DAILY_SUMMARY = "daily_summary"
+# Thay đổi gói do người dùng chủ động (huỷ/bật lại gia hạn).
+TYPE_SUBSCRIPTION = "subscription"
+# Nhắc gia hạn do job tự bắn. PHẢI là nhãn riêng, không dùng chung với
+# TYPE_SUBSCRIPTION: job chống trùng bằng cách hỏi "user này đã nhận thông báo
+# loại X gần đây chưa" — dùng chung nhãn thì một thông báo "đã huỷ gia hạn" sẽ
+# nuốt mất lời nhắc hết hạn của cả tuần sau đó.
+TYPE_SUBSCRIPTION_EXPIRY = "subscription_expiry"
 
 
 async def create_notification(
@@ -13,16 +29,42 @@ async def create_notification(
     body: str | None = None,
     type_: str | None = None,
 ) -> Notification:
-    """Tạo một thông báo cho user.
+    """Tạo một thông báo cho user, đồng thời đẩy push ra thiết bị.
 
     Đây là điểm vào dùng chung — mọi tính năng muốn báo cho người dùng đều gọi
-    hàm này (vd: thanh toán thành công). Khi làm FCM push sau này, chỗ đẩy
-    notification ra thiết bị cũng nên cắm vào đây, để không phải sửa từng nơi gọi.
+    hàm này (thanh toán xong, hết buổi tập, job nhắc nghỉ...). Push được cắm
+    ngay tại đây, nên thêm loại thông báo mới là **tự động có push**, không phải
+    sửa từng nơi gọi.
+
+    Push chạy nền và không chặn: chưa cấu hình FCM thì bỏ qua trong im lặng, lỗi
+    mạng cũng không làm hỏng việc ghi thông báo (xem `services/notifier.py`).
     """
     notification = Notification(user_id=user_id, title=title, body=body, type=type_)
     db.add(notification)
     await db.flush()
+
+    dispatch_push(user_id, title, body, type_)
     return notification
+
+
+async def users_notified_since(
+    db: AsyncSession, type_: str, since: datetime
+) -> set[int]:
+    """Tập user đã nhận thông báo loại `type_` kể từ mốc `since`.
+
+    **Đây là hàng rào chống trùng lặp của scheduler.** Không có nó thì mỗi lần
+    uvicorn khởi động lại (rất hay xảy ra với `--reload`) job có thể chạy lại và
+    bắn thông báo lần hai cho cùng một người trong cùng một ngày.
+
+    Trả về `set` để nơi gọi lọc hàng loạt bằng một truy vấn, thay vì hỏi DB một
+    lần cho mỗi user.
+    """
+    result = await db.execute(
+        select(Notification.user_id)
+        .where(Notification.type == type_, Notification.created_at >= since)
+        .distinct()
+    )
+    return set(result.scalars().all())
 
 
 async def get_notifications_by_user(db: AsyncSession, user_id: int) -> list[Notification]:
