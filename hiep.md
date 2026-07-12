@@ -261,12 +261,14 @@ Màn Subscription cũ **hardcode** `0₫ / 199.000₫ / 299.000₫`, trong khi D
 
 ---
 
-## ✅ ĐÃ COMMIT & PUSH — 12/07/2026
+## 📦 TÌNH TRẠNG COMMIT — 12/07/2026
 
-Toàn bộ công việc ngày 11–12/07 **đã được commit và đẩy lên GitHub**, nhánh `hiepga`.
-Working tree sạch, không còn gì chưa lưu.
+Nhánh `hiepga`, tổng **6 commit**. Working tree sạch (trừ `linux/ macos/ windows/` là
+nhiễu line-ending, cố ý không commit).
 
-### 5 commit (tách theo chủ đề để review được)
+> ⚠️ **5 commit đầu đã push. Commit thứ 6 (`17951e9`, sửa bug) CHƯA PUSH.**
+
+### 5 commit đầu — đã push (tách theo chủ đề để review được)
 
 | Commit | Nội dung |
 |---|---|
@@ -282,26 +284,52 @@ Working tree sạch, không còn gì chưa lưu.
 - **Không commit** `linux/`, `macos/`, `windows/` — git báo "modified" nhưng nội dung không đổi, chỉ là line-ending LF→CRLF. Commit vào chỉ tạo conflict vô nghĩa cho teammate.
 - **`lib/backend/.env` KHÔNG bị đẩy lên** (đã kiểm tra 2 cách) — mật khẩu MySQL và khoá VNPay vẫn nằm yên trên máy.
 
+### Commit thứ 6 — sửa bug (12/07 chiều)
+
+| Commit | Nội dung | Trạng thái |
+|---|---|---|
+| `17951e9` | **Fix BUG-1..BUG-4** — 11 file, +703/−96 dòng | ⚠️ **ĐÃ COMMIT, CHƯA PUSH** |
+
+11 file trong commit này:
+
+```
+lib/backend/app/crud/subscription.py        (BUG-1 het han + is_premium)
+lib/backend/app/models/subscription.py      (them hang so SUBSCRIPTION_EXPIRED)
+lib/backend/app/utils/deps.py               (BUG-2 require_premium)
+lib/backend/app/api/v1/routes/workouts.py   (BUG-2 gioi han Free + BUG-3 thong bao)
+lib/backend/tests/conftest.py               (MOI - ha tang test SQLite)
+lib/backend/tests/test_subscriptions.py     (MOI - 9 test)
+lib/backend/tests/test_workout_limit.py     (MOI - 6 test)
+lib/backend/tests/test_notifications.py     (MOI - 7 test)
+lib/backend/requirements.txt                (them aiosqlite)
+lib/screens/analyze_session_screen.dart     (hien loi khi khong luu duoc buoi tap)
+hiep.md
+```
+
+**Việc đầu tiên khi mở máy lần sau:**
+
+```powershell
+cd D:\clonecode\PostureX
+git push          # day commit 17951e9 len nhanh hiepga
+```
+
 ### Trạng thái nhánh
 
 ```
 main     ── ... ── c4cc5f1 (Merge branch 'Viet')
                         \
-hiepga                   94d8c34 → 9c56e81 → d0ec4d7 → b60459c → 26ff29b  ← đã push
+hiepga                   94d8c34 → 9c56e81 → d0ec4d7 → b60459c → 26ff29b   ← đã push
+                                                                      \
+                                                                       17951e9  ← CHƯA push
 ```
 
 `main` **không bị đụng tới**. Nhánh `hiepga` vẫn commit tiếp bình thường — push xong nhánh **không hề "đóng"**.
 
-### Ngày mai làm tiếp thế nào
+### Pull Request — giờ đã tạo được
 
-```powershell
-# vẫn ở nhánh hiepga, KHÔNG tạo nhánh mới
-git add <file da sua>
-git commit -m "Fix BUG-1 het han, BUG-2 quyen Premium"
-git push                      # khong can -u nua, nhanh da lien ket
-```
+Trước đây ghi "đừng bấm PR vì còn 2 bug đỏ". **Bug đã sửa xong**, nên sau khi `git push` là có thể bấm *"Compare & pull request"* để nhóm review.
 
-**Chưa tạo Pull Request.** GitHub đang hiện nút *"Compare & pull request"* — **đừng bấm bây giờ**, vì BE-14 còn 2 bug đỏ (xem mục dưới). Sửa xong bug rồi mới tạo PR để nhóm review một lần.
+Nhớ trong phần mô tả PR: nói rõ commit `94d8c34` (fix WebSocket) là **code của thành viên khác**, để họ biết mà xem lại.
 
 ---
 
@@ -414,9 +442,33 @@ git push
 | BE-09 WebSocket | Đang làm | ✅ **Đã xong**, đã test với người thật |
 | BE-11 Pose estimation | Xong | ✅ Đúng (nhưng nằm trong monolith) |
 | BE-12 Phân loại tư thế | Chưa bắt đầu | ⚠️ Có gắn nhãn lỗi squat, nhưng **rule-based** chứ không phải model ML |
-| **BE-13 Thông báo** | Chưa bắt đầu | ⚠️ **~50%** — hạ tầng xong, thiếu nguồn tự sinh + FCM |
-| **BE-14 Thanh toán** | Chưa bắt đầu | ⚠️ **~60%** — VNPay xong, thiếu hết hạn/gia hạn/huỷ + **Premium chưa mở khoá gì** |
-| BE-15 Test ≥80% | Chưa bắt đầu | ❌ Backend mới có **13 test** |
+| **BE-13 Thông báo** | Chưa bắt đầu | ⚠️ **~70%** — hạ tầng + tự sinh sau buổi tập/thanh toán xong. **Thiếu:** scheduler (nhắc nghỉ, tổng kết ngày) và FCM push |
+| **BE-14 Thanh toán** | Chưa bắt đầu | ⚠️ **~80%** — VNPay + hết hạn + quyền Premium xong. **Thiếu:** gia hạn tự động, huỷ gói, IPN (cần URL công khai) |
+| BE-15 Test ≥80% | Chưa bắt đầu | ⚠️ Backend có **35 test** (13 → 35). Chưa đo coverage, chắc chắn **chưa tới 80%** |
 | BE-10, 16, 17, 18-20 | Chưa bắt đầu | ❌ Đúng |
 
 ⚠️ **Lưu ý cho báo cáo:** plan ghi công cụ thanh toán là *"Stripe / IAP"*. Google Play **bắt buộc** dùng Google Play Billing cho nội dung số — bán Premium qua VNPay là **vi phạm chính sách nếu lên store**. Đồ án thì không sao, nhưng **đừng ghi là "đã tích hợp IAP"**.
+
+---
+
+## ▶️ LẦN SAU MỞ MÁY LÀM GÌ (theo thứ tự)
+
+1. **`git push`** — commit `17951e9` (sửa 4 bug) đang nằm trên máy, chưa lên GitHub.
+2. **Chuyển repo sang Private** — vẫn đang Public, vẫn đang lộ mật khẩu MySQL thật, backdoor admin, `SECRET_KEY` mặc định. Xem mục *"REPO ĐANG ĐỂ PUBLIC"* ở trên. **Việc này quan trọng hơn mọi thứ code còn lại.**
+3. **Tạo Pull Request** `hiepga → main` để nhóm review (giờ bug đã sạch, tạo được rồi).
+4. Muốn làm tiếp BE-13/BE-14 cho trọn thì còn: **scheduler** (nhắc nghỉ giải lao, tổng kết hằng ngày), **FCM push**, **gia hạn/huỷ gói**.
+
+### Chạy lại hệ thống (nhắc nhanh)
+
+```powershell
+cd D:\clonecode\PostureX\lib\backend
+venv\Scripts\activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 9000
+pytest                     # phai thay 35 passed
+```
+
+Tài khoản test: `test@posturex.com` / `Test123` (UserId = 3).
+
+> ⚠️ **Bẫy đã dính một lần:** uvicorn chạy sẵn từ phiên trước **không tự nạp code mới**. Sửa code xong mà API vẫn trả kết quả cũ thì **tắt hẳn rồi chạy lại**, đừng ngồi debug code (đã mất thời gian vì đúng chuyện này).
+
+> ⚠️ **Dữ liệu test trong MySQL đã bị nghịch:** UserId 3 hiện có gói Premium `Active` tới `2026-08-11` (do chạy thử BUG-1/BUG-2) và vài buổi tập giả trong bảng `workouts`. Không phải dữ liệu thật, cứ xoá thoải mái.
