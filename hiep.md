@@ -261,133 +261,127 @@ Màn Subscription cũ **hardcode** `0₫ / 199.000₫ / 299.000₫`, trong khi D
 
 ---
 
-## 📝 Thay đổi CHƯA COMMIT (nhánh `hiepga`, tính đến 12/07/2026)
+## ✅ ĐÃ COMMIT & PUSH — 12/07/2026
 
-### A. Sửa code — nên commit
+Toàn bộ công việc ngày 11–12/07 **đã được commit và đẩy lên GitHub**, nhánh `hiepga`.
+Working tree sạch, không còn gì chưa lưu.
 
-| File                                                         | Thay đổi                                                                     | Vì sao                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lib/backend/app/api/v1/routes/realtime.py`                | Bắt message`websocket.disconnect` trong vòng lặp nhận frame              | **Bug thật.** `websocket.receive()` không ném `WebSocketDisconnect` mà trả message `type: "websocket.disconnect"`. Code cũ bỏ qua nó rồi gọi `receive()` tiếp trên socket đã đóng → `RuntimeError` mỗi lần đóng màn phân tích, và **nuốt mất dòng tổng kết phiên** (`Reps: N / Độ chính xác: X%`). Đã vá và kiểm chứng: log giờ ra `INFO Client ngắt kết nối...`, không còn ERROR |
-| `android/app/build.gradle.kts`                             | Ghim Kotlin`jvmTarget = 17`                                                  | **Build hỏng nếu không có.** Java compile ở 17, Kotlin mặc định lấy theo JDK (21) → Gradle báo *"Inconsistent JVM-target compatibility"* và dừng                                                                                                                                                                                                                                                                                      |
-| `lib/config/api_config.dart`                               | Host đọc từ`String.fromEnvironment('API_HOST')`, mặc định `10.0.2.2` | Trước đây hardcode`localhost` — **sai với emulator** (emulator hiểu `localhost` là chính nó). Giờ emulator chạy mặc định, còn điện thoại thật thì build kèm `--dart-define=API_HOST=<IP LAN>` mà không phải sửa code                                                                                                                                                                                                 |
-| `android/app/src/main/res/xml/network_security_config.xml` | Thêm`192.168.1.9` vào whitelist cleartext                                  | Để test trên điện thoại thật qua Wi-Fi.**Lưu ý:** IP này là của máy Hiệp, người khác phải đổi. Cũng cẩn thận: XML **cấm dấu `--` trong comment** (đã làm build fail một lần)                                                                                                                                                                                                                                   |
+### 5 commit (tách theo chủ đề để review được)
 
-### B. File MỚI của BE-13 + BE-14 — nên commit (tất cả đang untracked)
+| Commit | Nội dung |
+|---|---|
+| `94d8c34` | **Fix: bắt message `websocket.disconnect` trong `/ws/analyze`** — *tách riêng có chủ ý*, vì đây là code của thành viên khác. Gửi họ đúng mã commit này để cherry-pick. |
+| `9c56e81` | Fix Kotlin `jvmTarget = 17` + API host cho emulator/điện thoại (không có thì **không build được**) |
+| `d0ec4d7` | **BE-13 thông báo + BE-14 thanh toán VNPay** — 21 file |
+| `b60459c` | Cập nhật tài liệu (`CLAUDE.md`, `hiep.md`) |
+| `26ff29b` | Xoá prototype `posturex_flutter` (133 file) |
 
-**Backend (10 file mới):**
+### Đã kiểm chứng trước khi push
 
-```
-lib/backend/app/models/notification.py        map bảng Notifications
-lib/backend/app/models/subscription.py        map SubscriptionPlans/UserSubscriptions/Payments
-lib/backend/app/schemas/notification.py
-lib/backend/app/schemas/subscription.py
-lib/backend/app/crud/notification.py          create_notification() — điểm vào dùng chung
-lib/backend/app/crud/subscription.py
-lib/backend/app/services/vnpay.py             ký + verify HMAC-SHA512 (hàm thuần)
-lib/backend/app/api/v1/routes/notifications.py
-lib/backend/app/api/v1/routes/subscriptions.py
-lib/backend/tests/test_vnpay.py               8 test, đều pass
-```
+- Commit BE-13/BE-14 **không phải điểm hỏng**: chạy `import app.main` từ đúng trạng thái đã commit → backend nạp được, chứng minh `router.py` + `config.py` đã đi kèm. (Nếu chỉ commit 10 file model/route mà quên 2 file này thì backend **crash ngay khi import**.)
+- **Không commit** `linux/`, `macos/`, `windows/` — git báo "modified" nhưng nội dung không đổi, chỉ là line-ending LF→CRLF. Commit vào chỉ tạo conflict vô nghĩa cho teammate.
+- **`lib/backend/.env` KHÔNG bị đẩy lên** (đã kiểm tra 2 cách) — mật khẩu MySQL và khoá VNPay vẫn nằm yên trên máy.
 
-**Backend (sửa):** `app/api/v1/router.py` (thêm 2 include_router), `app/core/config.py` (4 biến VNPAY_*)
-
-**Flutter (4 file mới):**
+### Trạng thái nhánh
 
 ```
-lib/models/app_notification.dart
-lib/models/subscription.dart
-lib/screens/notifications_screen.dart
-lib/screens/payment_webview_screen.dart
+main     ── ... ── c4cc5f1 (Merge branch 'Viet')
+                        \
+hiepga                   94d8c34 → 9c56e81 → d0ec4d7 → b60459c → 26ff29b  ← đã push
 ```
 
-**Flutter (sửa):** `lib/services/api_client.dart` (7 hàm mới), `lib/screens/home_screen.dart` (chuông + badge), `lib/screens/subscription_screen.dart` (viết lại, đọc giá từ API), `pubspec.yaml` (+ `webview_flutter`)
+`main` **không bị đụng tới**. Nhánh `hiepga` vẫn commit tiếp bình thường — push xong nhánh **không hề "đóng"**.
 
-### C. Tài liệu — nên commit
-
-- `CLAUDE.md` — viết lại: bản cũ vẫn ghi *"No backend, all client-side"*, sai từ khi tích hợp backend thật.
-- `hiep.md` — chính file này (**đang untracked, chưa từng được commit**).
-
-### D. Xoá thư mục thừa — nên commit
-
-- **133 file** trong `posturex_flutter/` đã bị xoá. Prototype Flutter cũ, không được tham chiếu ở đâu, không nằm trong build nào. Đã xác minh `dart analyze` sạch sau khi xoá.
-
-### E. Nhiễu — KHÔNG commit
-
-- `linux/`, `macos/`, `windows/` (`generated_plugin_registrant.*`): git báo "modified" nhưng **nội dung không đổi**, chỉ là line-ending LF→CRLF → `git checkout -- linux/ macos/ windows/`
-- `pubspec.lock`: `flutter pub get` tự nâng vài dependency phụ. **Lần này PHẢI commit** vì có thêm `webview_flutter` thật.
-- `lib/backend/.env` — đã bị gitignore, **đừng ép commit** (chứa mật khẩu).
-
-### Gợi ý commit (tách theo chủ đề để teammate review được)
+### Ngày mai làm tiếp thế nào
 
 ```powershell
-git checkout -- linux/ macos/ windows/     # bỏ nhiễu line-ending
-
-# 1. Bug fix của người khác (realtime) — tách riêng để họ review/cherry-pick
-git add lib/backend/app/api/v1/routes/realtime.py
-git commit -m "Fix: bat message websocket.disconnect trong /ws/analyze"
-
-# 2. Sửa để build/chay duoc
-git add android/ lib/config/api_config.dart
-git commit -m "Fix Kotlin jvmTarget 17 va API host cho emulator/dien thoai"
-
-# 3. BE-13 + BE-14
-git add lib/backend/app/models/notification.py lib/backend/app/models/subscription.py `
-        lib/backend/app/schemas/notification.py lib/backend/app/schemas/subscription.py `
-        lib/backend/app/crud/notification.py lib/backend/app/crud/subscription.py `
-        lib/backend/app/services/vnpay.py lib/backend/tests/test_vnpay.py `
-        lib/backend/app/api/v1/routes/notifications.py `
-        lib/backend/app/api/v1/routes/subscriptions.py `
-        lib/backend/app/api/v1/router.py lib/backend/app/core/config.py `
-        lib/models/app_notification.dart lib/models/subscription.dart `
-        lib/screens/notifications_screen.dart lib/screens/payment_webview_screen.dart `
-        lib/screens/home_screen.dart lib/screens/subscription_screen.dart `
-        lib/services/api_client.dart pubspec.yaml pubspec.lock
-git commit -m "BE-13 thong bao trong app + BE-14 thanh toan VNPay"
-
-# 4. Tài liệu + dọn rác
-git add CLAUDE.md hiep.md
-git commit -m "Cap nhat tai lieu theo codebase da gop"
-git add -A posturex_flutter
-git commit -m "Xoa prototype posturex_flutter khong con dung"
+# vẫn ở nhánh hiepga, KHÔNG tạo nhánh mới
+git add <file da sua>
+git commit -m "Fix BUG-1 het han, BUG-2 quyen Premium"
+git push                      # khong can -u nua, nhanh da lien ket
 ```
+
+**Chưa tạo Pull Request.** GitHub đang hiện nút *"Compare & pull request"* — **đừng bấm bây giờ**, vì BE-14 còn 2 bug đỏ (xem mục dưới). Sửa xong bug rồi mới tạo PR để nhóm review một lần.
 
 ---
 
-## 🐛 BUG CẦN SỬA — làm tiếp ngày mai
+## 🔴 REPO ĐANG ĐỂ PUBLIC — cần xử lý
 
-> Xếp theo mức quan trọng. Bug #1 là lỗi trong code vừa viết, sửa nhanh.
+`github.com/gwiz-bit/PostureX` là repo **Public** (đã có **1 fork**). Nghĩa là ai trên internet cũng đọc được:
 
-### 🔴 BUG-1 — Gói cước hết hạn KHÔNG BAO GIỜ tự tắt
+- `lib/backend/.env.example` → `DB_PASSWORD=Trumsolo456@` — **mật khẩu MySQL thật** của một máy trong nhóm
+- `login_screen.dart` → backdoor admin cứng `admin@gmail.com` / `123456`
+- `config.py` → `SECRET_KEY` mặc định `"change-me-in-production"` → **ai cũng ký được JWT giả mạo bất kỳ user nào, kể cả admin**
 
-**File:** `lib/backend/app/crud/subscription.py`, hàm `get_active_subscription()`
+**Việc cần làm:**
 
-Nó chỉ lọc `Status = 'Active'`, **không so `EndDate` với hôm nay**. Hệ quả: sau 30 ngày, gói vẫn báo Active vĩnh viễn — trả tiền một lần dùng mãi mãi.
+1. GitHub → **Settings** → **General** → **Danger Zone** → **Change repository visibility** → **Private**.
+2. Chuyển private **không xoá được thứ đã lộ** → vẫn phải **báo nhóm đổi mật khẩu MySQL `Trumsolo456@`**, và thay giá trị trong `.env.example` bằng placeholder.
 
-**Cách sửa:** thêm điều kiện vào câu `where`:
+---
 
-```python
-UserSubscription.end_date >= date.today()   # hoặc end_date IS NULL
+## ✅ ĐÃ SỬA XONG 4 BUG — 12/07/2026 (buổi chiều)
+
+Cả 4 bug ghi hôm qua **đã sửa xong và kiểm chứng**. Test tăng từ **13 → 35**.
+
+### 🔴 BUG-1 — Gói hết hạn không bao giờ tự tắt → ĐÃ SỬA
+
+**File:** `app/crud/subscription.py` → `get_active_subscription()`, `app/models/subscription.py`
+
+Hàm cũ chỉ lọc `Status = 'Active'`, không nhìn `EndDate` → trả tiền một lần dùng vĩnh viễn.
+
+Giờ hàm này **tự lật gói quá hạn sang `Status = 'Expired'` ngay lúc đọc**. Chọn cách này thay vì viết cron job vì nhóm không có hạ tầng chạy job định kỳ — mà kết quả thì tương đương, gói hết hạn tắt ngay lần gọi API kế tiếp. Thêm hằng số `SUBSCRIPTION_EXPIRED` ('Expired' là giá trị schema **có** cho phép).
+
+Lưu ý: `EndDate = NULL` được coi là **còn hiệu lực** (dữ liệu cũ không ghi hạn — không tự ý tắt gói của người ta). Gói hết hạn **đúng hôm nay** vẫn dùng được, không cắt sớm một ngày.
+
+**Đã kiểm chứng trên MySQL thật:** `UPDATE UserSubscriptions SET EndDate='2020-01-01'` → `GET /subscriptions/me` trả `null`, và dòng trong DB tự chuyển `Active → Expired`.
+
+### 🔴 BUG-2 — Mua Premium không mở khoá gì → ĐÃ SỬA
+
+**File:** `app/utils/deps.py`, `app/crud/subscription.py`, `app/api/v1/routes/workouts.py`
+
+- `require_premium` — dependency mới trong `deps.py` (theo đúng mẫu `get_current_admin`). Gắn vào route nào thì route đó thành tính năng trả phí:
+  ```python
+  current_user: User = Depends(require_premium)
+  ```
+- `is_premium(db, user_id)` trong `crud/subscription.py` — **không chỉ hỏi "có gói Active không"**: một dòng Active trỏ vào gói giá 0 vẫn là người dùng miễn phí.
+- `POST /workouts` giờ **thực thi giới hạn 3 buổi/ngày** của gói Free (con số lấy đúng từ cột `Features` của bảng `SubscriptionPlans`, không bịa). Buổi thứ 4 → **403**. Ngày reset tính theo **giờ VN (UTC+7)**, không theo UTC.
+
+**Đã kiểm chứng:** user Free → 3 buổi OK, buổi 4 trả 403. Bật Premium → buổi 4, 5 vào bình thường.
+
+**Phía app cũng phải sửa theo:** `analyze_session_screen.dart` trước đây `catch (_) {}` nuốt lỗi lưu buổi tập — người dùng Free bị chặn vẫn thấy bảng tổng kết như thường và tưởng đã lưu. Giờ lỗi được hiện ngay trong hộp thoại tổng kết.
+
+### 🟡 BUG-3 — Thông báo không có nguồn tự sinh → ĐÃ SỬA
+
+`POST /workouts` giờ tự bắn thông báo `type='workout'` sau mỗi buổi tập ("squat · 15 lần · độ chính xác 92% · 3 phút"). Buổi tập **bị chặn thì không sinh thông báo** (có test riêng cho việc này).
+
+Vẫn **chưa có** scheduler cho "nhắc nghỉ giải lao" / "tổng kết hằng ngày" — những thứ đó cần job định kỳ, chưa làm.
+
+### 🟡 BUG-4 — Chưa có test → ĐÃ SỬA
+
+Dựng hạ tầng test thật: **`tests/conftest.py`** chạy trên **SQLite trong bộ nhớ** (thêm `aiosqlite` vào `requirements.txt`), ghi đè `get_db`. Nghĩa là `pytest` chạy được trên máy bất kỳ ai, **không cần cài MySQL**, không đụng dữ liệu thật.
+
+| File test | Số test | Nội dung |
+|---|---|---|
+| `tests/test_subscriptions.py` | 9 | Hết hạn, gói Free-giá-0, chặn checkout gói 0đ, yêu cầu auth |
+| `tests/test_workout_limit.py` | 6 | Hạn mức Free, Premium không bị chặn, gói hết hạn tụt về hạn mức Free |
+| `tests/test_notifications.py` | 7 | Đếm chưa đọc, đánh dấu đã đọc, **không đọc được thông báo của người khác** |
+
+**Đã kiểm tra test có "răng" thật:** cố tình phá lại fix BUG-1 → đúng 3 test đỏ lên. Test không phải để chạy cho đẹp.
+
+> ⚠️ **Giới hạn:** SQLite không có CHECK constraint như MySQL (`CK_UserSub_Status`...). Test ở đây **không bắt được** lỗi ghi sai giá trị Status — phần đó vẫn phải dựa vào hằng số trong `app/models/subscription.py`.
+
+### Cần commit (nhánh `hiepga`)
+
+```powershell
+git add lib/backend/app/crud/subscription.py lib/backend/app/models/subscription.py `
+        lib/backend/app/utils/deps.py lib/backend/app/api/v1/routes/workouts.py `
+        lib/backend/tests/conftest.py lib/backend/tests/test_subscriptions.py `
+        lib/backend/tests/test_workout_limit.py lib/backend/tests/test_notifications.py `
+        lib/backend/requirements.txt lib/screens/analyze_session_screen.dart hiep.md
+git commit -m "Fix BUG-1..BUG-4: het han goi, quyen Premium, thong bao tu sinh, them test"
+git push
 ```
-
-Làm kỹ hơn thì viết thêm một job quét định kỳ, chuyển các gói quá hạn sang `Status = 'Expired'` (giá trị này schema **có** cho phép).
-
-**Cách kiểm chứng:** trong MySQL, `UPDATE UserSubscriptions SET EndDate = '2020-01-01' WHERE UserId = 3;` rồi gọi `GET /api/v1/subscriptions/me` — phải trả `null`, hiện tại nó vẫn trả Premium.
-
-### 🔴 BUG-2 — Mua Premium xong KHÔNG mở khoá gì cả
-
-**Khoảng trống lớn nhất của BE-14.** Không một endpoint nào kiểm tra gói cước của user. Trả 99.000đ xong thì app y hệt bản Free. Ngay cả giới hạn *"3 bài tập/ngày"* ghi trong mô tả gói Free cũng **không được thực thi ở đâu**.
-
-**Cách sửa:** viết một dependency `require_premium` trong `app/utils/deps.py` (theo mẫu `get_current_admin` đã có sẵn), rồi gắn vào chỗ cần giới hạn — ví dụ đếm số buổi tập trong ngày ở `POST /workouts` và chặn nếu user Free đã đủ 3 buổi.
-
-### 🟡 BUG-3 — Thông báo không có nguồn tự sinh
-
-Hiện **chỉ có một chỗ duy nhất** tạo thông báo: thanh toán thành công (`routes/subscriptions.py`). Các thứ plan mô tả — *"nhắc nghỉ giải lao"*, *"tổng kết hằng ngày"* — **chưa có gì cả**, không có scheduler.
-
-**Việc dễ làm trước:** gọi `create_notification(...)` trong `POST /api/v1/workouts` để mỗi buổi tập lưu xong thì bắn một thông báo. Hàm này đã viết sẵn ở `app/crud/notification.py`, chỉ cần import và gọi.
-
-### 🟡 BUG-4 — Chưa có test cho notification & subscription
-
-Mới chỉ có `tests/test_vnpay.py` (8 test cho phần chữ ký). Các endpoint notification/subscription mới chỉ được kiểm bằng script chạy tay, **chưa có test tự động**.
 
 ---
 

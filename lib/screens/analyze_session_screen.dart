@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../services/analyze_socket_service.dart';
 import '../services/api_client.dart';
+import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
 
 enum _SessionStatus { initializing, permissionDenied, connecting, running, error }
@@ -207,6 +208,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         ? null
         : _correctnessSamples.where((c) => c).length / _correctnessSamples.length * 100;
 
+    // Buổi tập không lưu được thì phải nói ra. Backend chặn user gói Free sau
+    // 3 buổi/ngày (403) — nuốt lỗi ở đây là để người dùng tin buổi tập đã lưu
+    // trong khi lịch sử của họ trống.
+    String? saveError;
     try {
       await ApiClient.instance.createWorkout(
         exercise: widget.exercise,
@@ -215,8 +220,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         accuracyScore: accuracyScore,
         startedAt: startedAt,
       );
+    } on ApiException catch (e) {
+      saveError = e.message;
     } catch (_) {
-      // Session summary is still shown even if saving to history failed.
+      saveError = 'Không lưu được buổi tập. Kiểm tra kết nối mạng.';
     }
 
     if (!mounted) return;
@@ -243,6 +250,33 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
               label: 'Accuracy',
               value: accuracyScore == null ? '—' : '${accuracyScore.round()}%',
             ),
+            if (saveError != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryMuted,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.error_outline_rounded, size: 18, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        saveError,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         actions: [

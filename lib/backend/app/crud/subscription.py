@@ -11,6 +11,7 @@ from app.models.subscription import (
     PAYMENT_PENDING,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCELLED,
+    SUBSCRIPTION_EXPIRED,
     SUBSCRIPTION_UNPAID,
     Payment,
     SubscriptionPlan,
@@ -39,8 +40,16 @@ async def get_plan_by_id(db: AsyncSession, plan_id: int) -> SubscriptionPlan | N
 
 
 async def get_active_subscription(db: AsyncSession, user_id: int) -> UserSubscription | None:
-    """Gói đang dùng của user. Mới nhất trước, phòng khi dữ liệu cũ có nhiều
-    dòng Active (schema không có ràng buộc chặn điều đó)."""
+    """Gói CÒN HIỆU LỰC của user, hoặc None.
+
+    Không hệ thống nào quét gói quá hạn (không có cron job), nên hàm này tự lật
+    gói đã qua `EndDate` sang 'Expired' ngay lúc đọc. Nếu chỉ lọc theo Status thì
+    trả tiền một lần là dùng Premium vĩnh viễn.
+
+    Duyệt mới nhất trước, phòng khi dữ liệu cũ có nhiều dòng Active (schema không
+    có ràng buộc chặn điều đó).
+    """
+    today = date.today()
     result = await db.execute(
         select(UserSubscription)
         .where(
@@ -49,7 +58,32 @@ async def get_active_subscription(db: AsyncSession, user_id: int) -> UserSubscri
         )
         .order_by(UserSubscription.id.desc())
     )
-    return result.scalars().first()
+
+    current: UserSubscription | None = None
+    for subscription in result.scalars().all():
+        if subscription.end_date is not None and subscription.end_date < today:
+            subscription.status = SUBSCRIPTION_EXPIRED
+        elif current is None:
+            # EndDate NULL = dữ liệu cũ không ghi hạn. Coi như còn hiệu lực chứ
+            # không tự ý tắt gói của người ta.
+            current = subscription
+
+    await db.flush()
+    return current
+
+
+async def is_premium(db: AsyncSession, user_id: int) -> bool:
+    """User có đang dùng gói TRẢ PHÍ còn hiệu lực không.
+
+    Không chỉ hỏi "có gói Active không": một dòng Active trỏ tới gói Free (giá 0)
+    thì vẫn là người dùng miễn phí, không được mở khoá gì.
+    """
+    subscription = await get_active_subscription(db, user_id)
+    if subscription is None:
+        return False
+
+    plan = await get_plan_by_id(db, subscription.plan_id)
+    return plan is not None and plan.price_monthly > 0
 
 
 async def create_pending_order(

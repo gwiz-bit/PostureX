@@ -32,3 +32,5 @@ aiofiles==24.1.0
 pytest==8.3.4
 pytest-asyncio==0.24.0
 httpx==0.28.0
+# Test chay tren SQLite trong bo nho, khong can dung MySQL that (xem conftest.py)
+aiosqlite==0.22.1

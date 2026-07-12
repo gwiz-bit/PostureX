@@ -25,6 +25,7 @@ from app.core.database import Base
 # người dùng bỏ ngang) rồi mới lật sang 'Active' khi trả tiền xong.
 # → Nếu muốn sạch hơn, cần người thiết kế DB thêm 'Pending' vào CK_UserSub_Status.
 SUBSCRIPTION_ACTIVE = "Active"
+SUBSCRIPTION_EXPIRED = "Expired"
 SUBSCRIPTION_CANCELLED = "Cancelled"
 SUBSCRIPTION_UNPAID = SUBSCRIPTION_CANCELLED
 
