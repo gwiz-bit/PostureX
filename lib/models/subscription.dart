@@ -57,7 +57,9 @@ class UserSubscription {
     required this.planName,
     required this.status,
     required this.startDate,
+    required this.autoRenew,
     this.endDate,
+    this.daysLeft,
   });
 
   final int id;
@@ -66,6 +68,13 @@ class UserSubscription {
   final String status;
   final DateTime startDate;
   final DateTime? endDate;
+
+  /// False = người dùng đã huỷ gia hạn. Gói **vẫn chạy** tới [endDate] rồi mới
+  /// tự hết hạn — huỷ không cắt quyền ngay.
+  final bool autoRenew;
+
+  /// Số ngày còn lại, do backend tính (client tự tính dễ sai múi giờ).
+  final int? daysLeft;
 
   factory UserSubscription.fromJson(Map<String, dynamic> json) {
     return UserSubscription(
@@ -77,6 +86,8 @@ class UserSubscription {
       endDate: json['end_date'] == null
           ? null
           : DateTime.parse(json['end_date'] as String),
+      autoRenew: json['auto_renew'] as bool,
+      daysLeft: json['days_left'] as int?,
     );
   }
 }

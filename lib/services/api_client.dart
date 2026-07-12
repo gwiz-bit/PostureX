@@ -281,4 +281,16 @@ class ApiClient {
     );
     return Checkout.fromJson(json as Map<String, dynamic>);
   }
+
+  /// Huỷ tự động gia hạn. **Không mất quyền ngay** — gói vẫn chạy tới hết hạn.
+  Future<UserSubscription> cancelSubscription() async {
+    final json = await _post('/api/v1/subscriptions/cancel', auth: true);
+    return UserSubscription.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Bật lại tự động gia hạn sau khi đã huỷ.
+  Future<UserSubscription> resumeSubscription() async {
+    final json = await _post('/api/v1/subscriptions/resume', auth: true);
+    return UserSubscription.fromJson(json as Map<String, dynamic>);
+  }
 }

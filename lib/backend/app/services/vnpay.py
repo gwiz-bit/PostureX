@@ -15,10 +15,10 @@ Chuỗi đem ký và chuỗi đặt lên URL là **một** — không được e
 import hashlib
 import hmac
 import urllib.parse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 # VNPay chốt mọi mốc thời gian theo giờ Việt Nam, không phải UTC.
-VN_TZ = timezone(timedelta(hours=7))
+from app.utils.timezone import VN_TZ
 
 # Mã phản hồi "giao dịch thành công" của VNPay.
 VNPAY_SUCCESS_CODE = "00"

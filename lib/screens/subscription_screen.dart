@@ -25,6 +25,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   UserSubscription? _current;
   int? _selectedPlanId;
   bool _isCheckingOut = false;
+  bool _isUpdatingRenewal = false;
 
   @override
   void initState() {
@@ -97,6 +98,66 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _confirmCancel() async {
+    final current = _current;
+    if (current == null) return;
+
+    final endText = current.endDate == null
+        ? 'hết hạn'
+        : '${current.endDate!.day}/${current.endDate!.month}/${current.endDate!.year}';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Huỷ tự động gia hạn?',
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+        ),
+        // Nói rõ là KHÔNG mất quyền ngay — người dùng hay sợ bấm huỷ là mất luôn.
+        content: Text(
+          'Bạn vẫn dùng gói ${current.planName} bình thường tới $endText. '
+          'Sau ngày đó gói sẽ tự hết hạn.',
+          style: const TextStyle(color: AppColors.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            child: const Text('Giữ gói'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            child: const Text('Huỷ gia hạn'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _setAutoRenew(false);
+  }
+
+  Future<void> _setAutoRenew(bool value) async {
+    setState(() => _isUpdatingRenewal = true);
+    try {
+      final updated = value
+          ? await ApiClient.instance.resumeSubscription()
+          : await ApiClient.instance.cancelSubscription();
+      if (!mounted) return;
+      setState(() => _current = updated);
+      _showSnack(value ? 'Đã bật lại tự động gia hạn.' : 'Đã huỷ tự động gia hạn.');
+    } on ApiException catch (e) {
+      if (mounted) _showSnack(e.message);
+    } catch (_) {
+      if (mounted) _showSnack('Không kết nối được máy chủ.');
+    } finally {
+      if (mounted) setState(() => _isUpdatingRenewal = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -147,12 +208,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       child: Column(
         children: [
-          Text(
-            _current == null
-                ? 'Unlock your full potential'
-                : 'Đang dùng: ${_current!.planName}',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-          ),
+          if (_current == null)
+            const Text(
+              'Unlock your full potential',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            )
+          else
+            _CurrentPlanBanner(
+              subscription: _current!,
+              busy: _isUpdatingRenewal,
+              onCancel: _confirmCancel,
+              onResume: () => _setAutoRenew(true),
+            ),
           const SizedBox(height: 20),
           Expanded(
             child: ListView.separated(
@@ -201,6 +268,107 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     if (isCurrentPlan) return 'Gói hiện tại';
     if (plan.isFree) return 'Gói miễn phí';
     return 'Nâng cấp ${plan.name} · ${plan.formattedPrice}/tháng';
+  }
+}
+
+/// Thẻ trạng thái gói đang dùng: còn bao nhiêu ngày, có tự gia hạn không, và
+/// nút huỷ/bật lại.
+///
+/// Cố ý nói rõ "vẫn dùng tới ngày X" khi đã huỷ — người dùng hay tưởng bấm huỷ
+/// là mất quyền ngay lập tức và không dám bấm.
+class _CurrentPlanBanner extends StatelessWidget {
+  const _CurrentPlanBanner({
+    required this.subscription,
+    required this.busy,
+    required this.onCancel,
+    required this.onResume,
+  });
+
+  final UserSubscription subscription;
+  final bool busy;
+  final VoidCallback onCancel;
+  final VoidCallback onResume;
+
+  String get _expiryText {
+    final end = subscription.endDate;
+    if (end == null) return 'Không giới hạn thời gian';
+
+    final date = '${end.day}/${end.month}/${end.year}';
+    final days = subscription.daysLeft;
+    if (days == null) return 'Hết hạn $date';
+    if (days <= 0) return 'Hết hạn hôm nay';
+    return 'Còn $days ngày · hết hạn $date';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final autoRenew = subscription.autoRenew;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.workspace_premium_rounded,
+                  size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Đang dùng ${subscription.planName}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _expiryText,
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            autoRenew
+                ? 'Tự động gia hạn: đang bật'
+                : 'Đã huỷ gia hạn — gói sẽ tự hết hạn, không bị trừ tiền thêm',
+            style: TextStyle(
+              color: autoRenew ? AppColors.textTertiary : AppColors.primary,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: busy ? null : (autoRenew ? onCancel : onResume),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                busy
+                    ? 'Đang xử lý…'
+                    : (autoRenew ? 'Huỷ tự động gia hạn' : 'Bật lại tự động gia hạn'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

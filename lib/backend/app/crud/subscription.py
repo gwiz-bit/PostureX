@@ -102,7 +102,10 @@ async def create_pending_order(
         # Chưa trả tiền thì chưa có hiệu lực. Schema không cho 'Pending' ở bảng
         # này (xem CK_UserSub_Status), nên dùng 'Cancelled' làm trạng thái chờ.
         status=SUBSCRIPTION_UNPAID,
-        auto_renew=False,
+        # Mua gói thì mặc định muốn dùng tiếp — người dùng tự tắt nếu không muốn.
+        # Cờ này KHÔNG tự thu tiền (VNPay không hỗ trợ), nó chỉ quyết định có nhắc
+        # gia hạn khi sắp hết hạn hay không.
+        auto_renew=True,
     )
     db.add(subscription)
     await db.flush()
@@ -151,7 +154,17 @@ async def activate_subscription(
 
     Huỷ mọi gói Active cũ của user trước khi bật gói mới — schema không có ràng
     buộc nào chặn một user có 2 gói Active cùng lúc, nên phải tự bảo đảm.
+
+    **Gia hạn sớm được cộng dồn ngày còn lại.** Người dùng còn 10 ngày Premium mà
+    gia hạn tiếp thì được 40 ngày, không phải 30 — nếu không, gia hạn sớm là tự
+    ném đi số ngày đã trả tiền, và không ai dám bấm nút gia hạn trước khi hết hạn.
+
+    Cộng dồn **chỉ áp dụng khi mua lại đúng gói cũ**. Đổi sang gói khác (Premium →
+    Pro) thì tính lại từ đầu: quy đổi giá trị còn lại giữa hai gói khác giá là
+    bài toán proration, cố tình không làm ở đây.
     """
+    today = date.today()
+
     result = await db.execute(
         select(UserSubscription).where(
             UserSubscription.user_id == subscription.user_id,
@@ -159,9 +172,18 @@ async def activate_subscription(
             UserSubscription.id != subscription.id,
         )
     )
+
+    carried_over_days = 0
     for old in result.scalars().all():
+        if (
+            old.plan_id == subscription.plan_id
+            and old.end_date is not None
+            and old.end_date > today
+        ):
+            carried_over_days = max(carried_over_days, (old.end_date - today).days)
+
         old.status = SUBSCRIPTION_CANCELLED
-        old.end_date = date.today()
+        old.end_date = today
 
     payment.status = PAYMENT_PAID
     payment.transaction_no = transaction_no
@@ -169,7 +191,59 @@ async def activate_subscription(
     payment.paid_at = datetime.now(timezone.utc)
 
     subscription.status = SUBSCRIPTION_ACTIVE
-    subscription.start_date = date.today()
-    subscription.end_date = date.today() + timedelta(days=SUBSCRIPTION_PERIOD_DAYS)
+    subscription.start_date = today
+    subscription.end_date = today + timedelta(
+        days=SUBSCRIPTION_PERIOD_DAYS + carried_over_days
+    )
 
     await db.flush()
+
+
+async def set_auto_renew(
+    db: AsyncSession, subscription: UserSubscription, auto_renew: bool
+) -> UserSubscription:
+    """Bật/tắt tự động gia hạn.
+
+    **Tắt (= "huỷ gói") KHÔNG cắt quyền ngay.** Người dùng đã trả tiền cho tới
+    `EndDate`, nên gói vẫn Active tới ngày đó rồi mới tự hết hạn. Cắt ngay là ăn
+    chặn số ngày họ đã mua.
+
+    Cảnh báo cho người đọc sau: cờ này **không tự thu tiền được** — VNPay trong
+    tích hợp hiện tại không hỗ trợ trừ tiền định kỳ. Nó chỉ dùng để quyết định có
+    gửi thông báo nhắc gia hạn hay không (xem `services/reminders.py`).
+    """
+    subscription.auto_renew = auto_renew
+    await db.flush()
+    return subscription
+
+
+async def list_payments(db: AsyncSession, user_id: int) -> list[Payment]:
+    """Lịch sử thanh toán của user, mới nhất trước."""
+    result = await db.execute(
+        select(Payment)
+        .join(UserSubscription, Payment.user_subscription_id == UserSubscription.id)
+        .where(UserSubscription.user_id == user_id)
+        .order_by(Payment.id.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_expiring_subscriptions(
+    db: AsyncSession, within_days: int
+) -> list[UserSubscription]:
+    """Gói còn hiệu lực nhưng sắp hết hạn trong `within_days` ngày tới.
+
+    Chỉ lấy gói **bật tự động gia hạn** — người đã chủ động tắt gia hạn thì họ
+    biết rồi, nhắc nữa là làm phiền.
+    """
+    today = date.today()
+    result = await db.execute(
+        select(UserSubscription).where(
+            UserSubscription.status == SUBSCRIPTION_ACTIVE,
+            UserSubscription.auto_renew.is_(True),
+            UserSubscription.end_date.is_not(None),
+            UserSubscription.end_date >= today,
+            UserSubscription.end_date <= today + timedelta(days=within_days),
+        )
+    )
+    return list(result.scalars().all())

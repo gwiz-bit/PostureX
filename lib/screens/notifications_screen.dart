@@ -173,11 +173,14 @@ class _NotificationTile extends StatelessWidget {
   final AppNotification notification;
   final VoidCallback onTap;
 
-  /// Icon theo `type` do backend gắn (vd "payment", "reminder").
+  /// Icon theo `type` do backend gắn. Danh sách giá trị nằm ở
+  /// `app/crud/notification.py` — thêm loại mới ở đó thì thêm nhánh ở đây.
   IconData get _icon => switch (notification.type) {
         'payment' => Icons.workspace_premium_rounded,
-        'reminder' => Icons.self_improvement_rounded,
         'workout' => Icons.fitness_center_rounded,
+        'break' => Icons.self_improvement_rounded,
+        'daily_summary' => Icons.insights_rounded,
+        'subscription' || 'subscription_expiry' => Icons.card_membership_rounded,
         _ => Icons.notifications_rounded,
       };
 

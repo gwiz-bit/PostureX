@@ -1,6 +1,6 @@
 """Endpoints lịch sử buổi tập."""
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -8,11 +8,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.crud.notification import create_notification
+from app.crud.notification import TYPE_WORKOUT, create_notification
 from app.crud.subscription import is_premium
 from app.models.user import User
 from app.models.workout import Workout
 from app.utils.deps import get_current_user
+from app.utils.timezone import vn_day_start_utc
 
 router = APIRouter(prefix="/workouts", tags=["workouts"])
 
@@ -20,23 +21,15 @@ router = APIRouter(prefix="/workouts", tags=["workouts"])
 # SubscriptionPlans). Đây là chỗ duy nhất thực thi lời hứa đó.
 FREE_DAILY_WORKOUT_LIMIT = 3
 
-# Người dùng ở Việt Nam, nên "hôm nay" phải tính theo ngày VN chứ không theo UTC
-# — nếu không, 7 giờ sáng ở VN vẫn đang là "hôm qua" của UTC và hạn mức reset trễ.
-VN_TZ = timezone(timedelta(hours=7))
-
 
 async def _count_workouts_today(db: AsyncSession, user_id: int) -> int:
-    """Số buổi tập user đã lưu trong ngày hôm nay (giờ VN)."""
-    now_vn = datetime.now(VN_TZ)
-    start_of_day = datetime.combine(now_vn.date(), time.min, tzinfo=VN_TZ)
-
+    """Số buổi tập user đã lưu trong ngày hôm nay (theo ngày giờ VN)."""
     result = await db.execute(
         select(func.count())
         .select_from(Workout)
         .where(
             Workout.user_id == user_id,
-            # created_at lưu theo UTC — so sánh bằng cùng một mốc đã quy về UTC.
-            Workout.created_at >= start_of_day.astimezone(timezone.utc),
+            Workout.created_at >= vn_day_start_utc(),
         )
     )
     return result.scalar_one()
@@ -102,7 +95,7 @@ async def create_workout(
         user_id=current_user.id,
         title="Hoàn thành buổi tập",
         body=_summary(workout),
-        type_="workout",
+        type_=TYPE_WORKOUT,
     )
     return WorkoutOut.model_validate(workout)
 

@@ -1,6 +1,7 @@
 """Endpoints gói cước & thanh toán VNPay."""
 
 import logging
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.crud.notification import create_notification
+from app.crud.notification import TYPE_PAYMENT, TYPE_SUBSCRIPTION, create_notification
 from app.crud.subscription import (
     activate_subscription,
     create_pending_order,
@@ -17,11 +18,19 @@ from app.crud.subscription import (
     get_plan_by_id,
     get_subscription_by_id,
     list_active_plans,
+    list_payments,
     mark_payment_failed,
+    set_auto_renew,
 )
 from app.models.subscription import PAYMENT_PAID
 from app.models.user import User
-from app.schemas.subscription import CheckoutIn, CheckoutOut, MySubscriptionOut, PlanOut
+from app.schemas.subscription import (
+    CheckoutIn,
+    CheckoutOut,
+    MySubscriptionOut,
+    PaymentOut,
+    PlanOut,
+)
 from app.services import vnpay
 from app.utils.deps import get_current_user
 
@@ -47,7 +56,71 @@ async def my_subscription(
     if subscription is None:
         return None
 
+    return await _to_out(db, subscription)
+
+
+@router.post("/subscriptions/cancel", response_model=MySubscriptionOut)
+async def cancel_subscription(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MySubscriptionOut:
+    """Huỷ tự động gia hạn.
+
+    **Không cắt quyền ngay.** Người dùng đã trả tiền tới `end_date` nên gói vẫn
+    chạy tới ngày đó rồi mới tự hết hạn — cắt ngay là ăn chặn ngày họ đã mua.
+    """
+    subscription = await get_active_subscription(db, current_user.id)
+    if subscription is None:
+        raise HTTPException(status_code=404, detail="Bạn không có gói nào đang dùng.")
+
+    if not subscription.auto_renew:
+        raise HTTPException(status_code=400, detail="Gói này đã tắt tự động gia hạn.")
+
+    await set_auto_renew(db, subscription, False)
     plan = await get_plan_by_id(db, subscription.plan_id)
+    await create_notification(
+        db,
+        user_id=current_user.id,
+        title="Đã huỷ tự động gia hạn",
+        body=f"Gói {plan.name if plan else 'Premium'} vẫn dùng được tới "
+        f"{subscription.end_date:%d/%m/%Y}.",
+        type_=TYPE_SUBSCRIPTION,
+    )
+    logger.info("User %d huỷ tự động gia hạn gói #%d", current_user.id, subscription.id)
+    return await _to_out(db, subscription)
+
+
+@router.post("/subscriptions/resume", response_model=MySubscriptionOut)
+async def resume_subscription(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MySubscriptionOut:
+    """Bật lại tự động gia hạn (đổi ý sau khi huỷ)."""
+    subscription = await get_active_subscription(db, current_user.id)
+    if subscription is None:
+        raise HTTPException(status_code=404, detail="Bạn không có gói nào đang dùng.")
+
+    await set_auto_renew(db, subscription, True)
+    return await _to_out(db, subscription)
+
+
+@router.get("/payments", response_model=list[PaymentOut])
+async def payment_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[PaymentOut]:
+    """Lịch sử thanh toán của user, mới nhất trước."""
+    payments = await list_payments(db, current_user.id)
+    return [PaymentOut.model_validate(p) for p in payments]
+
+
+async def _to_out(db: AsyncSession, subscription) -> MySubscriptionOut:
+    plan = await get_plan_by_id(db, subscription.plan_id)
+    days_left = (
+        (subscription.end_date - date.today()).days
+        if subscription.end_date is not None
+        else None
+    )
     return MySubscriptionOut(
         id=subscription.id,
         plan_id=subscription.plan_id,
@@ -55,6 +128,8 @@ async def my_subscription(
         status=subscription.status,
         start_date=subscription.start_date,
         end_date=subscription.end_date,
+        auto_renew=subscription.auto_renew,
+        days_left=days_left,
     )
 
 
@@ -166,7 +241,7 @@ async def vnpay_return(request: Request, db: AsyncSession = Depends(get_db)) -> 
         user_id=subscription.user_id,
         title=f"Kích hoạt gói {plan_name} thành công",
         body=f"Gói của bạn có hiệu lực tới {subscription.end_date:%d/%m/%Y}.",
-        type_="payment",
+        type_=TYPE_PAYMENT,
     )
     logger.info("Đơn #%d thanh toán thành công — kích hoạt gói %s", payment_id, plan_name)
 
