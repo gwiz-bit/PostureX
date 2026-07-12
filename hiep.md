@@ -337,14 +337,14 @@ Nhớ trong phần mô tả PR: nói rõ commit `94d8c34` (fix WebSocket) là **
 
 `github.com/gwiz-bit/PostureX` là repo **Public** (đã có **1 fork**). Nghĩa là ai trên internet cũng đọc được:
 
-- `lib/backend/.env.example` → `DB_PASSWORD=Trumsolo456@` — **mật khẩu MySQL thật** của một máy trong nhóm
+- `lib/backend/.env.example` → chứa **mật khẩu MySQL thật** của một máy trong nhóm (giá trị cụ thể xem trong lịch sử git — cố ý không chép lại vào đây)
 - `login_screen.dart` → backdoor admin cứng `admin@gmail.com` / `123456`
 - `config.py` → `SECRET_KEY` mặc định `"change-me-in-production"` → **ai cũng ký được JWT giả mạo bất kỳ user nào, kể cả admin**
 
 **Việc cần làm:**
 
 1. GitHub → **Settings** → **General** → **Danger Zone** → **Change repository visibility** → **Private**.
-2. Chuyển private **không xoá được thứ đã lộ** → vẫn phải **báo nhóm đổi mật khẩu MySQL `Trumsolo456@`**, và thay giá trị trong `.env.example` bằng placeholder.
+2. Chuyển private **không xoá được thứ đã lộ** → vẫn phải **báo nhóm đổi mật khẩu MySQL đã bị lộ**, và thay giá trị trong `.env.example` bằng placeholder.
 
 ---
 
@@ -415,7 +415,7 @@ git push
 
 ## 🆕 ĐỢT 3 — Scheduler, Push, Quản lý gói (13/07/2026, rạng sáng)
 
-> ⚠️ **TOÀN BỘ 30 FILE DƯỚI ĐÂY CHƯA COMMIT.** Đang nằm trên máy, mất máy là mất hết.
+> ✅ **ĐÃ COMMIT VÀ PUSH** lên nhánh `hiepga` — commit `41d5e09` + `900ebe2`.
 > Test: **69 passed** (13 → 35 → 44 → 54 → 69).
 
 ### 1️⃣ Scheduler — 3 job định kỳ (BE-13)
@@ -479,7 +479,7 @@ Cắm vào `create_notification()`, nên **mọi loại thông báo tự động
 ### 🧹 Dọn dẹp kèm theo
 
 - **`app/utils/timezone.py`** (mới) — `VN_TZ` đang lặp ở 2 nơi, sắp thành 3. Gom về một chỗ.
-- **`.env.example`** — đã thay `DB_PASSWORD=Trumsolo456@` (mật khẩu thật của teammate!) bằng placeholder.
+- **`.env.example`** — đã thay mật khẩu MySQL thật của teammate bằng placeholder.
 - **`.gitignore`** — chặn file khoá Firebase (commit lên là ai cũng gửi push được cho toàn bộ user).
 - **`notifications_screen.dart`** — có nhánh icon `'reminder'` mà backend **không bao giờ gửi** (code chết). Đã thay bằng 4 nhãn thật.
 
@@ -489,29 +489,19 @@ Chạy `create_tables.py` để tạo bảng `device_tokens` → **nó có `DROP
 
 > 🔴 **CẢNH BÁO CẢ NHÓM:** `create_tables.py` **XOÁ TOÀN BỘ lịch sử tập của mọi người dùng** mỗi lần chạy. Tài liệu chỉ ghi nhẹ "chỉ chạy lần đầu" — không có gì ngăn ai đó chạy lại. **Tôi đã dính. Người khác cũng sẽ dính.** Nên sửa script này (thêm xác nhận, hoặc bỏ DROP đi).
 
-### 📋 30 file cần commit
+### 📋 Đã commit thành 2 (không phải 3)
 
-```
-MOI (11):
-  app/core/scheduler.py            app/services/reminders.py
-  app/services/push.py             app/services/notifier.py
-  app/models/device_token.py       app/crud/device_token.py
-  app/utils/timezone.py            run_jobs_now.py
-  tests/test_reminders.py          tests/test_push.py
-  tests/test_subscription_manage.py
+| Commit | Nội dung | File |
+|---|---|---|
+| `41d5e09` | **FCM push — backend** | 13 |
+| `900ebe2` | **Scheduler + BE-14 quản lý gói** | 18 |
 
-SUA (19):
-  backend: .env.example  .gitignore  requirements.txt  create_tables.py
-           app/main.py  app/core/config.py
-           app/crud/notification.py  app/crud/subscription.py
-           app/schemas/notification.py  app/schemas/subscription.py
-           app/services/vnpay.py  tests/conftest.py
-           app/api/v1/routes/{notifications,subscriptions,workouts}.py
-  app:     lib/models/subscription.dart  lib/services/api_client.dart
-           lib/screens/{notifications,subscription}_screen.dart
-```
+**Vì sao không tách 3 như dự định:** ba mảng này **phụ thuộc chéo nhau** — `services/reminders.py` (scheduler) cần `get_expiring_subscriptions()` từ `crud/subscription.py` (nhóm BE-14), còn `tests/conftest.py` cần model `device_token` (nhóm FCM). Tách rời ra thì **commit ở giữa không import được**. Gộp thành 2 commit thật sự độc lập.
 
-Gợi ý tách 3 commit cho dễ review: **(1)** scheduler + timezone, **(2)** FCM backend, **(3)** BE-14 huỷ/gia hạn.
+**Đã kiểm chứng từ trạng thái ĐÃ COMMIT** (giải nén `git archive` ra thư mục tạm rồi chạy từ đó, không tin file trên đĩa):
+- `import app.main` → OK. *Nếu quên một file thì backend crash ngay khi import — đây là cách duy nhất bắt được lỗi đó.*
+- `pytest` → **69 passed**
+- `.env` và khoá Firebase **chưa từng lọt vào lịch sử git** (kiểm tra toàn bộ lịch sử, không chỉ commit mới nhất)
 
 ---
 
@@ -526,7 +516,7 @@ Gợi ý tách 3 commit cho dễ review: **(1)** scheduler + timezone, **(2)** F
 
 ## 🔐 Vấn đề bảo mật cần báo cả nhóm (chưa sửa)
 
-1. **Mật khẩu MySQL thật bị commit vào git**: `lib/backend/.env.example` **đang được git theo dõi** và chứa `DB_PASSWORD=Trumsolo456@`. Nằm trong lịch sử git, ai clone cũng đọc được → nên **đổi mật khẩu đó** và thay bằng placeholder.
+1. **Mật khẩu MySQL thật bị commit vào git**: `lib/backend/.env.example` **đang được git theo dõi** và từng chứa mật khẩu thật. Nằm trong lịch sử git, ai clone cũng đọc được → **phải đổi mật khẩu đó**. (File hiện tại đã thay bằng placeholder, nhưng lịch sử thì không xoá được.)
 2. **`SECRET_KEY` mặc định là `"change-me-in-production"`** — vì `.env` bị gitignore, ai clone về mà chưa tạo `.env` đều đang ký JWT bằng khoá công khai → **giả mạo được token của bất kỳ ai, kể cả admin**.
 3. **CORS mở toang**: `allow_origins=["*"]` đi kèm `allow_credentials=True`.
 4. **Không có rate limit ở `POST /auth/login`** → dò mật khẩu vô hạn.
@@ -553,13 +543,67 @@ Gợi ý tách 3 commit cho dễ review: **(1)** scheduler + timezone, **(2)** F
 
 ---
 
-## ▶️ LẦN SAU MỞ MÁY LÀM GÌ (theo thứ tự)
+## ▶️ LẦN SAU MỞ MÁY LÀM GÌ
 
-1. 🔴 **COMMIT 30 file của Đợt 3** — scheduler, push backend, huỷ/gia hạn gói. **Chưa commit gì cả**, đang nằm trên máy. Mất máy là mất hết. Xem mục *"ĐỢT 3"* ở trên.
-2. **`git push`** — commit `17951e9` + `a6d3a5a` (sửa 4 bug, tài liệu) cũng đang nằm trên máy, chưa lên GitHub.
-3. 🔴 **Chuyển repo sang Private** — vẫn đang Public, vẫn đang lộ mật khẩu MySQL thật, backdoor admin, `SECRET_KEY` mặc định. **Quan trọng hơn mọi thứ code còn lại.**
-4. **Tạo Pull Request** `hiepga → main` để nhóm review.
-5. Muốn làm nốt thì còn: **phần Flutter của FCM** (cần `google-services.json` từ Firebase Console) và **IPN** của VNPay (cần URL công khai).
+### ✅ Trạng thái chốt (13/07/2026)
+
+**Code đã an toàn.** Nhánh `hiepga` = **9 commit**, đã push hết lên GitHub, không còn gì nằm trên máy.
+`main` **chưa bị đụng**. **Chưa tạo Pull Request** (cố ý — BE-13 còn thiếu phần Flutter của FCM).
+
+```
+main   ── c4cc5f1
+              \
+hiepga         94d8c34 → 9c56e81 → d0ec4d7 → b60459c → 26ff29b
+               → 17951e9 → a6d3a5a → 41d5e09 → 900ebe2   ← đã push hết
+```
+
+Backend: **69 test pass**. BE-13 ~90%, BE-14 ~95%.
+
+---
+
+### 🔴 VIỆC SỐ 1 — Chuyển repo sang Private (1 phút, làm ngay)
+
+`github.com/gwiz-bit/PostureX` đang **Public**, đã có **1 fork**. Đang công khai cho cả internet:
+
+| Lộ cái gì | Ở đâu |
+|---|---|
+| **Mật khẩu MySQL thật** của teammate | `.env.example` — file hiện tại đã thay bằng placeholder, **nhưng giá trị cũ vẫn nằm trong LỊCH SỬ git**, đổi file không xoá được |
+| **Backdoor admin** `admin@gmail.com` / `123456` | `login_screen.dart` |
+| **`SECRET_KEY` mặc định** | `config.py` → ai cũng ký được JWT giả mạo **bất kỳ user nào, kể cả admin** |
+
+**Làm:** GitHub → Settings → General → Danger Zone → **Change repository visibility** → Private.
+**Rồi báo nhóm đổi mật khẩu MySQL** — chuyển private không xoá được thứ đã lộ.
+
+> Việc này **quan trọng hơn toàn bộ code còn lại**. Đã treo 2 ngày.
+
+---
+
+### Việc tiếp theo (chọn 1)
+
+| Việc | Cần gì | Ghi chú |
+|---|---|---|
+| **Phần Flutter của FCM** | Bạn tạo project Firebase → `google-services.json` + khoá service account | Backend **đã xong hết**. BE-13 sẽ lên 100%. Emulator Pixel_4 có Google Play → test push thật được. |
+| **IPN của VNPay** | URL công khai (ngrok / deploy) | BE-14 lên 100%. Không có IPN thì khách trả tiền xong tắt app ngay → **tiền bị trừ, gói không bật**. |
+| **Sửa `create_tables.py`** | Không cần gì | Xem cảnh báo bên dưới. Nhanh, và cứu cả nhóm khỏi mất dữ liệu. |
+| **Tạo Pull Request** | Không cần gì | Nếu muốn chốt phần đã làm, để nhóm review. |
+
+---
+
+### 💣 Ba thứ PHẢI nhớ (đã trả giá để biết)
+
+1. **`create_tables.py` XOÁ SẠCH bảng `workouts` + `videos` mỗi lần chạy.** Nó có `DROP TABLE` ở đầu. Tài liệu chỉ ghi nhẹ "chỉ chạy lần đầu". **Tôi đã dính và mất dữ liệu test của bạn.** Người khác cũng sẽ dính.
+
+2. **uvicorn chạy sẵn từ phiên trước KHÔNG tự nạp code mới.** Sửa code xong mà API vẫn trả kết quả cũ → **tắt hẳn rồi chạy lại**, đừng ngồi debug code. Đã mất thời gian vì đúng chuyện này.
+
+3. **Test xanh ≠ chạy đúng.** 69 test SQLite đều pass nhưng vẫn có bug chỉ MySQL mới lộ ra (xem mục "Bug chỉ MySQL mới lộ ra"). SQLite không có CHECK constraint và ràng buộc thật của MySQL. **Việc gì quan trọng thì phải chạy thử trên MySQL.**
+
+---
+
+### ⚠️ Ba điều ĐỪNG ghi sai trong báo cáo
+
+- **Đừng ghi "đã có cron job"** — scheduler chạy *trong tiến trình*, server tắt là job không chạy.
+- **Đừng ghi "đã có tự động gia hạn"** — VNPay không trừ tiền định kỳ được. Cờ `AutoRenew` chỉ để *nhắc* gia hạn.
+- **Đừng ghi "đã tích hợp IAP"** — dùng VNPay, không phải in-app purchase. (Và VNPay bán nội dung số là **vi phạm chính sách Google Play** nếu lên store.)
 
 ### Chạy lại hệ thống (nhắc nhanh)
 
@@ -575,4 +619,13 @@ Tài khoản test: `test@posturex.com` / `Test123` (UserId = 3).
 
 > ⚠️ **Bẫy đã dính một lần:** uvicorn chạy sẵn từ phiên trước **không tự nạp code mới**. Sửa code xong mà API vẫn trả kết quả cũ thì **tắt hẳn rồi chạy lại**, đừng ngồi debug code (đã mất thời gian vì đúng chuyện này).
 
-> ⚠️ **Dữ liệu test trong MySQL đã bị nghịch:** UserId 3 hiện có gói Premium `Active` tới `2026-08-11` (do chạy thử BUG-1/BUG-2) và vài buổi tập giả trong bảng `workouts`. Không phải dữ liệu thật, cứ xoá thoải mái.
+> ⚠️ **Dữ liệu test trong MySQL đã bị nghịch nhiều lần.** UserId 3 (`test@posturex.com`) hiện có: gói Premium hết hạn 15/07 (đã tắt tự gia hạn), vài buổi tập giả, một token FCM giả (`fake-fcm-token-tu-may-that`) trong bảng `device_tokens`. **Không phải dữ liệu thật, cứ xoá thoải mái:**
+>
+> ```sql
+> DELETE FROM Payments WHERE UserSubscriptionId IN (SELECT UserSubscriptionId FROM UserSubscriptions WHERE UserId=3);
+> DELETE FROM UserSubscriptions WHERE UserId=3;
+> DELETE FROM workouts WHERE user_id=3;
+> DELETE FROM Notifications WHERE UserId=3;
+> DELETE FROM device_tokens WHERE user_id=3;
+> ```
+> (Xoá `Payments` trước rồi mới `UserSubscriptions` — ngược lại sẽ vướng khoá ngoại.)
