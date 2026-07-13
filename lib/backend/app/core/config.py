@@ -46,14 +46,25 @@ class Settings(BaseSettings):
     # when verifying ID tokens from the Flutter app's google_sign_in flow.
     GOOGLE_CLIENT_ID: str = ""
 
-    # VNPay — lay TmnCode/HashSecret o https://sandbox.vnpayment.vn
-    VNPAY_TMN_CODE: str = ""
-    VNPAY_HASH_SECRET: str = ""
-    VNPAY_PAY_URL: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-    # VNPay redirect trinh duyet cua nguoi dung ve day sau khi thanh toan.
-    # Tren emulator, WebView cua app goi duoc 10.0.2.2 (= localhost cua may host).
+    # MoMo (AIO v2) — cong thanh toan dang dung.
+    #
+    # Gia tri mac dinh la BO KHOA SANDBOX CONG KHAI cua MoMo, lay tu repo mau
+    # chinh thuc github.com/momo-wallet/payment. KHONG phai bi mat, va KHONG
+    # tieu duoc tien that - nho vay ai clone repo ve cung chay duoc ngay, khong
+    # phai dang ky merchant. Len production thi phai thay bang khoa that va dua
+    # vao .env (dung commit).
+    MOMO_PARTNER_CODE: str = "MOMO"
+    MOMO_ACCESS_KEY: str = "F8BBA842ECF85"
+    MOMO_SECRET_KEY: str = "K951B6PE1waDMi640xX08PD3vg6EkVlz"
+    MOMO_CREATE_URL: str = "https://test-payment.momo.vn/v2/gateway/api/create"
+    MOMO_QUERY_URL: str = "https://test-payment.momo.vn/v2/gateway/api/query"
+    # MoMo redirect trinh duyet nguoi dung ve day sau khi thanh toan.
+    # Tren emulator, WebView goi duoc 10.0.2.2 (= localhost cua may host).
     # Doi sang IP LAN neu test tren dien thoai that.
-    VNPAY_RETURN_URL: str = "http://10.0.2.2:9000/api/v1/payments/vnpay/return"
+    MOMO_REDIRECT_URL: str = "http://10.0.2.2:9000/api/v1/payments/momo/return"
+    # IPN: MoMo goi server-to-server. Can URL CONG KHAI, chay localhost thi MoMo
+    # khong goi toi duoc - vi vay luong chinh dua vao /query (hoi thang MoMo).
+    MOMO_IPN_URL: str = "http://10.0.2.2:9000/api/v1/payments/momo/ipn"
 
     # Firebase Cloud Messaging — push notification (BE-13).
     # Lay file khoa: Firebase Console > Project settings > Service accounts >
@@ -70,10 +81,10 @@ class Settings(BaseSettings):
     DAILY_SUMMARY_HOUR: int = 20
 
     @property
-    def vnpay_configured(self) -> bool:
-        """False khi chua dien TmnCode/HashSecret — route checkout se bao 503
-        thay vi dung URL rac roi de VNPay tu choi voi loi kho hieu."""
-        return bool(self.VNPAY_TMN_CODE and self.VNPAY_HASH_SECRET)
+    def momo_configured(self) -> bool:
+        """False khi thieu khoa MoMo — route checkout bao 503 thay vi gui request
+        rac roi de MoMo tu choi voi loi kho hieu."""
+        return bool(self.MOMO_PARTNER_CODE and self.MOMO_ACCESS_KEY and self.MOMO_SECRET_KEY)
 
     @property
     def fcm_configured(self) -> bool:

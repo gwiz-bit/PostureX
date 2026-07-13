@@ -271,7 +271,7 @@ async def test_payment_history_lists_own_payments(
             user_subscription_id=subscription.id,
             amount=Decimal("99000.00"),
             currency="VND",
-            payment_method="VNPAY",
+            payment_method="MOMO",
             status=PAYMENT_PENDING,
         )
     )
@@ -281,4 +281,4 @@ async def test_payment_history_lists_own_payments(
 
     assert resp.status_code == 200
     assert len(resp.json()) == 1
-    assert resp.json()[0]["payment_method"] == "VNPAY"
+    assert resp.json()[0]["payment_method"] == "MOMO"

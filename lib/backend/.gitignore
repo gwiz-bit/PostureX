@@ -18,6 +18,10 @@ ENV/
 
 # Environment secrets
 .env
+# Ban sao luu (.env.bak, .env.local...) cung chua mat khau that -> chan luon.
+# Rieng .env.example thi van commit (chi co placeholder).
+.env.*
+!.env.example
 
 # Khoa service account Firebase (FCM push) — commit len la ai cung gui push
 # duoc cho toan bo nguoi dung cua app.

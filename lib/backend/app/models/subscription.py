@@ -79,7 +79,7 @@ class Payment(Base):
     currency: Mapped[str] = mapped_column("Currency", String(10), nullable=False)
     payment_method: Mapped[str] = mapped_column("PaymentMethod", String(50), nullable=False)
     status: Mapped[str] = mapped_column("Status", String(20), nullable=False, index=True)
-    # Lưu nguyên query string VNPay trả về, để đối soát khi có tranh chấp.
+    # Lưu nguyên phản hồi của cổng thanh toán, để đối soát khi có tranh chấp.
     gateway_log: Mapped[str | None] = mapped_column("PaymentGatewayLog", Text, nullable=True)
     paid_at: Mapped[datetime | None] = mapped_column("PaidAt", DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

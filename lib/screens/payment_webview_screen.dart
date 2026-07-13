@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../theme/app_theme.dart';
 
-/// Mở trang thanh toán VNPay trong WebView.
+/// Mở trang thanh toán MoMo trong WebView.
 ///
 /// Dùng WebView thay vì mở trình duyệt ngoài vì quay lại app từ trình duyệt
 /// cần deep link; ở đây chỉ cần bắt điều hướng là biết đã xong.
 ///
 /// Pop trả về:
-///   `true`  — VNPay đã redirect về `/payments/vnpay/return` và báo thành công
-///   `false` — thanh toán thất bại / bị huỷ
+///   `true`  — MoMo đã redirect về `/payments/momo/return`
 ///   `null`  — người dùng tự đóng giữa chừng (chưa rõ kết quả)
 ///
-/// Lưu ý: kết quả này chỉ để hiển thị cho nhanh. **Nguồn sự thật là backend** —
-/// màn gọi nó phải gọi lại `GET /subscriptions/me` để biết gói đã bật hay chưa,
-/// vì chính backend mới là bên xác minh chữ ký và kích hoạt gói.
+/// Lưu ý: giá trị này **không phải kết quả thanh toán**, chỉ là "đã quay về".
+/// **Nguồn sự thật là backend** — màn gọi nó phải gọi lại `GET /subscriptions/me`
+/// để biết gói đã bật hay chưa. Chính backend mới là bên hỏi MoMo xem đơn đã
+/// trả tiền thật chưa (API `/query`), nên tham số trên URL này không đáng tin.
 class PaymentWebViewScreen extends StatefulWidget {
   const PaymentWebViewScreen({super.key, required this.payUrl});
 
@@ -37,7 +38,8 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (url) => _checkForReturnUrl(url),
+          onNavigationRequest: _onNavigate,
+          onPageStarted: _checkForReturnUrl,
           onPageFinished: (_) {
             if (mounted) setState(() => _isLoading = false);
           },
@@ -46,15 +48,51 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
       ..loadRequest(Uri.parse(widget.payUrl));
   }
 
-  /// Backend redirect về `/api/v1/payments/vnpay/return?...` khi thanh toán
-  /// xong. Bắt đúng đường dẫn đó — kết quả nằm trong `vnp_ResponseCode`
-  /// ("00" là thành công).
+  /// Chặn mọi điều hướng **không phải http/https** và mở ra ngoài WebView.
+  ///
+  /// Bấm "Thanh toán bằng Ví MoMo", trang web gọi deeplink `momo://app?...` để
+  /// bật app MoMo. WebView chỉ hiểu http/https nên gặp scheme lạ là chết với
+  /// `ERR_UNKNOWN_URL_SCHEME`. Phải tự bắt lấy và giao cho hệ điều hành.
+  Future<NavigationDecision> _onNavigate(NavigationRequest request) async {
+    final uri = Uri.parse(request.url);
+    if (uri.scheme == 'http' || uri.scheme == 'https') {
+      return NavigationDecision.navigate;
+    }
+
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened) _showAppMissing();
+    } catch (_) {
+      // Không có app nào đăng ký scheme này (emulator thường chưa cài MoMo).
+      _showAppMissing();
+    }
+    return NavigationDecision.prevent;
+  }
+
+  void _showAppMissing() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Chưa cài ứng dụng MoMo trên máy này. '
+          'Hãy quét mã QR bằng MoMo trên điện thoại, hoặc cài MoMo Test App.',
+        ),
+        duration: Duration(seconds: 5),
+      ),
+    );
+  }
+
+  /// MoMo redirect về `/api/v1/payments/momo/return?...` khi xong. Bắt đúng
+  /// đường dẫn đó rồi đóng WebView.
+  ///
+  /// **Cố ý không đọc `resultCode` trên URL.** Người dùng sửa được URL trong
+  /// WebView, nên tin nó là tự cho phép kích hoạt Premium miễn phí. Backend đã
+  /// hỏi thẳng MoMo rồi — màn gọi chỉ cần hỏi lại `/subscriptions/me`.
   void _checkForReturnUrl(String url) {
-    if (_finished || !url.contains('/payments/vnpay/return')) return;
+    if (_finished || !url.contains('/payments/momo/return')) return;
 
     _finished = true;
-    final code = Uri.parse(url).queryParameters['vnp_ResponseCode'];
-    if (mounted) Navigator.of(context).pop(code == '00');
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   @override

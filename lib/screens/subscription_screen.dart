@@ -67,23 +67,23 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       final checkout = await ApiClient.instance.checkout(plan.id);
       if (!mounted) return;
 
-      final paid = await Navigator.of(context).push<bool>(
+      final returned = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
           builder: (_) => PaymentWebViewScreen(payUrl: checkout.payUrl),
         ),
       );
       if (!mounted) return;
 
-      // Không tin kết quả WebView trả về: hỏi lại backend — chính nó mới là bên
-      // xác minh chữ ký VNPay và kích hoạt gói.
+      // WebView chỉ cho biết "đã quay về", KHÔNG cho biết trả tiền chưa. Hỏi lại
+      // backend — chính nó mới là bên hỏi MoMo xem đơn đã thanh toán thật chưa.
       await _load();
       if (!mounted) return;
 
-      final activated = _current?.planId == plan.id;
-      if (activated) {
+      if (_current?.planId == plan.id) {
         _showSnack('Đã kích hoạt gói ${plan.name}.');
-      } else if (paid == false) {
-        _showSnack('Thanh toán không thành công.');
+      } else if (returned == true) {
+        // Quay về từ MoMo nhưng gói không bật ⇒ chưa trả tiền hoặc đã huỷ.
+        _showSnack('Thanh toán chưa hoàn tất.');
       }
     } on ApiException catch (e) {
       if (mounted) _showSnack(e.message);

@@ -28,7 +28,7 @@ Tất cả nằm trong **một** repo Flutter:
   * Cấu hình đọc từ **`lib/backend/.env`** (copy từ `.env.example`). File `.env` bị gitignore nên
     mỗi người phải tự tạo — **và mật khẩu MySQL trong `.env.example` là của máy người khác, phải sửa lại.**
 * **Cổng backend: 9000** (KHÔNG phải 8000 như tài liệu cũ). `lib/config/api_config.dart` chờ ở 9000.
-* **Tài khoản test: `test@posturex.com` / `Test123`** ✅ đăng nhập được.
+* **Tài khoản:** DB đã bị nạp lại 13/07 → `test@posturex.com` **không còn**. Xem mục *"Tài khoản"* ở cuối tài liệu. **Luôn `SELECT UserId, Email FROM Users;` trước khi đụng vào dữ liệu.**
 
 ---
 
@@ -413,6 +413,89 @@ git push
 
 ---
 
+## 💳 ĐỢT 4 — Đổi VNPay → MoMo (14/07/2026)
+
+> ✅ Đã commit & push. Test: **77 passed**.
+
+### Vì sao đổi
+
+VNPay **không chạy được**: `.env` dùng mã giả `DEMOTMN` (tôi tự bịa vì không có tài khoản), VNPay trả *"Không tìm thấy website"*. Muốn mã thật phải **đăng ký merchant** — chờ duyệt.
+
+**MoMo công bố công khai bộ khoá sandbox** trong repo mẫu chính thức `github.com/momo-wallet/payment` → chạy được ngay, **không cần đăng ký gì**. Giá trị mặc định nằm sẵn trong `app/core/config.py`, ai clone repo về cũng chạy được.
+
+### MoMo hơn VNPay ở một điểm quyết định
+
+MoMo có **API tra cứu trạng thái** (`POST /v2/gateway/api/query`) mà VNPay không có.
+
+Nhờ đó backend **hỏi thẳng MoMo** "đơn này trả tiền chưa?" thay vì tin tham số trên URL redirect — mà URL thì **người dùng sửa được trong WebView**. Với VNPay chạy localhost, muốn chắc chắn thì bắt buộc phải có IPN (cần URL công khai). MoMo thì xác minh được ngay trên máy. Có test riêng cho ca này (`test_return_does_not_trust_the_url_only_momo`).
+
+### File
+
+| File | |
+|---|---|
+| `app/services/momo.py` | **MỚI** — ký/xác minh (hàm thuần) + gọi `/create`, `/query` |
+| `app/services/vnpay.py`, `tests/test_vnpay.py` | **ĐÃ XOÁ** (còn trong lịch sử git nếu cần lấy lại) |
+| `app/api/v1/routes/subscriptions.py` | `/payments/momo/return` + `/payments/momo/ipn` |
+| `tests/test_momo.py` | **MỚI** — 17 test |
+| `lib/screens/payment_webview_screen.dart` | Bắt deeplink `momo://` (xem dưới) |
+
+### 🐛 Bug chỉ lộ ra khi gọi MoMo THẬT (test giả lập đều xanh)
+
+MoMo trả `resultCode=1000` = *"đã khởi tạo, **chờ người dùng xác nhận**"* — **không phải thất bại**. Code cũ đánh dấu đơn là `Failed`.
+
+Hậu quả thật: người dùng đang dở tay quét QR mà lỡ quay về app → đơn **bị giết oan**. Trả tiền xong, IPN về, nhưng đơn đã hỏng. Đã tách `is_pending()` riêng + test bắt đúng ca này.
+
+**Bài học lặp lại lần 2:** test xanh ≠ chạy đúng. Phải gọi thật.
+
+### 🐛 `ERR_UNKNOWN_URL_SCHEME` khi bấm "Thanh toán bằng Ví MoMo"
+
+Trang MoMo gọi deeplink **`momo://app?...`** để bật app. WebView chỉ hiểu `http`/`https` → chết.
+
+**Đã sửa:** `onNavigationRequest` bắt mọi scheme không phải http/https → `launchUrl(externalApplication)`. Thêm `url_launcher` vào `pubspec.yaml`.
+
+⚠️ **Phải khai báo `<queries>` trong `AndroidManifest.xml`** — Android 11+ giấu app khác khỏi app ta. Thiếu khối đó thì dù máy **đã cài MoMo** vẫn báo "chưa cài".
+
+### ⚠️ Không thanh toán sandbox bằng MoMo THẬT được
+
+Tài liệu MoMo ghi rõ: *"Uninstall MoMo app that installed on CH Play before installing test app"*. Muốn thanh toán thử phải cài **MoMo Test App**, và nó **xung đột với MoMo thật**.
+
+→ **Đừng gỡ MoMo thật trên điện thoại chỉ để test đồ án.** Trang thanh toán MoMo hiện ra đúng mã đơn + đúng số tiền đã đủ chứng minh tích hợp chạy.
+
+---
+
+## 🔮 THU TIỀN THẬT — đã nghiên cứu, để dành cho sau
+
+> **Quyết định 14/07: tạm dùng MoMo sandbox, sau này mới làm thanh toán thật.**
+> Ghi lại đây để lần sau khỏi phải tra lại từ đầu.
+
+### Ví MoMo cá nhân KHÔNG làm merchant API được
+
+Cổng MoMo đăng ký qua portal **M4B** (`business.momo.vn`), hồ sơ bắt buộc có **"Thông tin pháp lý và doanh nghiệp"** → dành cho **doanh nghiệp / hộ kinh doanh**. Ví cá nhân không có `partnerCode`/`accessKey`/`secretKey`, và **không có IPN** → backend không thể biết ai vừa trả tiền → không tự bật Premium được. VNPay, ZaloPay cũng vậy.
+
+### Các cách CÁ NHÂN thu tiền thật được
+
+| Cách | Giấy tờ | Phí | Ghi chú |
+|---|---|---|---|
+| **PayOS** ⭐ | Chỉ **CCCD** | **Miễn phí** (từ 23/01/2026) | Tiền về thẳng TK cá nhân. Có đủ API: tạo link, **tra cứu trạng thái**, webhook HMAC-SHA256. NH cá nhân: MB, OCB, KienlongBank, ACB, BIDV |
+| **SePay** | TK cá nhân | Free 50 GD/tháng | Đọc biến động số dư → webhook. Người dùng chuyển khoản kèm mã đơn. Không có trang thanh toán/thẻ |
+| **Google Play Billing** | CCCD + TK ngân hàng | 25 USD/lần + **15% hoa hồng** | **Bắt buộc** nếu app lên Play. Google thu tiền hộ |
+
+### 🔴 Google Play CẤM cổng thanh toán ngoài cho nội dung số
+
+Bán gói Premium (nội dung số) qua MoMo/VNPay/PayOS trên Google Play là **vi phạm chính sách → app bị gỡ**. PayOS/SePay chỉ hợp lệ nếu phát hành **ngoài Play** (APK, web).
+
+### Nếu chọn PayOS sau này
+
+Code **gần như không đổi** — chỉ thay `services/momo.py` → `services/payos.py`. Toàn bộ gói cước, kích hoạt, cộng dồn ngày, huỷ/gia hạn, thông báo **giữ nguyên**. Ước tính ~1 giờ.
+
+Cần: đăng ký `payos.vn` → liên kết TK ngân hàng (**tên chủ TK phải trùng khớp**) → lấy **Client ID**, **API Key**, **Checksum Key** → điền `.env`.
+
+### ⚠️ Tiền thật = nghĩa vụ thật
+
+Nghị định 68/2026 buộc khai báo với cơ quan thuế **mọi tài khoản dùng để kinh doanh**, kể cả ví điện tử. Cộng thêm trách nhiệm hoàn tiền/tranh chấp. **Với đồ án, sandbox là câu trả lời đúng.**
+
+---
+
 ## 🆕 ĐỢT 3 — Scheduler, Push, Quản lý gói (13/07/2026, rạng sáng)
 
 > ✅ **ĐÃ COMMIT VÀ PUSH** lên nhánh `hiepga` — commit `41d5e09` + `900ebe2`.
@@ -422,15 +505,16 @@ git push
 
 Trước đây plan ghi *"nhắc nghỉ giải lao, tổng kết hằng ngày"* nhưng **không có gì cả** vì thiếu hạ tầng chạy job. Giờ đã có, dùng **APScheduler** cắm vào `lifespan` của FastAPI.
 
-| Job | Giờ chạy (giờ VN) | Gửi cho ai |
-|---|---|---|
-| **Nhắc nghỉ giải lao** | 10h, 15h | Người **hôm nay chưa tập buổi nào**. Ai đã tập rồi thì bỏ qua — nhắc họ "đứng dậy vận động đi" là vô duyên. |
-| **Tổng kết hằng ngày** | 20h | Người **có tập**. Không tập thì im lặng (đã nhắc nghỉ rồi, cằn nhằn thêm làm gì). |
-| **Nhắc gia hạn** | 9h | Gói còn ≤ 3 ngày **và** đang bật tự động gia hạn. |
+| Job                              | Giờ chạy (giờ VN) | Gửi cho ai                                                                                                                                |
+| -------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Nhắc nghỉ giải lao**  | 10h, 15h             | Người**hôm nay chưa tập buổi nào**. Ai đã tập rồi thì bỏ qua — nhắc họ "đứng dậy vận động đi" là vô duyên. |
+| **Tổng kết hằng ngày** | 20h                  | Người**có tập**. Không tập thì im lặng (đã nhắc nghỉ rồi, cằn nhằn thêm làm gì).                                   |
+| **Nhắc gia hạn**         | 9h                   | Gói còn ≤ 3 ngày**và** đang bật tự động gia hạn.                                                                          |
 
 **File:** `app/services/reminders.py` (job, hàm thuần — test gọi thẳng được), `app/core/scheduler.py` (lịch chạy), `app/main.py` (lifespan).
 
 **Chạy tay để test, không phải chờ tới 20h:**
+
 ```powershell
 python run_jobs_now.py break     # nhac nghi giai lao
 python run_jobs_now.py summary   # tong ket hang ngay
@@ -491,14 +575,15 @@ Chạy `create_tables.py` để tạo bảng `device_tokens` → **nó có `DROP
 
 ### 📋 Đã commit thành 2 (không phải 3)
 
-| Commit | Nội dung | File |
-|---|---|---|
-| `41d5e09` | **FCM push — backend** | 13 |
-| `900ebe2` | **Scheduler + BE-14 quản lý gói** | 18 |
+| Commit      | Nội dung                                  | File |
+| ----------- | ------------------------------------------ | ---- |
+| `41d5e09` | **FCM push — backend**              | 13   |
+| `900ebe2` | **Scheduler + BE-14 quản lý gói** | 18   |
 
 **Vì sao không tách 3 như dự định:** ba mảng này **phụ thuộc chéo nhau** — `services/reminders.py` (scheduler) cần `get_expiring_subscriptions()` từ `crud/subscription.py` (nhóm BE-14), còn `tests/conftest.py` cần model `device_token` (nhóm FCM). Tách rời ra thì **commit ở giữa không import được**. Gộp thành 2 commit thật sự độc lập.
 
 **Đã kiểm chứng từ trạng thái ĐÃ COMMIT** (giải nén `git archive` ra thư mục tạm rồi chạy từ đó, không tin file trên đĩa):
+
 - `import app.main` → OK. *Nếu quên một file thì backend crash ngay khi import — đây là cách duy nhất bắt được lỗi đó.*
 - `pytest` → **69 passed**
 - `.env` và khoá Firebase **chưa từng lọt vào lịch sử git** (kiểm tra toàn bộ lịch sử, không chỉ commit mới nhất)
@@ -526,18 +611,18 @@ Chạy `create_tables.py` để tạo bảng `device_tokens` → **nó có `DROP
 
 ## 📊 Tình trạng thật so với plan (12/07/2026)
 
-| Mục                        | Plan ghi         | Thực tế                                                                                                                                            |
-| --------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| BE-02 CI/CD                 | Hoàn thành     | ❌**Không có `.github/workflows`**                                                                                                         |
-| BE-03 Microservice          | Hoàn thành     | ❌ Thực tế là**monolith**                                                                                                                   |
-| BE-07 API hồ sơ           | Chưa bắt đầu | ✅**Đã xong**                                                                                                                                |
-| BE-09 WebSocket             | Đang làm       | ✅**Đã xong**, đã test với người thật                                                                                                  |
-| BE-11 Pose estimation       | Xong             | ✅ Đúng (nhưng nằm trong monolith)                                                                                                               |
-| BE-12 Phân loại tư thế  | Chưa bắt đầu | ⚠️ Có gắn nhãn lỗi squat, nhưng**rule-based** chứ không phải model ML                                                                |
-| **BE-13 Thông báo** | Chưa bắt đầu | ⚠️ **~90%** — thông báo trong app + **3 job định kỳ** + **backend push xong**. **Thiếu:** phần Flutter của FCM (chờ `google-services.json`) |
-| **BE-14 Thanh toán** | Chưa bắt đầu | ⚠️ **~95%** — VNPay, hết hạn, quyền Premium, huỷ/bật lại gia hạn, cộng dồn ngày, lịch sử thanh toán. **Thiếu:** IPN (cần URL công khai) |
-| BE-15 Test ≥80%            | Chưa bắt đầu | ⚠️ Backend có **69 test** (13 → 69). Chưa đo coverage, chắc chắn **chưa tới 80%**                                               |
-| BE-10, 16, 17, 18-20        | Chưa bắt đầu | ❌ Đúng                                                                                                                                            |
+| Mục                        | Plan ghi         | Thực tế                                                                                                                                                                        |
+| --------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BE-02 CI/CD                 | Hoàn thành     | ❌**Không có `.github/workflows`**                                                                                                                                     |
+| BE-03 Microservice          | Hoàn thành     | ❌ Thực tế là**monolith**                                                                                                                                               |
+| BE-07 API hồ sơ           | Chưa bắt đầu | ✅**Đã xong**                                                                                                                                                            |
+| BE-09 WebSocket             | Đang làm       | ✅**Đã xong**, đã test với người thật                                                                                                                              |
+| BE-11 Pose estimation       | Xong             | ✅ Đúng (nhưng nằm trong monolith)                                                                                                                                           |
+| BE-12 Phân loại tư thế  | Chưa bắt đầu | ⚠️ Có gắn nhãn lỗi squat, nhưng**rule-based** chứ không phải model ML                                                                                            |
+| **BE-13 Thông báo** | Chưa bắt đầu | ⚠️**~90%** — thông báo trong app + **3 job định kỳ** + **backend push xong**. **Thiếu:** phần Flutter của FCM (chờ `google-services.json`) |
+| **BE-14 Thanh toán** | Chưa bắt đầu | ⚠️ **~95%** — **MoMo sandbox** (chạy thật), hết hạn, quyền Premium, huỷ/bật lại gia hạn, cộng dồn ngày, lịch sử thanh toán. **Thiếu:** thu tiền THẬT (xem mục *THU TIỀN THẬT*) |
+| BE-15 Test ≥80%            | Chưa bắt đầu | ⚠️ Backend có **77 test** (13 → 77). Chưa đo coverage, chắc chắn **chưa tới 80%**                                                                          |
+| BE-10, 16, 17, 18-20        | Chưa bắt đầu | ❌ Đúng                                                                                                                                                                        |
 
 ⚠️ **Lưu ý cho báo cáo:** plan ghi công cụ thanh toán là *"Stripe / IAP"*. Google Play **bắt buộc** dùng Google Play Billing cho nội dung số — bán Premium qua VNPay là **vi phạm chính sách nếu lên store**. Đồ án thì không sao, nhưng **đừng ghi là "đã tích hợp IAP"**.
 
@@ -565,11 +650,11 @@ Backend: **69 test pass**. BE-13 ~90%, BE-14 ~95%.
 
 `github.com/gwiz-bit/PostureX` đang **Public**, đã có **1 fork**. Đang công khai cho cả internet:
 
-| Lộ cái gì | Ở đâu |
-|---|---|
-| **Mật khẩu MySQL thật** của teammate | `.env.example` — file hiện tại đã thay bằng placeholder, **nhưng giá trị cũ vẫn nằm trong LỊCH SỬ git**, đổi file không xoá được |
-| **Backdoor admin** `admin@gmail.com` / `123456` | `login_screen.dart` |
-| **`SECRET_KEY` mặc định** | `config.py` → ai cũng ký được JWT giả mạo **bất kỳ user nào, kể cả admin** |
+| Lộ cái gì                                              | Ở đâu                                                                                                                                                      |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mật khẩu MySQL thật** của teammate            | `.env.example` — file hiện tại đã thay bằng placeholder, **nhưng giá trị cũ vẫn nằm trong LỊCH SỬ git**, đổi file không xoá được |
+| **Backdoor admin** `admin@gmail.com` / `123456` | `login_screen.dart`                                                                                                                                         |
+| **`SECRET_KEY` mặc định**                      | `config.py` → ai cũng ký được JWT giả mạo **bất kỳ user nào, kể cả admin**                                                               |
 
 **Làm:** GitHub → Settings → General → Danger Zone → **Change repository visibility** → Private.
 **Rồi báo nhóm đổi mật khẩu MySQL** — chuyển private không xoá được thứ đã lộ.
@@ -580,21 +665,19 @@ Backend: **69 test pass**. BE-13 ~90%, BE-14 ~95%.
 
 ### Việc tiếp theo (chọn 1)
 
-| Việc | Cần gì | Ghi chú |
-|---|---|---|
-| **Phần Flutter của FCM** | Bạn tạo project Firebase → `google-services.json` + khoá service account | Backend **đã xong hết**. BE-13 sẽ lên 100%. Emulator Pixel_4 có Google Play → test push thật được. |
-| **IPN của VNPay** | URL công khai (ngrok / deploy) | BE-14 lên 100%. Không có IPN thì khách trả tiền xong tắt app ngay → **tiền bị trừ, gói không bật**. |
-| **Sửa `create_tables.py`** | Không cần gì | Xem cảnh báo bên dưới. Nhanh, và cứu cả nhóm khỏi mất dữ liệu. |
-| **Tạo Pull Request** | Không cần gì | Nếu muốn chốt phần đã làm, để nhóm review. |
+| Việc                               | Cần gì                                                                      | Ghi chú                                                                                                                |
+| ----------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Phần Flutter của FCM**    | Bạn tạo project Firebase →`google-services.json` + khoá service account | Backend**đã xong hết**. BE-13 sẽ lên 100%. Emulator Pixel_4 có Google Play → test push thật được.      |
+| **IPN của VNPay**            | URL công khai (ngrok / deploy)                                               | BE-14 lên 100%. Không có IPN thì khách trả tiền xong tắt app ngay →**tiền bị trừ, gói không bật**. |
+| **Sửa `create_tables.py`** | Không cần gì                                                               | Xem cảnh báo bên dưới. Nhanh, và cứu cả nhóm khỏi mất dữ liệu.                                             |
+| **Tạo Pull Request**         | Không cần gì                                                               | Nếu muốn chốt phần đã làm, để nhóm review.                                                                    |
 
 ---
 
 ### 💣 Ba thứ PHẢI nhớ (đã trả giá để biết)
 
 1. **`create_tables.py` XOÁ SẠCH bảng `workouts` + `videos` mỗi lần chạy.** Nó có `DROP TABLE` ở đầu. Tài liệu chỉ ghi nhẹ "chỉ chạy lần đầu". **Tôi đã dính và mất dữ liệu test của bạn.** Người khác cũng sẽ dính.
-
 2. **uvicorn chạy sẵn từ phiên trước KHÔNG tự nạp code mới.** Sửa code xong mà API vẫn trả kết quả cũ → **tắt hẳn rồi chạy lại**, đừng ngồi debug code. Đã mất thời gian vì đúng chuyện này.
-
 3. **Test xanh ≠ chạy đúng.** 69 test SQLite đều pass nhưng vẫn có bug chỉ MySQL mới lộ ra (xem mục "Bug chỉ MySQL mới lộ ra"). SQLite không có CHECK constraint và ràng buộc thật của MySQL. **Việc gì quan trọng thì phải chạy thử trên MySQL.**
 
 ---
@@ -611,21 +694,52 @@ Backend: **69 test pass**. BE-13 ~90%, BE-14 ~95%.
 cd D:\clonecode\PostureX\lib\backend
 venv\Scripts\activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 9000
-pytest                     # phai thay 69 passed
+pytest                     # phai thay 77 passed
 python run_jobs_now.py all # chay tay 3 job dinh ky, khong phai cho toi gio
 ```
 
-Tài khoản test: `test@posturex.com` / `Test123` (UserId = 3).
+### 👤 Tài khoản (13/07, sau khi DB được nạp lại)
 
-> ⚠️ **Bẫy đã dính một lần:** uvicorn chạy sẵn từ phiên trước **không tự nạp code mới**. Sửa code xong mà API vẫn trả kết quả cũ thì **tắt hẳn rồi chạy lại**, đừng ngồi debug code (đã mất thời gian vì đúng chuyện này).
+Database **đã bị nạp lại** ở đâu đó giữa hai phiên làm việc. Bảng `Users` giờ là:
 
-> ⚠️ **Dữ liệu test trong MySQL đã bị nghịch nhiều lần.** UserId 3 (`test@posturex.com`) hiện có: gói Premium hết hạn 15/07 (đã tắt tự gia hạn), vài buổi tập giả, một token FCM giả (`fake-fcm-token-tu-may-that`) trong bảng `device_tokens`. **Không phải dữ liệu thật, cứ xoá thoải mái:**
+| UserId | Email | Ghi chú |
+|---|---|---|
+| 1 | `admin@posturex.com` | bcrypt — đăng nhập được |
+| 3 | **`hiepdvfb@gmail.com`** | **TÀI KHOẢN THẬT** của Hiệp |
+
+`test@posturex.com` **không còn tồn tại**. Muốn tạo lại:
+```powershell
+python create_admin.py test@posturex.com Test123 "Tester"
+# roi trong MySQL: UPDATE Users SET IsEmailVerified = 1 WHERE Email = 'test@posturex.com';
+```
+
+> 💥 **BÀI HỌC ĐẮT — đã trả giá:** tài liệu này từng ghi *"UserId 3 = tài khoản test, cứ xoá thoải mái"*. Sau khi DB được nạp lại, **UserId 3 trở thành tài khoản thật**. Chạy `DELETE ... WHERE UserId=3` theo trí nhớ → **xoá nhầm dữ liệu thật**.
 >
+> **Đừng bao giờ xoá theo UserId ghi trong tài liệu.** Luôn `SELECT` xem ID đó là ai **trước khi** xoá:
 > ```sql
-> DELETE FROM Payments WHERE UserSubscriptionId IN (SELECT UserSubscriptionId FROM UserSubscriptions WHERE UserId=3);
-> DELETE FROM UserSubscriptions WHERE UserId=3;
-> DELETE FROM workouts WHERE user_id=3;
-> DELETE FROM Notifications WHERE UserId=3;
-> DELETE FROM device_tokens WHERE user_id=3;
+> SELECT UserId, Email FROM Users;   -- LUON chay cai nay TRUOC
 > ```
-> (Xoá `Payments` trước rồi mới `UserSubscriptions` — ngược lại sẽ vướng khoá ngoại.)
+
+---
+
+### ⚠️ Bẫy khác đã dính
+
+**uvicorn chạy sẵn từ phiên trước không tự nạp code mới.** Sửa code xong mà API vẫn trả kết quả cũ thì **tắt hẳn rồi chạy lại**, đừng ngồi debug code.
+
+**Bảng `device_tokens` biến mất sau khi DB bị nạp lại** — nó do SQLAlchemy quản lý, không nằm trong schema SQL của nhóm. Tạo lại **KHÔNG được chạy `create_tables.py`** (nó có `DROP TABLE workouts`!). Chạy đoạn này:
+
+```python
+# trong lib/backend, voi venv da kich hoat
+import asyncio
+from app.core.database import Base, engine
+from app.models import device_token, role, user, video, workout, notification, subscription
+
+async def main():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all,
+                            tables=[Base.metadata.tables["device_tokens"]],
+                            checkfirst=True)
+    await engine.dispose()
+
+asyncio.run(main())
+```

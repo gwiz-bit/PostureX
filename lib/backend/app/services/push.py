@@ -5,7 +5,7 @@ Gọi thẳng REST API bằng `google-auth` + `httpx` — **không** kéo thêm
 Sign-In), còn firebase-admin sẽ thêm một cây phụ thuộc nặng chỉ để làm đúng việc
 này.
 
-**Chưa cấu hình thì im lặng bỏ qua** (giống `vnpay_configured`): thiếu file khoá
+**Chưa cấu hình thì im lặng bỏ qua** (giống `momo_configured`): thiếu file khoá
 Firebase, hàm chỉ ghi log rồi thoát. Nhờ vậy backend chạy được trên máy chưa ai
 lập project Firebase, và thông báo trong app vẫn hoạt động bình thường — push
 chỉ là lớp phủ thêm.

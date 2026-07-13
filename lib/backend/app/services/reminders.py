@@ -134,7 +134,7 @@ async def send_expiry_reminders(db: AsyncSession) -> int:
     """Nhắc những ai có gói sắp hết hạn trong [EXPIRY_WARNING_DAYS] ngày.
 
     Đây là công dụng **duy nhất** của cờ `AutoRenew` trong hệ thống hiện tại:
-    VNPay không trừ tiền định kỳ được, nên "tự động gia hạn" thực chất là "nhắc
+    Cổng thanh toán không trừ tiền định kỳ được, nên "tự động gia hạn" thực chất là "nhắc
     tôi gia hạn". Ai đã tự tắt gia hạn thì không nhắc — họ biết rồi.
 
     Trả về số thông báo đã gửi.

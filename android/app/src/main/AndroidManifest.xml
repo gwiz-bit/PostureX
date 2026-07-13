@@ -45,5 +45,17 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+
+        <!-- Android 11+ giau cac app khac khoi app cua ta tru khi khai bao o day.
+             Thieu khoi nay thi url_launcher KHONG tim ra MoMo du may DA CAI, va
+             nut "Thanh toan bang Vi MoMo" se bao "chua cai ung dung". -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="momo"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

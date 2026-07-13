@@ -91,8 +91,8 @@ async def create_pending_order(
 ) -> tuple[UserSubscription, Payment]:
     """Tạo đơn chờ thanh toán: UserSubscription(Pending) + Payment(Pending).
 
-    `Payment.id` chính là `vnp_TxnRef` gửi sang VNPay — nên phải flush để lấy id
-    trước khi dựng URL thanh toán.
+    `Payment.id` là gốc của `orderId` gửi sang MoMo — nên phải flush để lấy id
+    trước khi gọi cổng thanh toán.
     """
     subscription = UserSubscription(
         user_id=user_id,
@@ -103,7 +103,8 @@ async def create_pending_order(
         # này (xem CK_UserSub_Status), nên dùng 'Cancelled' làm trạng thái chờ.
         status=SUBSCRIPTION_UNPAID,
         # Mua gói thì mặc định muốn dùng tiếp — người dùng tự tắt nếu không muốn.
-        # Cờ này KHÔNG tự thu tiền (VNPay không hỗ trợ), nó chỉ quyết định có nhắc
+        # Cờ này KHÔNG tự thu tiền (MoMo/VNPay đều không hỗ trợ trong tích hợp này),
+        # nó chỉ quyết định có nhắc
         # gia hạn khi sắp hết hạn hay không.
         auto_renew=True,
     )
@@ -114,7 +115,7 @@ async def create_pending_order(
         user_subscription_id=subscription.id,
         amount=plan.price_monthly,
         currency=plan.currency,
-        payment_method="VNPAY",
+        payment_method="MOMO",
         status=PAYMENT_PENDING,
     )
     db.add(payment)
@@ -208,8 +209,8 @@ async def set_auto_renew(
     `EndDate`, nên gói vẫn Active tới ngày đó rồi mới tự hết hạn. Cắt ngay là ăn
     chặn số ngày họ đã mua.
 
-    Cảnh báo cho người đọc sau: cờ này **không tự thu tiền được** — VNPay trong
-    tích hợp hiện tại không hỗ trợ trừ tiền định kỳ. Nó chỉ dùng để quyết định có
+    Cảnh báo cho người đọc sau: cờ này **không tự thu tiền được** — tích hợp hiện
+    tại (MoMo one-time) không hỗ trợ trừ tiền định kỳ. Nó chỉ dùng để quyết định có
     gửi thông báo nhắc gia hạn hay không (xem `services/reminders.py`).
     """
     subscription.auto_renew = auto_renew
