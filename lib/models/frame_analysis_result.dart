@@ -31,6 +31,23 @@ class KeyAngles {
       );
 }
 
+/// Normalized (0-1, relative to the source frame) position of one joint —
+/// used to draw the skeleton overlay, as opposed to [KeyAngles]' already
+/// computed angle values.
+class Point {
+  const Point({required this.x, required this.y, required this.visibility});
+
+  final double x;
+  final double y;
+  final double visibility;
+
+  factory Point.fromJson(Map<String, dynamic> json) => Point(
+        x: (json['x'] as num).toDouble(),
+        y: (json['y'] as num).toDouble(),
+        visibility: (json['visibility'] as num).toDouble(),
+      );
+}
+
 /// One per-frame result from the analyze socket. [phase] is one of
 /// "going_down" | "bottom" | "going_up" | "top" per the backend's rep
 /// counter state machine.
@@ -41,6 +58,7 @@ class FrameAnalysisResult {
     required this.correct,
     required this.keyAngles,
     required this.phase,
+    required this.keypoints,
   });
 
   final int repCount;
@@ -49,6 +67,11 @@ class FrameAnalysisResult {
   final KeyAngles keyAngles;
   final String phase;
 
+  /// Keyed by joint name (e.g. "left_knee") — `null`/absent entries mean
+  /// that joint wasn't confidently detected this frame. `null` as a whole
+  /// means no person was detected at all.
+  final Map<String, Point>? keypoints;
+
   factory FrameAnalysisResult.fromJson(Map<String, dynamic> json) =>
       FrameAnalysisResult(
         repCount: json['rep_count'] as int,
@@ -56,5 +79,8 @@ class FrameAnalysisResult {
         correct: json['correct'] as bool,
         keyAngles: KeyAngles.fromJson(json['key_angles'] as Map<String, dynamic>),
         phase: json['phase'] as String,
+        keypoints: (json['keypoints'] as Map<String, dynamic>?)?.map(
+          (key, value) => MapEntry(key, Point.fromJson(value as Map<String, dynamic>)),
+        ),
       );
 }

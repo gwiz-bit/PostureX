@@ -10,6 +10,7 @@ import '../widgets/auth_text_field.dart';
 import '../widgets/google_sign_in_button.dart';
 import '../widgets/info_tip_card.dart';
 import '../widgets/or_divider.dart';
+import '../admin/screens/home_screen.dart' as admin;
 import 'main_shell.dart';
 import 'otp_verification_screen.dart';
 
@@ -98,6 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: profile.email,
         fullName: profile.fullName,
         accessToken: auth.accessToken,
+        isAdmin: profile.isAdmin,
       );
       try {
         await TokenStorage.saveSession(
@@ -111,7 +113,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       UserSession.hasCompletedOnboarding = true;
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainShell()),
+        MaterialPageRoute(
+          builder: (_) => profile.isAdmin ? const admin.HomeScreen() : const MainShell(),
+        ),
       );
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);

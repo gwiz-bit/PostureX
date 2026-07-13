@@ -11,6 +11,7 @@ import '../widgets/auth_text_field.dart';
 import '../widgets/google_sign_in_button.dart';
 import '../widgets/or_divider.dart';
 import '../admin/screens/home_screen.dart' as admin;
+import 'forgot_password_screen.dart';
 import 'main_shell.dart';
 import 'otp_verification_screen.dart';
 import 'register_screen.dart';
@@ -60,17 +61,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Local-only shortcut into the (mock-data) admin app — kept ahead of
-    // the real API call since the admin app is out of scope for backend
-    // integration.
-    if (_emailController.text.trim() == 'admin@gmail.com' &&
-        _passwordController.text == '123456') {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const admin.HomeScreen()),
-      );
-      return;
-    }
-
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
@@ -90,6 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: profile.email,
         fullName: profile.fullName,
         accessToken: auth.accessToken,
+        isAdmin: profile.isAdmin,
       );
       try {
         await TokenStorage.saveSession(
@@ -104,7 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
       UserSession.hasCompletedOnboarding = true;
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainShell()),
+        MaterialPageRoute(
+          builder: (_) => profile.isAdmin ? const admin.HomeScreen() : const MainShell(),
+        ),
       );
     } on ApiException catch (e) {
       setState(() {
@@ -151,6 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: profile.email,
         fullName: profile.fullName,
         accessToken: auth.accessToken,
+        isAdmin: profile.isAdmin,
       );
       try {
         await TokenStorage.saveSession(
@@ -164,7 +158,9 @@ class _LoginScreenState extends State<LoginScreen> {
       UserSession.hasCompletedOnboarding = true;
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainShell()),
+        MaterialPageRoute(
+          builder: (_) => profile.isAdmin ? const admin.HomeScreen() : const MainShell(),
+        ),
       );
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
@@ -242,7 +238,9 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                  ),
                   style: TextButton.styleFrom(foregroundColor: AppColors.primary),
                   child: const Text(
                     'Forgot password?',

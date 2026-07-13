@@ -33,6 +33,11 @@ class UserSession {
   static int? userId;
   static String? email;
 
+  /// From the backend's `UserOut.is_admin` — the single source of truth
+  /// for whether this session should land on the admin dashboard
+  /// (`admin.HomeScreen`) instead of the regular `MainShell`.
+  static bool isAdmin = false;
+
   static WorkoutPlan plan = WorkoutPlan.generate(
     workoutDays: const {},
     weeklyGoal: _defaultWeeklyGoal,
@@ -69,10 +74,12 @@ class UserSession {
     required String email,
     required String? fullName,
     required String accessToken,
+    required bool isAdmin,
   }) {
     UserSession.userId = userId;
     UserSession.email = email;
     UserSession.accessToken = accessToken;
+    UserSession.isAdmin = isAdmin;
     if (fullName != null && fullName.trim().isNotEmpty) {
       UserSession.name = fullName;
     }
@@ -98,5 +105,6 @@ class UserSession {
     accessToken = null;
     userId = null;
     email = null;
+    isAdmin = false;
   }
 }

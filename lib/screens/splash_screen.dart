@@ -5,6 +5,7 @@ import '../services/api_client.dart';
 import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
+import '../admin/screens/home_screen.dart' as admin;
 import 'login_screen.dart';
 import 'main_shell.dart';
 
@@ -64,6 +65,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         email: profile.email,
         fullName: profile.fullName,
         accessToken: stored.accessToken,
+        isAdmin: profile.isAdmin,
       );
       UserSession.hasCompletedOnboarding = true;
       return true;
@@ -78,7 +80,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final restored = await _sessionRestored;
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => restored ? const MainShell() : const LoginScreen()),
+      MaterialPageRoute(
+        builder: (_) {
+          if (!restored) return const LoginScreen();
+          return UserSession.isAdmin ? const admin.HomeScreen() : const MainShell();
+        },
+      ),
     );
   }
 

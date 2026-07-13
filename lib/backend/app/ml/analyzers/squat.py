@@ -4,7 +4,7 @@ from app.ml.angle_utils import calculate_angle
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
-from app.schemas.analysis import FrameAnalysisResult, KeyAngles
+from app.schemas.analysis import FrameAnalysisResult, KeyAngles, Point
 
 # Ngưỡng góc (độ)
 KNEE_DEPTH_THRESHOLD = 95.0      # Gối phải gập ≤ ngưỡng này mới đủ sâu
@@ -94,6 +94,16 @@ class SquatAnalyzer(ExerciseAnalyzer):
                 back_angle=back_angle,
             ),
             phase=phase,
+            keypoints=_visible_points({
+                "left_shoulder": left_shoulder,
+                "right_shoulder": right_shoulder,
+                "left_hip": left_hip,
+                "right_hip": right_hip,
+                "left_knee": left_knee,
+                "right_knee": right_knee,
+                "left_ankle": left_ankle,
+                "right_ankle": right_ankle,
+            }),
         )
 
 
@@ -109,3 +119,13 @@ def _avg(a: float | None, b: float | None) -> float | None:
     if a is not None and b is not None:
         return (a + b) / 2
     return a if a is not None else b
+
+
+def _visible_points(joints: dict[str, Keypoint]) -> dict[str, Point]:
+    """Chuyển các Keypoint đủ tin cậy thành Point để trả về client vẽ
+    skeleton — bỏ qua khớp che khuất/không rõ thay vì gửi tọa độ rác."""
+    return {
+        name: Point(x=kp.x, y=kp.y, visibility=kp.visibility)
+        for name, kp in joints.items()
+        if kp.visibility >= VISIBILITY_THRESHOLD
+    }

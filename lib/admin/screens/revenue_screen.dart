@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../admin_theme.dart';
 import '../../theme/app_theme.dart';
-import '../models/notification.dart';
+import '../../models/plan.dart';
+import '../models/admin_models.dart';
+import '../../services/api_client.dart';
+import '../../services/api_exception.dart';
 import '../widgets/common_widgets.dart';
-import '../widgets/dialogs.dart';
 
 class RevenueScreen extends StatefulWidget {
   const RevenueScreen({super.key});
@@ -12,194 +14,144 @@ class RevenueScreen extends StatefulWidget {
 }
 
 class _RevenueScreenState extends State<RevenueScreen> {
-  int _chip = 2;
-  final _chips = const ['Day', 'Week', 'Month', 'Year'];
-  final _barHeights = const [38.0, 46.0, 42.0, 58.0, 66.0, 80.0];
-  final _barLabels = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  RevenueStats? _stats;
+  Map<int, String> _planNames = {};
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  final _tx = const [
-    Transaction(
-        initials: 'NM',
-        avatarBg: kBlueBg,
-        avatarFg: kBlue,
-        name: 'Nguyen Minh',
-        plan: 'Annual Premium',
-        amount: '+799,000₫',
-        status: 'Success'),
-    Transaction(
-        initials: 'TL',
-        avatarBg: kPurpleBg,
-        avatarFg: kPurple,
-        name: 'Tran Lan',
-        plan: 'Monthly Premium',
-        amount: '+99,000₫',
-        status: 'Success'),
-    Transaction(
-        initials: 'PH',
-        avatarBg: kCoralBg,
-        avatarFg: kCoral,
-        name: 'Pham Huy',
-        plan: 'Monthly Premium',
-        amount: '−99,000₫',
-        status: 'Refund'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final results = await Future.wait([
+        ApiClient.instance.fetchAdminRevenue(),
+        ApiClient.instance.fetchAdminPlans(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _stats = results[0] as RevenueStats;
+        _planNames = {for (final p in results[1] as List<Plan>) p.id: p.name};
+      });
+    } on ApiException catch (e) {
+      setState(() => _errorMessage = e.message);
+    } catch (_) {
+      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatVnd(int vnd) {
+    final s = vnd.toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buffer.write(',');
+      buffer.write(s[i]);
+    }
+    return '${buffer.toString()}₫';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: adminAppBar('Revenue Management', 'July, 2026', actions: [
-        IconButton(
-            tooltip: 'Export report',
-            onPressed: () => showToast(context, 'Excel report exported'),
-            icon: const Icon(Icons.download_outlined)),
-      ]),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildChips(),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(
-                child: MetricCard(
-                    label: 'Total revenue',
-                    value: '48.5M ₫',
-                    sub: '+12% vs last month')),
-            const SizedBox(width: 12),
-            Expanded(
-                child: MetricCard(
-                    label: 'MRR',
-                    value: '32.1M ₫',
-                    sub: '+8% vs last month')),
-          ]),
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(
-                child: MetricCard(
-                    label: 'Paid users',
-                    value: '412',
-                    sub: '+37 new users')),
-            const SizedBox(width: 12),
-            Expanded(
-                child: MetricCard(
-                    label: 'Transactions',
-                    value: '186',
-                    sub: '3 refunds',
-                    subColor: kRed)),
-          ]),
-          const SizedBox(height: 16),
-          _buildChart(),
-          const SizedBox(height: 16),
-          const SectionLabel('Recent transactions'),
-          ListCard(rows: _tx.map(_txRow).toList()),
-        ],
+      appBar: adminAppBar('Revenue Management', 'Mock payments · live totals'),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : _errorMessage != null
+                ? ListView(padding: const EdgeInsets.all(16), children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Column(children: [
+                        Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: kMuted)),
+                        const SizedBox(height: 12),
+                        FilledButton(onPressed: _load, child: const Text('Retry')),
+                      ]),
+                    ),
+                  ])
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Row(children: [
+                        Expanded(
+                            child: MetricCard(
+                                label: 'Total revenue',
+                                value: _formatVnd(_stats!.totalRevenueVnd))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: MetricCard(
+                                label: 'Transactions', value: '${_stats!.totalTransactions}')),
+                      ]),
+                      const SizedBox(height: 16),
+                      const SectionLabel('Revenue by plan'),
+                      if (_stats!.revenueByPlan.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: Text('No revenue yet', style: TextStyle(color: kMuted))),
+                        )
+                      else
+                        ListCard(
+                          rows: _stats!.revenueByPlan.entries.map((e) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              child: Row(children: [
+                                Expanded(
+                                    child: Text(e.key,
+                                        style: const TextStyle(
+                                            fontSize: 13, fontWeight: FontWeight.w600, color: kInk))),
+                                Text(_formatVnd(e.value),
+                                    style: const TextStyle(
+                                        fontSize: 13, fontWeight: FontWeight.w600, color: kInk)),
+                              ]),
+                            );
+                          }).toList(),
+                        ),
+                      const SizedBox(height: 16),
+                      const SectionLabel('Recent transactions'),
+                      if (_stats!.recentTransactions.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: Text('No transactions yet', style: TextStyle(color: kMuted))),
+                        )
+                      else
+                        ListCard(rows: _stats!.recentTransactions.map(_txRow).toList()),
+                    ],
+                  ),
       ),
     );
   }
 
-  Widget _buildChips() {
-    return Row(
-      children: List.generate(_chips.length, (i) {
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(right: i < 3 ? 8 : 0),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => setState(() => _chip = i),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                    color: _chip == i ? AppColors.primary : AppColors.surface,
-                    borderRadius: BorderRadius.circular(10)),
-                child: Center(
-                    child: Text(_chips[i],
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _chip == i ? Colors.white : kMuted))),
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildChart() {
-    return WhiteCard(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Revenue last 6 months',
-            style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600, color: kInk)),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 110,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(6, (i) {
-              final isLast = i == 5;
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: i < 5 ? 10 : 0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        height: _barHeights[i],
-                        decoration: BoxDecoration(
-                            color: isLast
-                                ? AppColors.primary
-                                : AppColors.surfaceElevated,
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(6))),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(_barLabels[i],
-                          style: TextStyle(
-                              fontSize: 10,
-                              fontWeight:
-                                  isLast ? FontWeight.w600 : FontWeight.w400,
-                              color: isLast ? AppColors.primary : kMuted)),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Widget _txRow(Transaction t) {
-    final refund = t.status == 'Refund';
+  Widget _txRow(AdminTransaction t) {
+    final failed = t.status != 'success';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 11),
       child: Row(children: [
         CircleAvatar(
             radius: 17,
-            backgroundColor: t.avatarBg,
-            child: Text(t.initials,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: t.avatarFg))),
+            backgroundColor: kBlueBg,
+            child: Text('#${t.userId}',
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: kBlue))),
         const SizedBox(width: 10),
         Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(t.name,
-              style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600, color: kInk)),
-          Text(t.plan, style: const TextStyle(fontSize: 11, color: kMuted)),
+          Text(_planNames[t.planId] ?? 'Plan #${t.planId}',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kInk)),
+          Text(t.paymentMethod, style: const TextStyle(fontSize: 11, color: kMuted)),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(t.amount,
+          Text('+${_formatVnd(t.amountVnd)}',
               style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: refund ? kRed : kInk)),
-          Text(t.status,
-              style: TextStyle(fontSize: 11, color: refund ? kRed : kGreen)),
+                  fontSize: 13, fontWeight: FontWeight.w600, color: failed ? kRed : kInk)),
+          Text(t.status, style: TextStyle(fontSize: 11, color: failed ? kRed : kGreen)),
         ]),
       ]),
     );

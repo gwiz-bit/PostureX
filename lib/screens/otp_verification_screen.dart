@@ -7,6 +7,7 @@ import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/auth_text_field.dart';
+import '../admin/screens/home_screen.dart' as admin;
 import 'main_shell.dart';
 import 'onboarding/onboarding_flow.dart';
 
@@ -75,6 +76,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         email: profile.email,
         fullName: profile.fullName,
         accessToken: auth.accessToken,
+        isAdmin: profile.isAdmin,
       );
       try {
         await TokenStorage.saveSession(
@@ -90,9 +92,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => widget.name != null
-              ? OnboardingFlow(name: widget.name!)
-              : const MainShell(),
+          builder: (_) {
+            if (widget.name != null) return OnboardingFlow(name: widget.name!);
+            return profile.isAdmin ? const admin.HomeScreen() : const MainShell();
+          },
         ),
       );
     } on ApiException catch (e) {

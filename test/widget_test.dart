@@ -80,6 +80,26 @@ final _mockClient = MockClient((request) async {
   if (path == '/api/v1/workouts' && request.method == 'GET') {
     return http.Response(jsonEncode(<dynamic>[]), 200);
   }
+  if (path == '/api/v1/exercises' && request.method == 'GET') {
+    return http.Response(
+      jsonEncode([
+        {
+          'id': 1,
+          'name': 'Back Squat',
+          'description': null,
+          'category': 'Strength',
+          'difficulty': 'Beginner',
+          'exercise_type': 'Standard',
+          'demo_video_url': null,
+          'thumbnail_url': null,
+          'met': null,
+          'is_active': true,
+          'created_at': '2024-01-01T00:00:00',
+        },
+      ]),
+      200,
+    );
+  }
   return http.Response(jsonEncode({'detail': 'Not found'}), 404);
 });
 

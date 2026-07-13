@@ -6,8 +6,8 @@
 class ApiConfig {
   ApiConfig._();
 
-  static const String baseUrl = 'http://localhost:9000';
-  static const String wsUrl = 'ws://localhost:9000';
+  static const String baseUrl = 'http://10.0.2.2:9000';
+  static const String wsUrl = 'ws://10.0.2.2:9000';
 
   /// The "Web application" OAuth 2.0 client ID from Google Cloud Console
   /// (Credentials page) — NOT the Android client ID. Passed as

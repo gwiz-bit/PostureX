@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../admin_theme.dart';
-import '../models/plan.dart';
+import '../../services/api_client.dart';
+import '../../services/api_exception.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialogs.dart';
 
@@ -12,26 +13,40 @@ class AddPlanScreen extends StatefulWidget {
 
 class _AddPlanScreenState extends State<AddPlanScreen> {
   final _name = TextEditingController();
+  final _tagline = TextEditingController();
   final _price = TextEditingController();
   final _benefits = TextEditingController();
   String _duration = 'Month';
   bool _showError = false;
+  bool _isSaving = false;
 
-  void _save() {
-    if (_name.text.trim().isEmpty || _price.text.trim().isEmpty) {
+  Future<void> _save() async {
+    final price = int.tryParse(_price.text.trim());
+    if (_name.text.trim().isEmpty || price == null) {
       setState(() => _showError = true);
       return;
     }
-    Navigator.pop(
-      context,
-      Plan(
+    setState(() {
+      _showError = false;
+      _isSaving = true;
+    });
+    try {
+      final plan = await ApiClient.instance.createAdminPlan(
         name: _name.text.trim(),
-        detail: '${_price.text.trim()}₫ / ${_duration.toLowerCase()}',
-        icon: Icons.star_border,
-        iconBg: kBlueBg,
-        iconFg: kBlue,
-      ),
-    );
+        tagline: _tagline.text.trim().isEmpty ? null : _tagline.text.trim(),
+        priceVnd: price,
+        durationMonths: _duration == 'Year' ? 12 : 1,
+        features: _benefits.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.pop(context, plan);
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, 'Could not reach the server. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -47,10 +62,15 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
               decoration: adminInput('Plan name (required)')),
           const SizedBox(height: 10),
           TextField(
+              controller: _tagline,
+              style: const TextStyle(color: kInk),
+              decoration: adminInput('Tagline, e.g. "For serious fitness enthusiasts"')),
+          const SizedBox(height: 10),
+          TextField(
               controller: _price,
               keyboardType: TextInputType.number,
               style: const TextStyle(color: kInk),
-              decoration: adminInput('Price (VND, required)')),
+              decoration: adminInput('Price (VND, required — 0 for free)')),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             initialValue: _duration,
@@ -64,17 +84,20 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
           const SizedBox(height: 10),
           TextField(
               controller: _benefits,
-              maxLines: 3,
+              maxLines: 5,
               style: const TextStyle(color: kInk),
-              decoration: adminInput('Benefits: exercises, AI features...')),
+              decoration: adminInput('Benefits — one feature per line')),
           if (_showError)
             const Padding(
               padding: EdgeInsets.only(top: 10),
-              child: Text('Plan name or price is missing',
+              child: Text('Plan name or price is missing/invalid',
                   style: TextStyle(color: kRed, fontSize: 12)),
             ),
           const SizedBox(height: 18),
-          PrimaryButton(label: 'Save, apply to new purchases', onPressed: _save),
+          PrimaryButton(
+            label: _isSaving ? 'Saving...' : 'Save, apply to new purchases',
+            onPressed: _isSaving ? () {} : _save,
+          ),
         ],
       ),
     );

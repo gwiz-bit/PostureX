@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/user_session.dart';
 import '../services/api_client.dart';
-import '../services/api_exception.dart';
 import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
+import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 import 'subscription_screen.dart';
 
@@ -45,6 +45,10 @@ class ProfileScreenState extends State<ProfileScreen> {
       if (profile.fullName != null && profile.fullName!.trim().isNotEmpty) {
         UserSession.name = profile.fullName!;
       }
+      final profileData = await ApiClient.instance.fetchProfile();
+      if (profileData.age != null) UserSession.age = profileData.age!;
+      if (profileData.heightCm != null) UserSession.heightCm = profileData.heightCm!.round();
+      if (profileData.weightKg != null) UserSession.weightKg = profileData.weightKg!.round();
       final workouts = await ApiClient.instance.fetchWorkouts();
       if (!mounted) return;
       setState(() {
@@ -56,6 +60,13 @@ class ProfileScreenState extends State<ProfileScreen> {
       // already holds locally rather than blocking the screen.
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _editProfile(BuildContext context) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+    );
+    if (saved == true && mounted) setState(() {});
   }
 
   @override
@@ -292,75 +303,6 @@ class ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _editProfile(BuildContext context) async {
-    final nameController = TextEditingController(text: UserSession.name);
-    final passwordController = TextEditingController();
-    String? errorText;
-
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surfaceElevated,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text(
-            'Edit profile',
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(labelText: 'Full name'),
-              ),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'New password (optional)',
-                ),
-              ),
-              if (errorText != null) ...[
-                const SizedBox(height: 8),
-                Text(errorText!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                try {
-                  final profile = await ApiClient.instance.updateMe(
-                    fullName: nameController.text.trim(),
-                    password: passwordController.text.isEmpty ? null : passwordController.text,
-                  );
-                  UserSession.name = profile.fullName ?? UserSession.name;
-                  if (dialogContext.mounted) Navigator.of(dialogContext).pop(true);
-                } on ApiException catch (e) {
-                  setDialogState(() => errorText = e.message);
-                } catch (_) {
-                  setDialogState(() => errorText = 'Could not reach the server.');
-                }
-              },
-              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (saved == true && mounted) setState(() {});
   }
 
   Future<void> _confirmLogOut(BuildContext context) async {

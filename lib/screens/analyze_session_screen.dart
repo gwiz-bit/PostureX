@@ -3,17 +3,31 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 
+import '../models/frame_analysis_result.dart';
 import '../services/analyze_socket_service.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../utils/exercise_videos.dart';
+import '../utils/squat_error_tips.dart';
+import '../widgets/guide_video_player.dart';
+import '../widgets/skeleton_painter.dart';
+import 'workout_summary_screen.dart';
 
 enum _SessionStatus { initializing, permissionDenied, connecting, running, error }
 
 const _noPersonMessage = 'Không phát hiện được người trong frame.';
 const _frameInterval = Duration(milliseconds: 110); // ~9 fps cap
+
+/// How many consecutive frames the same mistake category must appear in
+/// before it gets read aloud via TTS. At the ~9fps frame cap this is under
+/// half a second — short, but matches "lặp lại 3 lần liên tiếp" literally;
+/// tune here if that turns out to fire too eagerly in practice.
+const _ttsRepeatThreshold = 3;
 
 /// Full-screen camera capture that streams frames to the backend's
 /// `/api/v1/ws/analyze` WebSocket and renders live rep-count/phase/error
@@ -44,19 +58,32 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   String _phase = 'going_down';
   bool _correct = true;
   List<String> _errors = const [];
+  Map<String, Point>? _keypoints;
   final List<bool> _correctnessSamples = [];
 
   bool _awaitingResponse = false;
   DateTime? _lastFrameSentAt;
   DateTime? _sessionStart;
   bool _isEnding = false;
+  bool _isPaused = false;
   String? _transientError;
   Timer? _transientErrorTimer;
+
+  final _tts = FlutterTts();
+
+  /// Tallied by mistake category (see [categorizeSquatError]), not raw
+  /// message, so the live angle value some messages embed doesn't
+  /// fragment one recurring mistake into many near-duplicate entries —
+  /// carried into [WorkoutSummaryScreen] when the session ends.
+  final Map<String, int> _errorCounts = {};
+  String? _lastErrorCategory;
+  int _consecutiveErrorCount = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _tts.setLanguage('vi-VN');
     _init();
   }
 
@@ -148,11 +175,20 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       if (!frame.errors.contains(_noPersonMessage)) {
         _correctnessSamples.add(frame.correct);
       }
+      if (frame.repCount > _repCount && frame.correct) {
+        // Only beep for a rep that closed out clean — matches the spec's
+        // "không tính rep nếu có lỗi nghiêm trọng" intent as closely as
+        // possible without changing the backend's counting semantics
+        // (every rep still counts toward the total either way).
+        SystemSound.play(SystemSoundType.click);
+      }
+      _processErrorsForTts(frame.errors);
       setState(() {
         _repCount = frame.repCount;
         _phase = frame.phase;
         _correct = frame.correct;
         _errors = frame.errors;
+        _keypoints = frame.keypoints;
       });
       return;
     }
@@ -160,6 +196,30 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     if (event.error != null) {
       _awaitingResponse = false;
       _showTransientError(event.error!);
+    }
+  }
+
+  /// Tallies mistakes by category (for [WorkoutSummaryScreen]) and speaks
+  /// the top one aloud once it's shown up in [_ttsRepeatThreshold]
+  /// consecutive frames — "once" per streak, not every frame past the
+  /// threshold, so it doesn't nag continuously while a mistake persists.
+  void _processErrorsForTts(List<String> errors) {
+    final categories = errors.map(categorizeSquatError).whereType<String>().toSet();
+    for (final category in categories) {
+      _errorCounts[category] = (_errorCounts[category] ?? 0) + 1;
+    }
+
+    final primaryCategory = categories.isEmpty ? null : categories.first;
+    if (primaryCategory != null && primaryCategory == _lastErrorCategory) {
+      _consecutiveErrorCount++;
+    } else {
+      _consecutiveErrorCount = primaryCategory == null ? 0 : 1;
+    }
+    _lastErrorCategory = primaryCategory;
+
+    if (primaryCategory != null && _consecutiveErrorCount == _ttsRepeatThreshold) {
+      final tip = tipForCategory(primaryCategory);
+      if (tip != null) _tts.speak(tip.label);
     }
   }
 
@@ -172,13 +232,15 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   }
 
   void _onCameraFrame(CameraImage image) {
-    if (_status != _SessionStatus.running || _awaitingResponse) return;
+    if (_status != _SessionStatus.running || _awaitingResponse || _isPaused) return;
     final now = DateTime.now();
     if (_lastFrameSentAt != null && now.difference(_lastFrameSentAt!) < _frameInterval) return;
     _lastFrameSentAt = now;
     _awaitingResponse = true;
     _encodeAndSend(image);
   }
+
+  void _togglePause() => setState(() => _isPaused = !_isPaused);
 
   Future<void> _encodeAndSend(CameraImage image) async {
     try {
@@ -220,38 +282,15 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     }
 
     if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Session complete',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WorkoutSummaryScreen(
+          exercise: widget.exercise,
+          repCount: _repCount,
+          durationSeconds: durationSeconds,
+          accuracyScore: accuracyScore,
+          errorCounts: _errorCounts,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SummaryRow(label: 'Reps', value: '$_repCount'),
-            _SummaryRow(
-              label: 'Duration',
-              value: '${durationSeconds.round()}s',
-            ),
-            _SummaryRow(
-              label: 'Accuracy',
-              value: accuracyScore == null ? '—' : '${accuracyScore.round()}%',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-            child: const Text('Done'),
-          ),
-        ],
       ),
     );
     if (!mounted) return;
@@ -265,6 +304,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     _socketSub?.cancel();
     _socket.close();
     _controller?.dispose();
+    _tts.stop();
     super.dispose();
   }
 
@@ -322,13 +362,54 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 
   Widget _buildAnalyzeView() {
     final controller = _controller!;
+    // 40/60 vertical split: guide video on top, camera + live analysis
+    // below — flex 2:3 gives the exact 40%/60% ratio.
+    return Column(
+      children: [
+        Expanded(
+          flex: 2,
+          child: GuideVideoPlayer(assetPath: guideVideoAssetFor(widget.exercise)),
+        ),
+        Expanded(
+          flex: 3,
+          child: _buildCameraPanel(controller),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCameraPanel(CameraController controller) {
     return Stack(
       fit: StackFit.expand,
       children: [
         Center(
           child: AspectRatio(
             aspectRatio: controller.value.aspectRatio,
-            child: CameraPreview(controller),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CameraPreview(controller),
+                // Coordinates come from the same rotated JPEG sent to the
+                // backend (see _encodeCameraImage), so they should line up
+                // with what CameraPreview shows — verify on-device, since
+                // sensor-orientation quirks vary by hardware/emulator.
+                CustomPaint(painter: SkeletonPainter(keypoints: _keypoints, correct: _correct)),
+                if (_isPaused)
+                  Container(
+                    color: Colors.black54,
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'PAUSED',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
         Positioned(
@@ -357,7 +438,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                     ),
                   ),
                   const Spacer(),
-                  const SizedBox(width: 48),
+                  IconButton(
+                    onPressed: _togglePause,
+                    icon: Icon(
+                      _isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -465,30 +552,6 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 }
 
 String _capitalize(String value) => value.isEmpty ? value : value[0].toUpperCase() + value.substring(1);
-
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(color: AppColors.textSecondary)),
-          Text(
-            value,
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _MessageScreen extends StatelessWidget {
   const _MessageScreen({

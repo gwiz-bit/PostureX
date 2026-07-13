@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # OTP
     OTP_EXPIRE_MINUTES: int = 10
 
+    # Dat lai mat khau
+    RESET_TOKEN_EXPIRE_MINUTES: int = 30
+
     # Google Sign-In — "Web application" OAuth client ID from Google Cloud
     # Console (NOT the Android client ID). This is the expected `aud` claim
     # when verifying ID tokens from the Flutter app's google_sign_in flow.

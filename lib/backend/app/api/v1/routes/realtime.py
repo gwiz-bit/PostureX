@@ -115,6 +115,7 @@ async def analyze_realtime(websocket: WebSocket) -> None:
                     "correct": False,
                     "key_angles": KeyAngles().model_dump(),
                     "phase": session.rep_counter.phase.value,
+                    "keypoints": None,
                 })
                 continue
 

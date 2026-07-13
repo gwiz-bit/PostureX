@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import '../admin/models/admin_models.dart';
 import '../models/auth_response.dart';
+import '../models/plan.dart';
 import '../models/profile_data.dart';
 import '../models/user_profile.dart';
 import '../models/video.dart';
@@ -47,6 +49,15 @@ class ApiClient {
       final body = jsonDecode(response.body);
       if (body is Map && body['detail'] is String) {
         message = body['detail'] as String;
+      } else if (body is Map && body['detail'] is List) {
+        // FastAPI/Pydantic validation errors (422) shape `detail` as a list
+        // of {"loc", "msg", "type"} objects rather than a plain string —
+        // surface the first one (e.g. a password-strength rule) instead of
+        // falling through to the generic message.
+        final errors = body['detail'] as List;
+        if (errors.isNotEmpty && errors.first is Map && errors.first['msg'] is String) {
+          message = errors.first['msg'] as String;
+        }
       }
     } catch (_) {
       // Non-JSON error body (e.g. a raw 500) — keep the generic message.
@@ -83,6 +94,11 @@ class ApiClient {
       headers: _headers(auth: auth),
       body: body == null ? null : jsonEncode(body),
     );
+    return _decode(response);
+  }
+
+  Future<dynamic> _delete(String path, {bool auth = false}) async {
+    final response = await _http.delete(_uri(path), headers: _headers(auth: auth, json: false));
     return _decode(response);
   }
 
@@ -135,6 +151,30 @@ class ApiClient {
     return AuthResponse.fromJson(json as Map<String, dynamic>);
   }
 
+  /// Requests a password-reset code be emailed to [email]. Always succeeds
+  /// (backend intentionally never reveals whether the email is registered)
+  /// — returns the generic confirmation message to show the user.
+  Future<String> forgotPassword({required String email}) async {
+    final json = await _post('/api/v1/auth/forgot-password', body: {'email': email});
+    return (json as Map<String, dynamic>)['message'] as String;
+  }
+
+  /// Completes a password reset using the code emailed via [forgotPassword].
+  /// Throws [ApiException] with a specific message on an invalid/expired
+  /// token, a weak password, or a confirm-password mismatch.
+  Future<String> resetPassword({
+    required String token,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final json = await _post('/api/v1/auth/reset-password', body: {
+      'token': token,
+      'new_password': newPassword,
+      'confirm_password': confirmPassword,
+    });
+    return (json as Map<String, dynamic>)['message'] as String;
+  }
+
   // --- User -------------------------------------------------------------
 
   Future<UserProfile> fetchMe() async {
@@ -151,8 +191,9 @@ class ApiClient {
   }
 
   /// Saves the subset of onboarding answers the backend has columns for
-  /// (Gender/HeightCm/WeightKg/FitnessLevel + a WorkoutsPerWeek goal).
+  /// (Age/Gender/HeightCm/WeightKg/FitnessLevel + a WorkoutsPerWeek goal).
   Future<ProfileData> updateProfile({
+    int? age,
     String? gender,
     double? heightCm,
     double? weightKg,
@@ -160,6 +201,7 @@ class ApiClient {
     int? weeklyGoal,
   }) async {
     final json = await _put('/api/v1/users/me/profile', auth: true, body: {
+      if (age != null) 'age': age,
       if (gender != null) 'gender': gender,
       if (heightCm != null) 'height_cm': heightCm,
       if (weightKg != null) 'weight_kg': weightKg,
@@ -227,5 +269,219 @@ class ApiClient {
   Future<Video> fetchVideo(int id) async {
     final json = await _get('/api/v1/videos/$id', auth: true);
     return Video.fromJson(json as Map<String, dynamic>);
+  }
+
+  // --- Subscriptions ------------------------------------------------------
+
+  Future<List<Plan>> fetchPlans() async {
+    final json = await _get('/api/v1/plans');
+    return (json as List).map((e) => Plan.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// The caller's current plan, derived server-side from their latest
+  /// successful transaction — `null` if they've never subscribed (Free).
+  Future<Plan?> fetchMyPlan() async {
+    final json = await _get('/api/v1/plans/me', auth: true);
+    return json == null ? null : Plan.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Subscribes to [planId] — mock payment, always succeeds immediately.
+  Future<void> subscribe({required int planId, String? promoCode}) async {
+    await _post('/api/v1/subscriptions/subscribe', auth: true, body: {
+      'plan_id': planId,
+      if (promoCode != null && promoCode.isNotEmpty) 'promo_code': promoCode,
+    });
+  }
+
+  // --- Admin: stats & users ------------------------------------------------
+
+  Future<SystemStats> fetchAdminStats() async {
+    final json = await _get('/api/v1/admin/stats', auth: true);
+    return SystemStats.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<List<AdminUser>> fetchAdminUsers() async {
+    final json = await _get('/api/v1/admin/users', auth: true);
+    return (json as List).map((e) => AdminUser.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<AdminUser> updateAdminUser(
+    int userId, {
+    String? fullName,
+    bool? isActive,
+    bool? isAdmin,
+  }) async {
+    final json = await _patch('/api/v1/admin/users/$userId', auth: true, body: {
+      if (fullName != null) 'full_name': fullName,
+      if (isActive != null) 'is_active': isActive,
+      if (isAdmin != null) 'is_admin': isAdmin,
+    });
+    return AdminUser.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAdminUser(int userId) async {
+    await _delete('/api/v1/admin/users/$userId', auth: true);
+  }
+
+  // --- Admin: workouts & videos ---------------------------------------------
+
+  Future<List<AdminWorkout>> fetchAdminWorkouts() async {
+    final json = await _get('/api/v1/admin/workouts', auth: true);
+    return (json as List).map((e) => AdminWorkout.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> deleteAdminWorkout(int workoutId) async {
+    await _delete('/api/v1/admin/workouts/$workoutId', auth: true);
+  }
+
+  Future<List<AdminVideo>> fetchAdminVideos() async {
+    final json = await _get('/api/v1/admin/videos', auth: true);
+    return (json as List).map((e) => AdminVideo.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> deleteAdminVideo(int videoId) async {
+    await _delete('/api/v1/admin/videos/$videoId', auth: true);
+  }
+
+  // --- Admin: AI config -------------------------------------------------
+
+  Future<AIConfig> fetchAIConfig() async {
+    final json = await _get('/api/v1/admin/config', auth: true);
+    return AIConfig.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AIConfig> updateAIConfig(AIConfig config) async {
+    final json = await _patch('/api/v1/admin/config', auth: true, body: config.toJson());
+    return AIConfig.fromJson(json as Map<String, dynamic>);
+  }
+
+  // --- Admin: plans & promo codes ------------------------------------------
+
+  Future<List<Plan>> fetchAdminPlans() async {
+    final json = await _get('/api/v1/admin/plans', auth: true);
+    return (json as List).map((e) => Plan.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<Plan> createAdminPlan({
+    required String name,
+    String? tagline,
+    required int priceVnd,
+    required int durationMonths,
+    String features = '',
+  }) async {
+    final json = await _post('/api/v1/admin/plans', auth: true, body: {
+      'name': name,
+      'tagline': tagline,
+      'price_vnd': priceVnd,
+      'duration_months': durationMonths,
+      'features': features,
+    });
+    return Plan.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<Plan> updateAdminPlan(int planId, {bool? isActive}) async {
+    final json = await _patch('/api/v1/admin/plans/$planId', auth: true, body: {
+      if (isActive != null) 'is_active': isActive,
+    });
+    return Plan.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAdminPlan(int planId) async {
+    await _delete('/api/v1/admin/plans/$planId', auth: true);
+  }
+
+  Future<List<AdminPromoCode>> fetchAdminPromoCodes() async {
+    final json = await _get('/api/v1/admin/promo-codes', auth: true);
+    return (json as List).map((e) => AdminPromoCode.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<AdminPromoCode> createAdminPromoCode({
+    required String code,
+    required int discountPercent,
+    DateTime? expiresAt,
+  }) async {
+    final json = await _post('/api/v1/admin/promo-codes', auth: true, body: {
+      'code': code,
+      'discount_percent': discountPercent,
+      if (expiresAt != null) 'expires_at': expiresAt.toUtc().toIso8601String(),
+    });
+    return AdminPromoCode.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AdminPromoCode> updateAdminPromoCode(int promoId, {bool? isActive}) async {
+    final json = await _patch('/api/v1/admin/promo-codes/$promoId', auth: true, body: {
+      if (isActive != null) 'is_active': isActive,
+    });
+    return AdminPromoCode.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAdminPromoCode(int promoId) async {
+    await _delete('/api/v1/admin/promo-codes/$promoId', auth: true);
+  }
+
+  // --- Admin: revenue & notifications ------------------------------------
+
+  Future<RevenueStats> fetchAdminRevenue() async {
+    final json = await _get('/api/v1/admin/revenue', auth: true);
+    return RevenueStats.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<List<AdminNotification>> fetchAdminNotifications() async {
+    final json = await _get('/api/v1/admin/notifications', auth: true);
+    return (json as List).map((e) => AdminNotification.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<AdminNotification> createAdminNotification({
+    required String title,
+    required String content,
+    required String audience,
+  }) async {
+    final json = await _post('/api/v1/admin/notifications', auth: true, body: {
+      'title': title,
+      'content': content,
+      'audience': audience,
+    });
+    return AdminNotification.fromJson(json as Map<String, dynamic>);
+  }
+
+  // --- Exercises ------------------------------------------------------
+
+  /// The published exercise library — used by the app's own Exercises tab.
+  Future<List<AdminExercise>> fetchExercises() async {
+    final json = await _get('/api/v1/exercises');
+    return (json as List).map((e) => AdminExercise.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<AdminExercise>> fetchAdminExercises() async {
+    final json = await _get('/api/v1/admin/exercises', auth: true);
+    return (json as List).map((e) => AdminExercise.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<AdminExercise> createAdminExercise({
+    required String name,
+    String? description,
+    String? category,
+    String? difficulty,
+    String exerciseType = 'Standard',
+  }) async {
+    final json = await _post('/api/v1/admin/exercises', auth: true, body: {
+      'name': name,
+      'description': description,
+      'category': category,
+      'difficulty': difficulty,
+      'exercise_type': exerciseType,
+    });
+    return AdminExercise.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AdminExercise> updateAdminExercise(int exerciseId, {bool? isActive}) async {
+    final json = await _patch('/api/v1/admin/exercises/$exerciseId', auth: true, body: {
+      if (isActive != null) 'is_active': isActive,
+    });
+    return AdminExercise.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAdminExercise(int exerciseId) async {
+    await _delete('/api/v1/admin/exercises/$exerciseId', auth: true);
   }
 }

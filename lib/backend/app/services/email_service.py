@@ -29,3 +29,33 @@ async def send_otp_email(to_email: str, otp_code: str) -> None:
         "Nếu bạn không yêu cầu đăng ký tài khoản Posture X, vui lòng bỏ qua email này."
     )
     await asyncio.to_thread(_send_sync, to_email, subject, body)
+
+
+async def send_reset_password_email(to_email: str, reset_token: str) -> None:
+    """Gửi token đặt lại mật khẩu tới email người dùng.
+
+    Ứng dụng là app di động thuần (chưa có web/deep-link), nên thay vì
+    một link bấm được, email chứa thẳng token dạng text để người dùng
+    copy vào màn "Reset password" trong app — vẫn cùng token bảo mật
+    (secrets.token_urlsafe) như thiết kế gốc, chỉ khác cách truyền tay.
+    """
+    subject = "Posture X - Đặt lại mật khẩu"
+    body = (
+        f"Mã đặt lại mật khẩu của bạn là:\n\n{reset_token}\n\n"
+        "Mở app Posture X, vào màn 'Reset password', dán mã này để đặt mật khẩu mới.\n"
+        f"Mã có hiệu lực trong {settings.RESET_TOKEN_EXPIRE_MINUTES} phút.\n"
+        "Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này — "
+        "mật khẩu hiện tại của bạn vẫn an toàn."
+    )
+    await asyncio.to_thread(_send_sync, to_email, subject, body)
+
+
+async def send_password_changed_email(to_email: str) -> None:
+    """Thông báo mật khẩu vừa được đổi thành công — giúp người dùng phát
+    hiện sớm nếu có ai đó khác thực hiện thay đổi này mà không phải họ."""
+    subject = "Posture X - Mật khẩu đã được thay đổi"
+    body = (
+        "Mật khẩu tài khoản Posture X của bạn vừa được đặt lại thành công.\n\n"
+        "Nếu đây không phải là bạn, vui lòng liên hệ hỗ trợ ngay lập tức."
+    )
+    await asyncio.to_thread(_send_sync, to_email, subject, body)

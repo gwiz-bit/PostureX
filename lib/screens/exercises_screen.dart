@@ -1,26 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../admin/models/admin_models.dart';
+import '../services/api_client.dart';
+import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_logo.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
-
-class _Exercise {
-  const _Exercise({
-    required this.name,
-    required this.icon,
-    required this.category,
-    required this.level,
-    this.useLogo = false,
-  });
-
-  final String name;
-  final IconData icon;
-  final String category;
-  final String level;
-  final bool useLogo;
-}
 
 class ExercisesScreen extends StatefulWidget {
   const ExercisesScreen({super.key});
@@ -30,145 +16,175 @@ class ExercisesScreen extends StatefulWidget {
 }
 
 class _ExercisesScreenState extends State<ExercisesScreen> {
-  static const _filters = ['All', 'Push', 'Pull', 'Legs', 'Core'];
+  static const _filters = ['All', 'Strength', 'Cardio', 'Core', 'Mobility'];
   String _selectedFilter = 'All';
+  String _query = '';
 
-  static const _exercises = [
-    _Exercise(
-      name: 'Back Squat',
-      icon: Icons.accessibility_new_rounded,
-      category: 'Legs',
-      level: 'Intermediate',
-    ),
-    _Exercise(
-      name: 'Conventional Deadlift',
-      icon: Icons.swap_vert_rounded,
-      category: 'Pull',
-      level: 'Advanced',
-    ),
-    _Exercise(
-      name: 'Barbell Bench Press',
-      icon: Icons.fitness_center_rounded,
-      category: 'Push',
-      level: 'Intermediate',
-      useLogo: true,
-    ),
-    _Exercise(
-      name: 'Standing Overhead Press',
-      icon: Icons.arrow_upward_rounded,
-      category: 'Push',
-      level: 'Intermediate',
-    ),
-    _Exercise(
-      name: 'Bent-Over Barbell Row',
-      icon: Icons.arrow_back_rounded,
-      category: 'Pull',
-      level: 'Intermediate',
-    ),
-    _Exercise(
-      name: 'Forearm Plank',
-      icon: Icons.horizontal_rule_rounded,
-      category: 'Core',
-      level: 'Beginner',
-    ),
-  ];
+  List<AdminExercise> _exercises = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final exercises = await ApiClient.instance.fetchExercises();
+      if (!mounted) return;
+      setState(() => _exercises = exercises);
+    } on ApiException catch (e) {
+      setState(() => _errorMessage = e.message);
+    } catch (_) {
+      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  IconData _iconFor(String? category) {
+    switch (category) {
+      case 'Cardio':
+        return Icons.directions_run_rounded;
+      case 'Core':
+        return Icons.horizontal_rule_rounded;
+      case 'Mobility':
+        return Icons.self_improvement_rounded;
+      default:
+        return Icons.fitness_center_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final filtered = _exercises.where((e) {
-      if (_selectedFilter == 'All') return true;
-      return e.category == _selectedFilter;
+      if (_selectedFilter != 'All' && e.category != _selectedFilter) return false;
+      if (_query.trim().isNotEmpty && !e.name.toLowerCase().contains(_query.trim().toLowerCase())) {
+        return false;
+      }
+      return true;
     }).toList();
 
     return SafeArea(
       bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-        children: [
-          const Text(
-            'Exercises',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 18),
-          TextField(
-            style: const TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Search exercises',
-              hintStyle: TextStyle(color: AppColors.textSecondary),
-              prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary),
-              filled: true,
-              fillColor: AppColors.surface,
-              contentPadding: const EdgeInsets.symmetric(vertical: 14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          children: [
+            const Text(
+              'Exercises',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _filters.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
-              itemBuilder: (context, index) {
-                final filter = _filters[index];
-                final selected = filter == _selectedFilter;
-                return _FilterChip(
-                  label: filter,
-                  selected: selected,
-                  onTap: () => setState(() => _selectedFilter = filter),
-                );
-              },
+            const SizedBox(height: 18),
+            TextField(
+              style: const TextStyle(color: AppColors.textPrimary),
+              onChanged: (v) => setState(() => _query = v),
+              decoration: InputDecoration(
+                hintText: 'Search exercises',
+                hintStyle: TextStyle(color: AppColors.textSecondary),
+                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary),
+                filled: true,
+                fillColor: AppColors.surface,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          for (final exercise in filtered) ...[
-            SectionCard(
-              padding: const EdgeInsets.all(16),
-              onTap: () {},
-              child: Row(
-                children: [
-                  IconBadge(
-                    icon: exercise.icon,
-                    customIcon: exercise.useLogo ? const AppLogo() : null,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          exercise.name,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _filters.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final filter = _filters[index];
+                  final selected = filter == _selectedFilter;
+                  return _FilterChip(
+                    label: filter,
+                    selected: selected,
+                    onTap: () => setState(() => _selectedFilter = filter),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              )
+            else if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(children: [
+                  Text(_errorMessage!,
+                      textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                ]),
+              )
+            else if (filtered.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                    child: Text('No exercises found', style: TextStyle(color: AppColors.textSecondary))),
+              )
+            else
+              for (final exercise in filtered) ...[
+                SectionCard(
+                  padding: const EdgeInsets.all(16),
+                  onTap: () {},
+                  child: Row(
+                    children: [
+                      IconBadge(icon: _iconFor(exercise.category)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TagChip(label: exercise.category, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            TagChip(label: exercise.level),
+                            Text(
+                              exercise.name,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                if (exercise.category != null) ...[
+                                  TagChip(label: exercise.category!, color: AppColors.primary),
+                                  const SizedBox(width: 8),
+                                ],
+                                if (exercise.difficulty != null) TagChip(label: exercise.difficulty!),
+                              ],
+                            ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+                    ],
                   ),
-                  const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
+                ),
+                const SizedBox(height: 12),
+              ],
           ],
-        ],
+        ),
       ),
     );
   }

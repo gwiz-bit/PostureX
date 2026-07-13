@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class ProfileUpdate(BaseModel):
+    age: int | None = Field(default=None, ge=1, le=120)
     gender: str | None = Field(default=None, pattern="^(Male|Female|Other)$")
     height_cm: float | None = None
     weight_kg: float | None = None
@@ -14,6 +15,7 @@ class ProfileUpdate(BaseModel):
 
 
 class ProfileOut(BaseModel):
+    age: int | None
     gender: str | None
     height_cm: float | None
     weight_kg: float | None
