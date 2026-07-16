@@ -19,6 +19,11 @@ ENV/
 # Environment secrets
 .env
 
+# Data dump: chứa dữ liệu user thật (email, mật khẩu đã hash) — chỉ chia
+# sẻ thủ công qua kênh riêng tư, không bao giờ push lên git (repo có thể
+# đổi sang public bất cứ lúc nào).
+sql/data_dump.sql
+
 # IDE
 .vscode/
 .idea/

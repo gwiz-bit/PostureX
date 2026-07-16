@@ -18,11 +18,12 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
+  final _homeKey = GlobalKey<HomeScreenState>();
   final _progressKey = GlobalKey<ProgressScreenState>();
   final _profileKey = GlobalKey<ProfileScreenState>();
 
   late final _screens = [
-    const HomeScreen(),
+    HomeScreen(key: _homeKey),
     const ExercisesScreen(),
     const WorkoutScreen(),
     ProgressScreen(key: _progressKey),
@@ -43,6 +44,7 @@ class _MainShellState extends State<MainShell> {
   /// never show up when coming back to it.
   void _onTabTap(int i) {
     setState(() => _index = i);
+    if (i == 0) _homeKey.currentState?.reload();
     if (i == 3) _progressKey.currentState?.reload();
     if (i == 4) _profileKey.currentState?.reload();
   }

@@ -86,10 +86,17 @@ class _GuideVideoPlayerState extends State<GuideVideoPlayer> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Center(
-            child: AspectRatio(
-              aspectRatio: _controller.value.aspectRatio,
-              child: VideoPlayer(_controller),
+          // Cover-fill instead of letterboxed AspectRatio, so the video
+          // visually fills its whole 40% panel share rather than leaving
+          // black bars around a smaller centered rectangle.
+          ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: 100,
+                height: 100 / _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              ),
             ),
           ),
           Positioned(

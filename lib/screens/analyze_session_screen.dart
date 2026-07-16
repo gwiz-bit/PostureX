@@ -18,7 +18,13 @@ import '../widgets/guide_video_player.dart';
 import '../widgets/skeleton_painter.dart';
 import 'workout_summary_screen.dart';
 
-enum _SessionStatus { initializing, permissionDenied, connecting, running, error }
+enum _SessionStatus {
+  initializing,
+  permissionDenied,
+  connecting,
+  running,
+  error,
+}
 
 const _noPersonMessage = 'Không phát hiện được người trong frame.';
 const _frameInterval = Duration(milliseconds: 110); // ~9 fps cap
@@ -35,7 +41,11 @@ const _ttsRepeatThreshold = 3;
 /// point in [WorkoutScreen] launches this with exercise: 'squat', labelled
 /// honestly on screen rather than pretending other exercises are analyzed.
 class AnalyzeSessionScreen extends StatefulWidget {
-  const AnalyzeSessionScreen({super.key, required this.exercise, this.routineName});
+  const AnalyzeSessionScreen({
+    super.key,
+    required this.exercise,
+    this.routineName,
+  });
 
   final String exercise;
   final String? routineName;
@@ -102,7 +112,11 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       );
       _rotationDegrees = camera.sensorOrientation;
 
-      final controller = CameraController(camera, ResolutionPreset.medium, enableAudio: false);
+      final controller = CameraController(
+        camera,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
       await controller.initialize();
       if (!mounted) {
         await controller.dispose();
@@ -130,7 +144,11 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         (c) => c.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(camera, ResolutionPreset.medium, enableAudio: false);
+      final controller = CameraController(
+        camera,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
       await controller.initialize();
       if (!mounted) {
         await controller.dispose();
@@ -151,7 +169,8 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
 
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
       _controller = null;
       controller.dispose();
     } else if (state == AppLifecycleState.resumed) {
@@ -204,7 +223,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   /// consecutive frames — "once" per streak, not every frame past the
   /// threshold, so it doesn't nag continuously while a mistake persists.
   void _processErrorsForTts(List<String> errors) {
-    final categories = errors.map(categorizeSquatError).whereType<String>().toSet();
+    final categories = errors
+        .map(categorizeSquatError)
+        .whereType<String>()
+        .toSet();
     for (final category in categories) {
       _errorCounts[category] = (_errorCounts[category] ?? 0) + 1;
     }
@@ -217,7 +239,8 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     }
     _lastErrorCategory = primaryCategory;
 
-    if (primaryCategory != null && _consecutiveErrorCount == _ttsRepeatThreshold) {
+    if (primaryCategory != null &&
+        _consecutiveErrorCount == _ttsRepeatThreshold) {
       final tip = tipForCategory(primaryCategory);
       if (tip != null) _tts.speak(tip.label);
     }
@@ -232,9 +255,12 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   }
 
   void _onCameraFrame(CameraImage image) {
-    if (_status != _SessionStatus.running || _awaitingResponse || _isPaused) return;
+    if (_status != _SessionStatus.running || _awaitingResponse || _isPaused)
+      return;
     final now = DateTime.now();
-    if (_lastFrameSentAt != null && now.difference(_lastFrameSentAt!) < _frameInterval) return;
+    if (_lastFrameSentAt != null &&
+        now.difference(_lastFrameSentAt!) < _frameInterval)
+      return;
     _lastFrameSentAt = now;
     _awaitingResponse = true;
     _encodeAndSend(image);
@@ -244,7 +270,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 
   Future<void> _encodeAndSend(CameraImage image) async {
     try {
-      final jpeg = await compute(_encodeCameraImage, _EncodeArgs(image, _rotationDegrees));
+      final jpeg = await compute(
+        _encodeCameraImage,
+        _EncodeArgs(image, _rotationDegrees),
+      );
       _socket.sendFrame(jpeg);
     } catch (_) {
       _awaitingResponse = false;
@@ -264,10 +293,15 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     await _socket.close();
 
     final startedAt = _sessionStart ?? DateTime.now();
-    final durationSeconds = DateTime.now().difference(startedAt).inSeconds.toDouble();
+    final durationSeconds = DateTime.now()
+        .difference(startedAt)
+        .inSeconds
+        .toDouble();
     final accuracyScore = _correctnessSamples.isEmpty
         ? null
-        : _correctnessSamples.where((c) => c).length / _correctnessSamples.length * 100;
+        : _correctnessSamples.where((c) => c).length /
+              _correctnessSamples.length *
+              100;
 
     try {
       await ApiClient.instance.createWorkout(
@@ -315,10 +349,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && _status == _SessionStatus.running) _endSession();
       },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: _buildBody(),
-      ),
+      child: Scaffold(backgroundColor: Colors.black, body: _buildBody()),
     );
   }
 
@@ -368,190 +399,245 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       children: [
         Expanded(
           flex: 2,
-          child: GuideVideoPlayer(assetPath: guideVideoAssetFor(widget.exercise)),
+          child: GuideVideoPlayer(
+            assetPath: guideVideoAssetFor(widget.exercise),
+          ),
         ),
-        Expanded(
-          flex: 3,
-          child: _buildCameraPanel(controller),
-        ),
+        Expanded(flex: 3, child: _buildCameraPanel(controller)),
       ],
     );
   }
 
   Widget _buildCameraPanel(CameraController controller) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Center(
-          child: AspectRatio(
-            aspectRatio: controller.value.aspectRatio,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CameraPreview(controller),
-                // Coordinates come from the same rotated JPEG sent to the
-                // backend (see _encodeCameraImage), so they should line up
-                // with what CameraPreview shows — verify on-device, since
-                // sensor-orientation quirks vary by hardware/emulator.
-                CustomPaint(painter: SkeletonPainter(keypoints: _keypoints, correct: _correct)),
-                if (_isPaused)
-                  Container(
-                    color: Colors.black54,
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'PAUSED',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: _endSession,
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Analyzing: ${_capitalize(widget.exercise)}',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: _togglePause,
-                    icon: Icon(
-                      _isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 90,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              decoration: BoxDecoration(
-                color: (_correct ? AppColors.chartGreen : Colors.redAccent).withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                _phase.replaceAll('_', ' ').toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_transientError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        _transientError!,
-                        style: const TextStyle(color: Colors.orangeAccent, fontSize: 12),
-                      ),
-                    ),
-                  if (_errors.isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (final error in _errors)
-                            Text(
-                              error,
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                        ],
-                      ),
-                    ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // Camera + skeleton overlay are composited together inside a
+            // box sized to the panel's actual width FIRST (so skeleton
+            // alignment against the raw camera frame stays exact, and
+            // painted strokes/joint dots keep their real on-screen size
+            // instead of being blown up by FittedBox scaling from an
+            // arbitrary small base size), then cover-scaled just enough to
+            // fill the panel height with no letterboxing.
+            ClipRect(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  height: constraints.maxWidth / controller.value.aspectRatio,
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$_repCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 48,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const Text('REPS', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                        ],
-                      ),
-                      ElevatedButton(
-                        onPressed: _isEnding ? null : _endSession,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.onPrimary,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                      CameraPreview(controller),
+                      // Coordinates come from the same rotated JPEG sent to
+                      // the backend (see _encodeCameraImage), so they line
+                      // up with CameraPreview as long as both are scaled
+                      // together by the same FittedBox above.
+                      CustomPaint(
+                        painter: SkeletonPainter(
+                          keypoints: _keypoints,
+                          correct: _correct,
                         ),
-                        child: const Text('End Session', style: TextStyle(fontWeight: FontWeight.w700)),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
-      ],
+            if (_isPaused)
+              Container(
+                color: Colors.black54,
+                alignment: Alignment.center,
+                child: const Text(
+                  'PAUSED',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: _endSession,
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Analyzing: ${_capitalize(widget.exercise)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: _togglePause,
+                        icon: Icon(
+                          _isPaused
+                              ? Icons.play_arrow_rounded
+                              : Icons.pause_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 90,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: (_correct ? AppColors.chartGreen : Colors.redAccent)
+                        .withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    _phase.replaceAll('_', ' ').toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_transientError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            _transientError!,
+                            style: const TextStyle(
+                              color: Colors.orangeAccent,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      if (_errors.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (final error in _errors)
+                                Text(
+                                  error,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$_repCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const Text(
+                                'REPS',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          ElevatedButton(
+                            onPressed: _isEnding ? null : _endSession,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.onPrimary,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(28),
+                              ),
+                            ),
+                            child: const Text(
+                              'End Session',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-String _capitalize(String value) => value.isEmpty ? value : value[0].toUpperCase() + value.substring(1);
+String _capitalize(String value) =>
+    value.isEmpty ? value : value[0].toUpperCase() + value.substring(1);
 
 class _MessageScreen extends StatelessWidget {
   const _MessageScreen({

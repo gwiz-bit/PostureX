@@ -30,22 +30,34 @@ class _FakeSecureStorageBackend implements SecureStorageBackend {
   Future<void> deleteAll() async => _values.clear();
 }
 
+/// Tracks the most recently registered `full_name` so `/api/v1/users/me`
+/// echoes back what was actually submitted — like a real backend would —
+/// instead of a fixed stub. Without this, [ProfileScreen] (mounted
+/// alongside [HomeScreen] in `MainShell`'s `IndexedStack`) would overwrite
+/// [UserSession.name] with a stale hardcoded value once its own `fetchMe`
+/// call resolves, racing against whatever name onboarding just set.
+String _lastRegisteredFullName = 'Test User';
+
 /// Canned backend so widget tests never make a real network call to the
 /// dev server address (http://10.0.2.2:9000) — matches the request path
 /// against the same endpoints ApiClient hits in the real app.
 final _mockClient = MockClient((request) async {
   final path = request.url.path;
-  const userJson = {
+  final userJson = {
     'id': 1,
     'email': 'test@example.com',
-    'full_name': 'Test User',
+    'full_name': _lastRegisteredFullName,
     'is_active': true,
     'is_admin': false,
     'created_at': '2024-01-01T00:00:00',
   };
 
   if (path == '/api/v1/auth/register' && request.method == 'POST') {
-    return http.Response(jsonEncode(userJson), 201);
+    final body = jsonDecode(request.body) as Map<String, dynamic>;
+    if (body['full_name'] is String && (body['full_name'] as String).isNotEmpty) {
+      _lastRegisteredFullName = body['full_name'] as String;
+    }
+    return http.Response(jsonEncode({...userJson, 'full_name': _lastRegisteredFullName}), 201);
   }
   if (path == '/api/v1/auth/login' && request.method == 'POST') {
     return http.Response(
