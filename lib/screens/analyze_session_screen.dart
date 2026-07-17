@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../models/frame_analysis_result.dart';
 import '../services/analyze_socket_service.dart';
 import '../services/api_client.dart';
+import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
 import '../utils/exercise_videos.dart';
 import '../utils/squat_error_tips.dart';
@@ -303,6 +304,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
               _correctnessSamples.length *
               100;
 
+    // Buổi tập không lưu được thì phải nói ra. Backend chặn user gói Free sau
+    // 3 buổi/ngày (403) — nuốt lỗi ở đây là để người dùng tin buổi tập đã lưu
+    // trong khi lịch sử của họ trống.
+    String? saveError;
     try {
       await ApiClient.instance.createWorkout(
         exercise: widget.exercise,
@@ -311,8 +316,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         accuracyScore: accuracyScore,
         startedAt: startedAt,
       );
+    } on ApiException catch (e) {
+      saveError = e.message;
     } catch (_) {
-      // Session summary is still shown even if saving to history failed.
+      saveError = 'Không lưu được buổi tập. Kiểm tra kết nối mạng.';
     }
 
     if (!mounted) return;
@@ -327,6 +334,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         ),
       ),
     );
+    if (saveError != null && mounted) {
+      // Giữ thông báo giới hạn gói Free (403 sau 3 buổi/ngày) của nhánh hiepga:
+      // màn tổng kết của main không có chỗ hiện lỗi lưu, nên báo bằng SnackBar.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(saveError)),
+      );
+    }
     if (!mounted) return;
     Navigator.of(context).pop();
   }

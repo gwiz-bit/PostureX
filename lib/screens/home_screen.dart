@@ -7,6 +7,7 @@ import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/app_logo.dart';
+import 'notifications_screen.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/plan_calendar.dart';
 import '../widgets/score_ring.dart';
@@ -324,38 +325,88 @@ class HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
+class _Header extends StatefulWidget {
+  @override
+  State<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<_Header> {
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnread();
+  }
+
+  Future<void> _loadUnread() async {
+    try {
+      final unread = await ApiClient.instance.fetchUnreadCount();
+      if (!mounted) return;
+      setState(() => _unread = unread);
+    } catch (_) {
+      // Badge chỉ là phụ trợ — hỏng mạng thì im lặng bỏ qua, đừng chặn Home.
+    }
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+    );
+    // Lấy lại số chưa đọc dù màn kia báo có đổi hay không: người dùng có thể
+    // đã kéo-làm-mới và nhận thêm thông báo mới trong lúc ở đó.
+    if (mounted) await _loadUnread();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome back',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                UserSession.name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        GestureDetector(
+          onTap: _openNotifications,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 2),
-            Text(
-              UserSession.name,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
+            child: Center(
+              child: Badge(
+                isLabelVisible: _unread > 0,
+                backgroundColor: AppColors.primary,
+                textColor: AppColors.onPrimary,
+                label: Text('$_unread'),
+                child: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
-          ],
-        ),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.person_outline_rounded, color: AppColors.textSecondary),
         ),
       ],
     );

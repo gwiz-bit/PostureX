@@ -89,6 +89,13 @@ async def analyze_realtime(websocket: WebSocket) -> None:
         while True:
             raw = await websocket.receive()
 
+            # `receive()` (khác `receive_text/bytes`) trả về cả message ngắt kết
+            # nối thay vì ném WebSocketDisconnect. Không bắt ở đây thì vòng lặp
+            # sẽ gọi `receive()` lần nữa trên socket đã đóng và RuntimeError —
+            # nuốt mất phần tổng kết phiên bên dưới.
+            if raw["type"] == "websocket.disconnect":
+                raise WebSocketDisconnect(raw.get("code", 1000))
+
             # FastAPI WebSocket có thể nhận bytes hoặc text
             frame_data: bytes | str
             if "bytes" in raw and raw["bytes"] is not None:

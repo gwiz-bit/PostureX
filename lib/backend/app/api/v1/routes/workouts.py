@@ -4,15 +4,35 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.crud.notification import TYPE_WORKOUT, create_notification
+from app.crud.subscription import is_premium
 from app.models.user import User
 from app.models.workout import Workout
 from app.utils.deps import get_current_user
+from app.utils.timezone import vn_day_start_utc
 
 router = APIRouter(prefix="/workouts", tags=["workouts"])
+
+# Gói Free bán kèm lời hứa "giới hạn 3 bài tập/ngày" (xem cột Features của bảng
+# SubscriptionPlans). Đây là chỗ duy nhất thực thi lời hứa đó.
+FREE_DAILY_WORKOUT_LIMIT = 3
+
+
+async def _count_workouts_today(db: AsyncSession, user_id: int) -> int:
+    """Số buổi tập user đã lưu trong ngày hôm nay (theo ngày giờ VN)."""
+    result = await db.execute(
+        select(func.count())
+        .select_from(Workout)
+        .where(
+            Workout.user_id == user_id,
+            Workout.created_at >= vn_day_start_utc(),
+        )
+    )
+    return result.scalar_one()
 
 
 class WorkoutCreate(BaseModel):
@@ -42,7 +62,22 @@ async def create_workout(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> WorkoutOut:
-    """Lưu một buổi tập vào lịch sử."""
+    """Lưu một buổi tập vào lịch sử.
+
+    User gói Free bị chặn sau buổi thứ [FREE_DAILY_WORKOUT_LIMIT] trong ngày.
+    """
+    premium = await is_premium(db, current_user.id)
+    if not premium:
+        done_today = await _count_workouts_today(db, current_user.id)
+        if done_today >= FREE_DAILY_WORKOUT_LIMIT:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Gói Free chỉ lưu được {FREE_DAILY_WORKOUT_LIMIT} buổi tập/ngày. "
+                    "Nâng cấp Premium để tập không giới hạn."
+                ),
+            )
+
     workout = Workout(
         user_id=current_user.id,
         exercise=data.exercise,
@@ -54,7 +89,24 @@ async def create_workout(
     )
     db.add(workout)
     await db.flush()
+
+    await create_notification(
+        db,
+        user_id=current_user.id,
+        title="Hoàn thành buổi tập",
+        body=_summary(workout),
+        type_=TYPE_WORKOUT,
+    )
     return WorkoutOut.model_validate(workout)
+
+
+def _summary(workout: Workout) -> str:
+    parts = [f"{workout.exercise} · {workout.total_reps} lần"]
+    if workout.accuracy_score is not None:
+        parts.append(f"độ chính xác {workout.accuracy_score:.0f}%")
+    if workout.duration_seconds:
+        parts.append(f"{workout.duration_seconds / 60:.0f} phút")
+    return " · ".join(parts)
 
 
 @router.get("", response_model=list[WorkoutOut])

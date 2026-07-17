@@ -6,6 +6,7 @@ from sqlalchemy import select, text
 
 from app.core.database import AsyncSessionLocal, Base, engine
 from app.models import (  # noqa: F401 dang ky model de resolve FK
+    device_token,
     email_otp,
     goal,
     notification,
@@ -25,8 +26,10 @@ from app.models.plan import Plan
 # ngoai, dung chung voi schema PostureX (sql/postureX123_schema.sql). Luu y:
 # MySQL o day co lower_case_table_names=1 nen "Users" va "users" la CUNG MOT
 # bang — tuyet doi khong duoc them "users" vao DROP_SQL nay.
-# email_otps va password_reset_tokens KHONG nam trong DROP_SQL (khong drop
-# moi lan chay) de khong xoa OTP/token dang cho xu ly cua nguoi dung khac.
+# email_otps, password_reset_tokens va device_tokens KHONG nam trong DROP_SQL
+# (khong drop moi lan chay): xoa email_otps/password_reset_tokens la mat OTP/token
+# dang cho xu ly cua nguoi dung khac; xoa device_tokens la moi thiet bi mat dang ky,
+# nguoi dung ngung nhan push cho toi khi mo lai app.
 DROP_SQL = """
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS videos;
@@ -51,7 +54,7 @@ async def main() -> None:
                 Base.metadata.tables["plans"],
                 Base.metadata.tables["promo_codes"],
                 Base.metadata.tables["transactions"],
-                Base.metadata.tables["admin_notifications"],
+                Base.metadata.tables["device_tokens"],
             ],
             checkfirst=True,
         )
