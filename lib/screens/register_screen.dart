@@ -119,7 +119,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Google sign-in failed: $e');
       setState(() => _errorMessage = 'Could not sign in with Google. Check your connection.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
