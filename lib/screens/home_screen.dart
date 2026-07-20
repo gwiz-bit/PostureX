@@ -272,7 +272,14 @@ class HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
           SectionCard(
-            child: PlanCalendar(plan: UserSession.plan),
+            child: PlanCalendar(
+              plan: UserSession.plan,
+              onDayChanged: (updatedDay) {
+                setState(() {
+                  UserSession.plan = UserSession.plan.replacingDay(updatedDay);
+                });
+              },
+            ),
           ),
           const SizedBox(height: 24),
           const Text(

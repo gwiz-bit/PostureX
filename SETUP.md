@@ -16,6 +16,23 @@ cd PostureX
 
 ## 3. Setup Backend (FastAPI)
 
+**Cách nhanh — 1 lệnh làm hết (khuyên dùng):**
+
+```powershell
+cd lib\backend
+.\run.ps1
+```
+
+Lần đầu chạy, nếu chưa có `.env` script sẽ tự tạo từ `.env.example` rồi dừng
+lại để bạn điền `DB_PASSWORD` — điền xong chạy lại `.\run.ps1` là xong: script
+tự tạo venv, cài dependencies, tải model MediaPipe, khởi tạo database (nếu
+database rỗng) hoặc chỉ đồng bộ thêm bảng còn thiếu (nếu đã có dữ liệu —
+không đụng gì dữ liệu cũ), rồi chạy server. Chạy lại `.\run.ps1` bất cứ lúc
+nào cũng an toàn, kể cả sau khi `git pull` có model/bảng mới.
+
+Các bước dưới đây là để hiểu/điều chỉnh thủ công từng phần khi cần — không
+cần làm nếu `run.ps1` đã chạy được.
+
 ```powershell
 cd lib\backend
 python -m venv venv
@@ -128,7 +145,7 @@ flutter run
 ## 6. Thứ tự khởi động mỗi lần code lại
 
 1. Bật MySQL
-2. Chạy backend: `venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 9000` (trong `lib\backend`)
+2. Chạy backend: `.\run.ps1` (trong `lib\backend`) — hoặc thủ công: `venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 9000`
 3. Chạy app Flutter: `flutter run`
 
 Backend **không tự chạy nền** — mỗi lần tắt máy/terminal phải khởi động lại thủ công theo bước 2.

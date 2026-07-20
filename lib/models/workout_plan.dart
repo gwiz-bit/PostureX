@@ -78,6 +78,20 @@ class WorkoutPlan {
     return diff.clamp(0, days.length - 1) ~/ 7;
   }
 
+  /// Returns a copy of this plan with [updated] swapped in for the day
+  /// sharing its date — the only mutation path, since [days] itself stays
+  /// immutable (edits go through here, callers replace their `WorkoutPlan`
+  /// reference rather than mutating one in place).
+  WorkoutPlan replacingDay(DayPlan updated) {
+    final target = _dateOnly(updated.date);
+    return WorkoutPlan(
+      startDate: startDate,
+      days: [
+        for (final day in days) _dateOnly(day.date) == target ? updated : day,
+      ],
+    );
+  }
+
   static DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 
   static WorkoutPlan generate({
