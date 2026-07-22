@@ -18,6 +18,15 @@ ENV/
 
 # Environment secrets
 .env
+# Ban sao luu (.env.bak, .env.local...) cung chua mat khau that -> chan luon.
+# Rieng .env.example thi van commit (chi co placeholder).
+.env.*
+!.env.example
+
+# Khoa service account Firebase (FCM push) — commit len la ai cung gui push
+# duoc cho toan bo nguoi dung cua app.
+firebase-service-account.json
+*-firebase-adminsdk-*.json
 
 # Data dump: chứa dữ liệu user thật (email, mật khẩu đã hash) — chỉ chia
 # sẻ thủ công qua kênh riêng tư, không bao giờ push lên git (repo có thể

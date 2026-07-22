@@ -5,10 +5,11 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import '../admin/models/admin_models.dart';
+import '../models/app_notification.dart';
 import '../models/auth_response.dart';
 import '../models/chat_message.dart';
-import '../models/plan.dart';
 import '../models/profile_data.dart';
+import '../models/subscription.dart';
 import '../models/user_profile.dart';
 import '../models/video.dart';
 import '../models/workout.dart';
@@ -272,28 +273,6 @@ class ApiClient {
     return Video.fromJson(json as Map<String, dynamic>);
   }
 
-  // --- Subscriptions ------------------------------------------------------
-
-  Future<List<Plan>> fetchPlans() async {
-    final json = await _get('/api/v1/plans');
-    return (json as List).map((e) => Plan.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  /// The caller's current plan, derived server-side from their latest
-  /// successful transaction — `null` if they've never subscribed (Free).
-  Future<Plan?> fetchMyPlan() async {
-    final json = await _get('/api/v1/plans/me', auth: true);
-    return json == null ? null : Plan.fromJson(json as Map<String, dynamic>);
-  }
-
-  /// Subscribes to [planId] — mock payment, always succeeds immediately.
-  Future<void> subscribe({required int planId, String? promoCode}) async {
-    await _post('/api/v1/subscriptions/subscribe', auth: true, body: {
-      'plan_id': planId,
-      if (promoCode != null && promoCode.isNotEmpty) 'promo_code': promoCode,
-    });
-  }
-
   // --- Admin: stats & users ------------------------------------------------
 
   Future<SystemStats> fetchAdminStats() async {
@@ -356,93 +335,70 @@ class ApiClient {
     return AIConfig.fromJson(json as Map<String, dynamic>);
   }
 
-  // --- Admin: plans & promo codes ------------------------------------------
+  // --- Admin: plans (SubscriptionPlans) --------------------------------
 
-  Future<List<Plan>> fetchAdminPlans() async {
+  Future<List<AdminPlan>> fetchAdminPlans() async {
     final json = await _get('/api/v1/admin/plans', auth: true);
-    return (json as List).map((e) => Plan.fromJson(e as Map<String, dynamic>)).toList();
+    return (json as List).map((e) => AdminPlan.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<Plan> createAdminPlan({
+  Future<AdminPlan> createAdminPlan({
     required String name,
-    String? tagline,
-    required int priceVnd,
-    required int durationMonths,
-    String features = '',
+    required double priceMonthly,
+    String currency = 'VND',
+    String? features,
+    bool isActive = true,
   }) async {
     final json = await _post('/api/v1/admin/plans', auth: true, body: {
       'name': name,
-      'tagline': tagline,
-      'price_vnd': priceVnd,
-      'duration_months': durationMonths,
+      'price_monthly': priceMonthly,
+      'currency': currency,
       'features': features,
+      'is_active': isActive,
     });
-    return Plan.fromJson(json as Map<String, dynamic>);
+    return AdminPlan.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<Plan> updateAdminPlan(int planId, {bool? isActive}) async {
-    final json = await _patch('/api/v1/admin/plans/$planId', auth: true, body: {
-      if (isActive != null) 'is_active': isActive,
-    });
-    return Plan.fromJson(json as Map<String, dynamic>);
-  }
-
-  Future<void> deleteAdminPlan(int planId) async {
-    await _delete('/api/v1/admin/plans/$planId', auth: true);
-  }
-
-  Future<List<AdminPromoCode>> fetchAdminPromoCodes() async {
-    final json = await _get('/api/v1/admin/promo-codes', auth: true);
-    return (json as List).map((e) => AdminPromoCode.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  Future<AdminPromoCode> createAdminPromoCode({
-    required String code,
-    required int discountPercent,
-    DateTime? expiresAt,
+  Future<AdminPlan> updateAdminPlan(
+    int planId, {
+    String? name,
+    double? priceMonthly,
+    String? currency,
+    String? features,
+    bool? isActive,
   }) async {
-    final json = await _post('/api/v1/admin/promo-codes', auth: true, body: {
-      'code': code,
-      'discount_percent': discountPercent,
-      if (expiresAt != null) 'expires_at': expiresAt.toUtc().toIso8601String(),
-    });
-    return AdminPromoCode.fromJson(json as Map<String, dynamic>);
-  }
-
-  Future<AdminPromoCode> updateAdminPromoCode(int promoId, {bool? isActive}) async {
-    final json = await _patch('/api/v1/admin/promo-codes/$promoId', auth: true, body: {
+    final json = await _patch('/api/v1/admin/plans/$planId', auth: true, body: {
+      if (name != null) 'name': name,
+      if (priceMonthly != null) 'price_monthly': priceMonthly,
+      if (currency != null) 'currency': currency,
+      if (features != null) 'features': features,
       if (isActive != null) 'is_active': isActive,
     });
-    return AdminPromoCode.fromJson(json as Map<String, dynamic>);
+    return AdminPlan.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<void> deleteAdminPromoCode(int promoId) async {
-    await _delete('/api/v1/admin/promo-codes/$promoId', auth: true);
-  }
-
-  // --- Admin: revenue & notifications ------------------------------------
+  // --- Admin: revenue (Payments) ----------------------------------------
 
   Future<RevenueStats> fetchAdminRevenue() async {
     final json = await _get('/api/v1/admin/revenue', auth: true);
     return RevenueStats.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<List<AdminNotification>> fetchAdminNotifications() async {
-    final json = await _get('/api/v1/admin/notifications', auth: true);
-    return (json as List).map((e) => AdminNotification.fromJson(e as Map<String, dynamic>)).toList();
+  // --- Admin: broadcast notifications -------------------------------------
+
+  Future<List<BroadcastHistoryItem>> fetchBroadcastHistory() async {
+    final json = await _get('/api/v1/admin/notifications/broadcast', auth: true);
+    return (json as List)
+        .map((e) => BroadcastHistoryItem.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<AdminNotification> createAdminNotification({
-    required String title,
-    required String content,
-    required String audience,
-  }) async {
-    final json = await _post('/api/v1/admin/notifications', auth: true, body: {
+  Future<int> sendBroadcast({required String title, String? body}) async {
+    final json = await _post('/api/v1/admin/notifications/broadcast', auth: true, body: {
       'title': title,
-      'content': content,
-      'audience': audience,
+      'body': body,
     });
-    return AdminNotification.fromJson(json as Map<String, dynamic>);
+    return (json as Map<String, dynamic>)['recipients'] as int;
   }
 
   // --- Exercises ------------------------------------------------------
@@ -525,5 +481,68 @@ class ApiClient {
       'history': history.map((m) => m.toJson()).toList(),
     });
     return (json as Map<String, dynamic>)['reply'] as String;
+  }
+
+  // --- Notifications ------------------------------------------------------
+
+  Future<List<AppNotification>> fetchNotifications() async {
+    final json = await _get('/api/v1/notifications', auth: true);
+    return (json as List)
+        .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Số thông báo chưa đọc — cho badge trên icon chuông ở Home.
+  Future<int> fetchUnreadCount() async {
+    final json = await _get('/api/v1/notifications/unread-count', auth: true);
+    return (json as Map<String, dynamic>)['unread'] as int;
+  }
+
+  Future<AppNotification> markNotificationRead(int id) async {
+    final json = await _patch('/api/v1/notifications/$id/read', auth: true);
+    return AppNotification.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await _patch('/api/v1/notifications/read-all', auth: true);
+  }
+
+  // --- Subscriptions & payments -------------------------------------------
+
+  /// Giá là thông tin công khai — endpoint này không cần token.
+  Future<List<SubscriptionPlan>> fetchPlans() async {
+    final json = await _get('/api/v1/subscriptions/plans');
+    return (json as List)
+        .map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Gói đang dùng — `null` nếu user chưa mua gói nào.
+  Future<UserSubscription?> fetchMySubscription() async {
+    final json = await _get('/api/v1/subscriptions/me', auth: true);
+    if (json == null) return null;
+    return UserSubscription.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Tạo đơn chờ thanh toán và lấy URL VNPay để mở trong WebView.
+  Future<Checkout> checkout(int planId) async {
+    final json = await _post(
+      '/api/v1/subscriptions/checkout',
+      auth: true,
+      body: {'plan_id': planId},
+    );
+    return Checkout.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Huỷ tự động gia hạn. **Không mất quyền ngay** — gói vẫn chạy tới hết hạn.
+  Future<UserSubscription> cancelSubscription() async {
+    final json = await _post('/api/v1/subscriptions/cancel', auth: true);
+    return UserSubscription.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Bật lại tự động gia hạn sau khi đã huỷ.
+  Future<UserSubscription> resumeSubscription() async {
+    final json = await _post('/api/v1/subscriptions/resume', auth: true);
+    return UserSubscription.fromJson(json as Map<String, dynamic>);
   }
 }

@@ -1,6 +1,7 @@
 """Endpoint chat với AI Coach — tư vấn tập luyện/dinh dưỡng cá nhân hóa."""
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
@@ -22,7 +23,8 @@ router = APIRouter(prefix="/coach", tags=["coach"])
 
 async def _build_user_context(db: AsyncSession, user: User) -> str:
     """Tóm tắt hồ sơ + lịch sử tập của user thành đoạn text đưa vào system
-    prompt — để lời khuyên của AI thực sự cá nhân hóa thay vì chung chung."""
+    prompt — để lời khuyên của AI thực sự cá nhân hóa và có số liệu cụ thể
+    để phân tích, thay vì chỉ liệt kê thông tin chung chung."""
     lines = [f"Tên: {user.full_name or 'Chưa cập nhật'}"]
 
     profile = await get_profile(db, user.id)
@@ -34,6 +36,9 @@ async def _build_user_context(db: AsyncSession, user: User) -> str:
         lines.append(f"Chiều cao: {profile.height_cm} cm")
     if profile.weight_kg:
         lines.append(f"Cân nặng: {profile.weight_kg} kg")
+    if profile.height_cm and profile.weight_kg:
+        bmi = profile.weight_kg / ((profile.height_cm / 100) ** 2)
+        lines.append(f"BMI: {bmi:.1f}")
     if profile.fitness_level:
         lines.append(f"Mức độ tập luyện: {profile.fitness_level}")
     if profile.weekly_goal:
@@ -42,31 +47,99 @@ async def _build_user_context(db: AsyncSession, user: User) -> str:
     session_count = (
         await db.execute(select(func.count()).select_from(Workout).where(Workout.user_id == user.id))
     ).scalar_one()
-    if session_count:
-        avg_accuracy = (
-            await db.execute(
-                select(func.avg(Workout.accuracy_score)).where(
-                    Workout.user_id == user.id, Workout.accuracy_score.is_not(None)
-                )
-            )
-        ).scalar_one()
-        lines.append(f"Đã tập {session_count} buổi")
-        if avg_accuracy is not None:
-            lines.append(f"Độ chính xác tư thế trung bình: {avg_accuracy:.0f}%")
-
-        recent = (
-            await db.execute(
-                select(Workout.exercise, Workout.total_reps)
-                .where(Workout.user_id == user.id)
-                .order_by(Workout.started_at.desc())
-                .limit(5)
-            )
-        ).all()
-        if recent:
-            recent_text = ", ".join(f"{ex} ({reps} reps)" for ex, reps in recent)
-            lines.append(f"5 buổi tập gần nhất: {recent_text}")
-    else:
+    if not session_count:
         lines.append("Chưa có buổi tập nào được ghi nhận.")
+        return "\n".join(lines)
+
+    avg_accuracy = (
+        await db.execute(
+            select(func.avg(Workout.accuracy_score)).where(
+                Workout.user_id == user.id, Workout.accuracy_score.is_not(None)
+            )
+        )
+    ).scalar_one()
+    lines.append(f"Tổng số buổi đã tập: {session_count}")
+    if avg_accuracy is not None:
+        lines.append(f"Độ chính xác tư thế trung bình (toàn thời gian): {avg_accuracy:.0f}%")
+
+    last_workout_at = (
+        await db.execute(
+            select(func.max(Workout.started_at)).where(Workout.user_id == user.id)
+        )
+    ).scalar_one()
+    if last_workout_at is not None:
+        days_since = (datetime.now(timezone.utc) - last_workout_at.replace(tzinfo=timezone.utc)).days
+        lines.append(f"Buổi tập gần nhất: {days_since} ngày trước")
+
+    since_7d = datetime.now(timezone.utc) - timedelta(days=7)
+    sessions_this_week = (
+        await db.execute(
+            select(func.count())
+            .select_from(Workout)
+            .where(Workout.user_id == user.id, Workout.started_at >= since_7d)
+        )
+    ).scalar_one()
+    if profile.weekly_goal:
+        lines.append(
+            f"Đã tập {sessions_this_week}/{profile.weekly_goal} buổi trong 7 ngày qua "
+            f"({'đạt' if sessions_this_week >= profile.weekly_goal else 'CHƯA đạt'} mục tiêu tuần)"
+        )
+    else:
+        lines.append(f"Đã tập {sessions_this_week} buổi trong 7 ngày qua")
+
+    # Breakdown theo từng bài — sắp xếp từ độ chính xác thấp nhất lên, để AI
+    # dễ nhận ra ngay bài nào đang yếu nhất mà chủ động góp ý kỹ thuật.
+    by_exercise = (
+        await db.execute(
+            select(
+                Workout.exercise,
+                func.count().label("cnt"),
+                func.avg(Workout.accuracy_score).label("avg_acc"),
+                func.sum(Workout.total_reps).label("total_reps"),
+            )
+            .where(Workout.user_id == user.id)
+            .group_by(Workout.exercise)
+            .order_by(func.avg(Workout.accuracy_score).asc())
+        )
+    ).all()
+    if by_exercise:
+        lines.append("Chi tiết theo từng bài tập (sắp theo độ chính xác tăng dần):")
+        for exercise, cnt, avg_acc, total_reps in by_exercise:
+            acc_text = f"{avg_acc:.0f}% chính xác TB" if avg_acc is not None else "chưa có điểm chính xác"
+            lines.append(f"  - {exercise}: {cnt} buổi, {int(total_reps or 0)} reps, {acc_text}")
+
+    # Xu hướng gần đây: so 5 buổi mới nhất với phần còn lại để biết đang cải
+    # thiện hay tụt lùi — số liệu này quan trọng hơn nhiều so với chỉ liệt kê
+    # 5 buổi gần nhất suông.
+    recent = (
+        await db.execute(
+            select(Workout.exercise, Workout.total_reps, Workout.accuracy_score)
+            .where(Workout.user_id == user.id)
+            .order_by(Workout.started_at.desc())
+            .limit(5)
+        )
+    ).all()
+    if recent:
+        recent_text = ", ".join(
+            f"{ex} ({reps} reps"
+            + (f", {acc:.0f}%" if acc is not None else "")
+            + ")"
+            for ex, reps, acc in recent
+        )
+        lines.append(f"5 buổi tập gần nhất: {recent_text}")
+
+        recent_accs = [acc for _, _, acc in recent if acc is not None]
+        if recent_accs and avg_accuracy is not None:
+            recent_avg = sum(recent_accs) / len(recent_accs)
+            delta = recent_avg - avg_accuracy
+            if abs(delta) >= 3:
+                trend = "đang CẢI THIỆN" if delta > 0 else "đang GIẢM SÚT"
+                lines.append(
+                    f"Xu hướng độ chính xác: {trend} ({recent_avg:.0f}% gần đây so với "
+                    f"{avg_accuracy:.0f}% trung bình toàn thời gian)"
+                )
+            else:
+                lines.append("Xu hướng độ chính xác: ổn định, không thay đổi rõ rệt gần đây")
 
     return "\n".join(lines)
 

@@ -1,8 +1,9 @@
-"""Pydantic schemas cho Plan, PromoCode, Transaction, Notification."""
+"""Schema Pydantic cho gói cước & thanh toán."""
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class PlanOut(BaseModel):
@@ -10,91 +11,42 @@ class PlanOut(BaseModel):
 
     id: int
     name: str
-    tagline: str | None
-    price_vnd: int
-    duration_months: int
-    features: str
-    is_active: bool
-    created_at: datetime
+    price_monthly: Decimal
+    currency: str
+    features: str | None
 
 
-class PlanCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=50)
-    tagline: str | None = None
-    price_vnd: int = Field(ge=0)
-    duration_months: int = Field(ge=0)
-    features: str = ""
-    is_active: bool = True
-
-
-class PlanUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=50)
-    tagline: str | None = None
-    price_vnd: int | None = Field(default=None, ge=0)
-    duration_months: int | None = Field(default=None, ge=0)
-    features: str | None = None
-    is_active: bool | None = None
-
-
-class PromoCodeOut(BaseModel):
-    model_config = {"from_attributes": True}
+class MySubscriptionOut(BaseModel):
+    """Gói đang dùng. `plan_name` phẳng hoá để client khỏi gọi thêm một lượt."""
 
     id: int
-    code: str
-    discount_percent: int
-    expires_at: datetime | None
-    is_active: bool
-    created_at: datetime
-
-
-class PromoCodeCreate(BaseModel):
-    code: str = Field(min_length=1, max_length=30)
-    discount_percent: int = Field(ge=1, le=100)
-    expires_at: datetime | None = None
-    is_active: bool = True
-
-
-class PromoCodeUpdate(BaseModel):
-    discount_percent: int | None = Field(default=None, ge=1, le=100)
-    expires_at: datetime | None = None
-    is_active: bool | None = None
-
-
-class TransactionOut(BaseModel):
-    model_config = {"from_attributes": True}
-
-    id: int
-    user_id: int
     plan_id: int
-    amount_vnd: int
+    plan_name: str
+    status: str
+    start_date: date
+    end_date: date | None
+    # False = người dùng đã huỷ gia hạn; gói vẫn chạy tới end_date rồi tự tắt.
+    auto_renew: bool
+    # Số ngày còn lại, để app khỏi phải tự tính (và tính sai múi giờ).
+    days_left: int | None
+
+
+class CheckoutIn(BaseModel):
+    plan_id: int
+
+
+class CheckoutOut(BaseModel):
+    payment_id: int
+    pay_url: str
+
+
+class PaymentOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    amount: Decimal
+    currency: str
     payment_method: str
     status: str
+    paid_at: datetime | None
     created_at: datetime
-
-
-class SubscribeRequest(BaseModel):
-    plan_id: int
-    promo_code: str | None = None
-
-
-class RevenueStats(BaseModel):
-    total_revenue_vnd: int
-    total_transactions: int
-    revenue_by_plan: dict[str, int]
-    recent_transactions: list[TransactionOut]
-
-
-class NotificationOut(BaseModel):
-    model_config = {"from_attributes": True}
-
-    id: int
-    title: str
-    content: str
-    audience: str
-    created_at: datetime
-
-
-class NotificationCreate(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-    content: str = Field(min_length=1)
-    audience: str = Field(default="all", pattern="^(all|premium|free)$")

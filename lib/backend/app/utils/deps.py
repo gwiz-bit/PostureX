@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import decode_token
+from app.crud.subscription import is_premium
 from app.crud.user import get_user_by_id
 from app.models.user import User
 
@@ -44,5 +45,22 @@ async def get_current_admin(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền admin.",
+        )
+    return current_user
+
+
+async def require_premium(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Chỉ cho phép user đang có gói trả phí còn hiệu lực.
+
+    Gắn vào route nào thì route đó thành tính năng Premium:
+        current_user: User = Depends(require_premium)
+    """
+    if not await is_premium(db, current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tính năng này chỉ dành cho gói trả phí. Hãy nâng cấp để sử dụng.",
         )
     return current_user

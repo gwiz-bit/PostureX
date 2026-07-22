@@ -1,6 +1,8 @@
 """Entry point ứng dụng FastAPI Posture X."""
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,11 +13,23 @@ from slowapi.errors import RateLimitExceeded
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.rate_limit import limiter
+from app.core.scheduler import shutdown_scheduler, start_scheduler
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Bật scheduler (nhắc nghỉ giải lao, tổng kết hằng ngày) theo vòng đời app."""
+    start_scheduler()
+    try:
+        yield
+    finally:
+        shutdown_scheduler()
+
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -23,6 +37,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Rate limiting (slowapi) — dung cho /auth/forgot-password de chong spam

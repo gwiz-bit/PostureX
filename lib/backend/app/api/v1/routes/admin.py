@@ -5,26 +5,32 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import select
+
 from app.core.database import get_db
 from app.crud import admin as admin_crud
 from app.crud import exercise as exercise_crud
 from app.crud import subscription as sub_crud
+from app.crud.notification import broadcast_notification, list_broadcast_history
 from app.crud.user import get_user_by_id
 from app.crud.video import get_video_by_id
 from app.models.user import User
-from app.schemas.admin import AIConfig, AdminUserOut, AdminUserUpdate, SystemStats
-from app.schemas.exercise import ExerciseCreate, ExerciseOut, ExerciseUpdate
-from app.schemas.subscription import (
-    NotificationCreate,
-    NotificationOut,
-    PlanCreate,
-    PlanOut,
-    PlanUpdate,
-    PromoCodeCreate,
-    PromoCodeOut,
-    PromoCodeUpdate,
+from app.schemas.admin import (
+    AdminPaymentOut,
+    AdminPlanCreate,
+    AdminPlanOut,
+    AdminPlanUpdate,
+    AdminUserOut,
+    AdminUserUpdate,
+    AIConfig,
+    BroadcastHistoryItem,
+    BroadcastIn,
+    BroadcastOut,
+    RevenueByPlan,
     RevenueStats,
+    SystemStats,
 )
+from app.schemas.exercise import ExerciseCreate, ExerciseOut, ExerciseUpdate
 from app.services.exercise_video_service import exercise_video_service
 from app.services.video_service import video_service
 from app.utils.deps import get_current_admin
@@ -229,113 +235,67 @@ async def update_ai_config(
 
 
 # ─────────────────────────────────────────────
-# Quản lý gói subscription (Plans)
+# Quản lý gói cước (SubscriptionPlans — hệ MoMo của hiepga)
 # ─────────────────────────────────────────────
+#
+# LƯU Ý MERGE (hiepga): các endpoint admin quản lý gói/doanh thu/broadcast bản
+# CŨ (dựa trên app.models.plan/transaction + admin_notifications) đã bị gỡ khi
+# gộp nhánh hiepga vì không còn tương thích với hệ subscription mới (models/
+# subscription.py: SubscriptionPlans/UserSubscriptions/Payments + MoMo). Các
+# route dưới đây build lại đúng 3 chức năng đó nhưng trỏ thẳng vào bảng THẬT mà
+# người dùng đang dùng để mua gói — không đụng tới app.models.plan/promo_code/
+# transaction (đã orphan, giữ nguyên không xóa theo quyết định trước).
 
-@router.get("/plans", response_model=list[PlanOut])
+@router.get("/plans", response_model=list[AdminPlanOut])
 async def admin_list_plans(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
-) -> list[PlanOut]:
-    """Xem tất cả gói (kể cả gói đã ngừng bán)."""
-    plans = await sub_crud.get_all_plans(db)
-    return [PlanOut.model_validate(p) for p in plans]
+) -> list[AdminPlanOut]:
+    """Toàn bộ gói cước, kể cả đã tắt bán."""
+    plans = await sub_crud.list_all_plans(db)
+    return [AdminPlanOut.model_validate(p) for p in plans]
 
 
-@router.post("/plans", response_model=PlanOut, status_code=status.HTTP_201_CREATED)
+@router.post("/plans", response_model=AdminPlanOut, status_code=status.HTTP_201_CREATED)
 async def admin_create_plan(
-    data: PlanCreate,
+    data: AdminPlanCreate,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
-) -> PlanOut:
-    """Tạo gói subscription mới."""
-    plan = await sub_crud.create_plan(db, data)
-    return PlanOut.model_validate(plan)
+) -> AdminPlanOut:
+    """Tạo gói cước mới."""
+    plan = await sub_crud.create_plan(
+        db,
+        name=data.name,
+        price_monthly=data.price_monthly,
+        currency=data.currency,
+        features=data.features,
+        is_active=data.is_active,
+    )
+    return AdminPlanOut.model_validate(plan)
 
 
-@router.patch("/plans/{plan_id}", response_model=PlanOut)
+@router.patch("/plans/{plan_id}", response_model=AdminPlanOut)
 async def admin_update_plan(
     plan_id: int,
-    data: PlanUpdate,
+    data: AdminPlanUpdate,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
-) -> PlanOut:
-    """Cập nhật gói (giá, tính năng, ngừng/mở bán...)."""
+) -> AdminPlanOut:
+    """Sửa gói cước (giá, tên, mô tả) hoặc tắt/bật bán.
+
+    Không có DELETE thật — gói đã có người mua thì `UserSubscriptions`/`Payments`
+    còn tham chiếu tới nó, xóa cứng sẽ vỡ lịch sử giao dịch. Tắt bán (`is_active
+    = false`) là cách an toàn để "gỡ" một gói khỏi màn chọn gói của user.
+    """
     plan = await sub_crud.get_plan_by_id(db, plan_id)
     if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy gói.")
-    updated = await sub_crud.update_plan(db, plan, data)
-    return PlanOut.model_validate(updated)
-
-
-@router.delete("/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def admin_delete_plan(
-    plan_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
-) -> None:
-    """Xóa gói subscription."""
-    plan = await sub_crud.get_plan_by_id(db, plan_id)
-    if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy gói.")
-    await sub_crud.delete_plan(db, plan)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy gói cước.")
+    updated = await sub_crud.update_plan(db, plan, **data.model_dump(exclude_unset=True))
+    return AdminPlanOut.model_validate(updated)
 
 
 # ─────────────────────────────────────────────
-# Quản lý mã giảm giá (PromoCodes)
-# ─────────────────────────────────────────────
-
-@router.get("/promo-codes", response_model=list[PromoCodeOut])
-async def admin_list_promo_codes(
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
-) -> list[PromoCodeOut]:
-    """Xem tất cả mã giảm giá."""
-    promos = await sub_crud.get_all_promo_codes(db)
-    return [PromoCodeOut.model_validate(p) for p in promos]
-
-
-@router.post("/promo-codes", response_model=PromoCodeOut, status_code=status.HTTP_201_CREATED)
-async def admin_create_promo_code(
-    data: PromoCodeCreate,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
-) -> PromoCodeOut:
-    """Tạo mã giảm giá mới."""
-    promo = await sub_crud.create_promo_code(db, data)
-    return PromoCodeOut.model_validate(promo)
-
-
-@router.patch("/promo-codes/{promo_id}", response_model=PromoCodeOut)
-async def admin_update_promo_code(
-    promo_id: int,
-    data: PromoCodeUpdate,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
-) -> PromoCodeOut:
-    """Cập nhật mã giảm giá (vô hiệu hóa, đổi hạn dùng...)."""
-    promo = await sub_crud.get_promo_by_id(db, promo_id)
-    if promo is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy mã giảm giá.")
-    updated = await sub_crud.update_promo_code(db, promo, data)
-    return PromoCodeOut.model_validate(updated)
-
-
-@router.delete("/promo-codes/{promo_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def admin_delete_promo_code(
-    promo_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_admin),
-) -> None:
-    """Xóa mã giảm giá."""
-    promo = await sub_crud.get_promo_by_id(db, promo_id)
-    if promo is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy mã giảm giá.")
-    await sub_crud.delete_promo_code(db, promo)
-
-
-# ─────────────────────────────────────────────
-# Doanh thu (Revenue)
+# Doanh thu (Payments)
 # ─────────────────────────────────────────────
 
 @router.get("/revenue", response_model=RevenueStats)
@@ -343,34 +303,64 @@ async def admin_get_revenue(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
 ) -> RevenueStats:
-    """Thống kê doanh thu: tổng, theo gói, giao dịch gần nhất."""
-    data = await sub_crud.get_revenue_stats(db)
-    return RevenueStats(**data)
+    """Tổng doanh thu, breakdown theo gói, và các giao dịch gần nhất.
+
+    Chỉ tính đơn `Payments.Status = 'Completed'` — đơn Pending/Failed không phải
+    tiền thật đã thu.
+    """
+    total_revenue, total_count, by_plan_rows, recent_rows = await sub_crud.get_revenue_stats(db)
+    return RevenueStats(
+        total_revenue=total_revenue,
+        total_paid_payments=total_count,
+        by_plan=[
+            RevenueByPlan(plan_id=r[0], plan_name=r[1], revenue=r[2], payment_count=r[3])
+            for r in by_plan_rows
+        ],
+        recent_payments=[
+            AdminPaymentOut(
+                id=r[0],
+                user_id=r[1],
+                user_email=r[2],
+                plan_name=r[3],
+                amount=r[4],
+                currency=r[5],
+                status=r[6],
+                paid_at=r[7],
+                created_at=r[8],
+            )
+            for r in recent_rows
+        ],
+    )
 
 
 # ─────────────────────────────────────────────
-# Thông báo (Notifications)
+# Thông báo hàng loạt (broadcast)
 # ─────────────────────────────────────────────
 
-@router.get("/notifications", response_model=list[NotificationOut])
-async def admin_list_notifications(
+@router.get("/notifications/broadcast", response_model=list[BroadcastHistoryItem])
+async def admin_broadcast_history(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
-) -> list[NotificationOut]:
-    """Xem tất cả thông báo admin đã gửi."""
-    notifs = await sub_crud.get_all_notifications(db)
-    return [NotificationOut.model_validate(n) for n in notifs]
+) -> list[BroadcastHistoryItem]:
+    """Lịch sử các lần gửi thông báo hàng loạt, mới nhất trước."""
+    rows = await list_broadcast_history(db)
+    return [
+        BroadcastHistoryItem(title=r[0], body=r[1], created_at=r[2], recipients=r[3])
+        for r in rows
+    ]
 
 
-@router.post("/notifications", response_model=NotificationOut, status_code=status.HTTP_201_CREATED)
-async def admin_create_notification(
-    data: NotificationCreate,
+@router.post("/notifications/broadcast", response_model=BroadcastOut)
+async def admin_send_broadcast(
+    data: BroadcastIn,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
-) -> NotificationOut:
-    """Gửi thông báo broadcast mới (all/premium/free)."""
-    notif = await sub_crud.create_notification(db, data)
-    return NotificationOut.model_validate(notif)
+) -> BroadcastOut:
+    """Gửi thông báo cho toàn bộ user đang active (tài khoản bị khoá thì bỏ qua)."""
+    result = await db.execute(select(User.id).where(User.is_active.is_(True)))
+    user_ids = list(result.scalars().all())
+    recipients = await broadcast_notification(db, user_ids, data.title, data.body)
+    return BroadcastOut(recipients=recipients)
 
 
 # ─────────────────────────────────────────────

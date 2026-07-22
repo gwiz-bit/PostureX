@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
+        <!-- Android emulator's alias for the dev machine's localhost -->
         <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- Dev machine's LAN IP, for testing on a physical phone over Wi-Fi.
+             Must match the API_HOST value passed at build time. -->
+        <domain includeSubdomains="false">192.168.1.9</domain>
     </domain-config>
 </network-security-config>

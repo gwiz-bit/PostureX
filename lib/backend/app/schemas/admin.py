@@ -1,6 +1,7 @@
 """Pydantic schemas dành riêng cho Admin."""
 
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -43,3 +44,84 @@ class AIConfig(BaseModel):
     squat_rep_up_threshold: float = 160.0
     pose_model_complexity: int = 1
     pose_min_detection_confidence: float = 0.5
+
+
+# ─────────────────────────────────────────────
+# Quản lý gói cước (SubscriptionPlans) — admin
+# ─────────────────────────────────────────────
+
+class AdminPlanOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    name: str
+    price_monthly: Decimal
+    currency: str
+    features: str | None
+    is_active: bool
+
+
+class AdminPlanCreate(BaseModel):
+    name: str
+    price_monthly: Decimal
+    currency: str = "VND"
+    features: str | None = None
+    is_active: bool = True
+
+
+class AdminPlanUpdate(BaseModel):
+    name: str | None = None
+    price_monthly: Decimal | None = None
+    currency: str | None = None
+    features: str | None = None
+    is_active: bool | None = None
+
+
+# ─────────────────────────────────────────────
+# Doanh thu (Payments) — admin
+# ─────────────────────────────────────────────
+
+class RevenueByPlan(BaseModel):
+    plan_id: int
+    plan_name: str
+    revenue: Decimal
+    payment_count: int
+
+
+class AdminPaymentOut(BaseModel):
+    id: int
+    user_id: int
+    user_email: str
+    plan_name: str
+    amount: Decimal
+    currency: str
+    status: str
+    paid_at: datetime | None
+    created_at: datetime
+
+
+class RevenueStats(BaseModel):
+    total_revenue: Decimal
+    total_paid_payments: int
+    by_plan: list[RevenueByPlan]
+    recent_payments: list[AdminPaymentOut]
+
+
+# ─────────────────────────────────────────────
+# Thông báo broadcast — admin
+# ─────────────────────────────────────────────
+
+class BroadcastIn(BaseModel):
+    title: str
+    body: str | None = None
+
+
+class BroadcastOut(BaseModel):
+    recipients: int
+
+
+class BroadcastHistoryItem(BaseModel):
+    title: str
+    body: str | None
+    created_at: datetime
+    recipients: int
