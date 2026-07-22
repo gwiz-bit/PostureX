@@ -1,8 +1,9 @@
 """CRUD cho gói cước & thanh toán."""
 
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.subscription import (
@@ -17,6 +18,7 @@ from app.models.subscription import (
     SubscriptionPlan,
     UserSubscription,
 )
+from app.models.user import User
 
 # Một chu kỳ = 1 tháng. Dùng 30 ngày cho đơn giản và ổn định (không phải xử lý
 # chuyện 31/1 + 1 tháng ra ngày nào).
@@ -227,6 +229,84 @@ async def list_payments(db: AsyncSession, user_id: int) -> list[Payment]:
         .order_by(Payment.id.desc())
     )
     return list(result.scalars().all())
+
+
+async def list_all_plans(db: AsyncSession) -> list[SubscriptionPlan]:
+    """Toàn bộ gói (kể cả đã tắt bán) — dùng cho màn quản trị."""
+    result = await db.execute(select(SubscriptionPlan).order_by(SubscriptionPlan.price_monthly))
+    return list(result.scalars().all())
+
+
+async def create_plan(
+    db: AsyncSession,
+    name: str,
+    price_monthly: Decimal,
+    currency: str,
+    features: str | None,
+    is_active: bool,
+) -> SubscriptionPlan:
+    plan = SubscriptionPlan(
+        name=name,
+        price_monthly=price_monthly,
+        currency=currency,
+        features=features,
+        is_active=is_active,
+    )
+    db.add(plan)
+    await db.flush()
+    return plan
+
+
+async def update_plan(db: AsyncSession, plan: SubscriptionPlan, **fields) -> SubscriptionPlan:
+    for key, value in fields.items():
+        if value is not None:
+            setattr(plan, key, value)
+    await db.flush()
+    return plan
+
+
+async def get_revenue_stats(db: AsyncSession, recent_limit: int = 20):
+    """Doanh thu từ các đơn đã thanh toán thành công (`Payments.Status = 'Completed'`)."""
+    total_row = await db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0), func.count())
+        .where(Payment.status == PAYMENT_PAID)
+    )
+    total_revenue, total_count = total_row.one()
+
+    by_plan_rows = await db.execute(
+        select(
+            SubscriptionPlan.id,
+            SubscriptionPlan.name,
+            func.coalesce(func.sum(Payment.amount), 0),
+            func.count(Payment.id),
+        )
+        .join(UserSubscription, Payment.user_subscription_id == UserSubscription.id)
+        .join(SubscriptionPlan, UserSubscription.plan_id == SubscriptionPlan.id)
+        .where(Payment.status == PAYMENT_PAID)
+        .group_by(SubscriptionPlan.id, SubscriptionPlan.name)
+        .order_by(func.sum(Payment.amount).desc())
+    )
+
+    recent_rows = await db.execute(
+        select(
+            Payment.id,
+            User.id,
+            User.email,
+            SubscriptionPlan.name,
+            Payment.amount,
+            Payment.currency,
+            Payment.status,
+            Payment.paid_at,
+            Payment.created_at,
+        )
+        .join(UserSubscription, Payment.user_subscription_id == UserSubscription.id)
+        .join(SubscriptionPlan, UserSubscription.plan_id == SubscriptionPlan.id)
+        .join(User, UserSubscription.user_id == User.id)
+        .order_by(Payment.id.desc())
+        .limit(recent_limit)
+    )
+
+    return total_revenue, total_count, by_plan_rows.all(), recent_rows.all()
 
 
 async def get_expiring_subscriptions(

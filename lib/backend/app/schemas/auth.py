@@ -13,6 +13,10 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    # True chỉ khi vừa tự tạo tài khoản Google mới (xem POST /auth/google)
+    # — client dùng cờ này để đưa user qua onboarding thay vì vào thẳng
+    # Home, khớp hành vi với luồng đăng ký email/OTP.
+    is_new_user: bool = False
 
 
 class VerifyOtpRequest(BaseModel):

@@ -4,13 +4,14 @@ import 'package:video_player/video_player.dart';
 import '../theme/app_theme.dart';
 
 /// Looping demo-technique video panel for [AnalyzeSessionScreen]'s top
-/// 40% split. Plays a bundled asset (see `assets/video/`, declared in
-/// `pubspec.yaml`) — not a network video, so no loading/buffering states
-/// beyond the initial decode.
+/// 40% split. Plays [networkUrl] (an admin-uploaded guide video served
+/// from the backend) when set; otherwise falls back to the bundled
+/// [assetPath] asset (see `assets/video/`, declared in `pubspec.yaml`).
 class GuideVideoPlayer extends StatefulWidget {
-  const GuideVideoPlayer({super.key, required this.assetPath});
+  const GuideVideoPlayer({super.key, required this.assetPath, this.networkUrl});
 
   final String assetPath;
+  final String? networkUrl;
 
   @override
   State<GuideVideoPlayer> createState() => _GuideVideoPlayerState();
@@ -24,7 +25,9 @@ class _GuideVideoPlayerState extends State<GuideVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(widget.assetPath);
+    _controller = widget.networkUrl != null
+        ? VideoPlayerController.networkUrl(Uri.parse(widget.networkUrl!))
+        : VideoPlayerController.asset(widget.assetPath);
     _controller
       ..setLooping(true)
       ..initialize().then((_) {
@@ -59,7 +62,7 @@ class _GuideVideoPlayerState extends State<GuideVideoPlayer> {
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => _FullscreenGuideVideo(assetPath: widget.assetPath),
+        builder: (_) => _FullscreenGuideVideo(assetPath: widget.assetPath, networkUrl: widget.networkUrl),
       ),
     );
   }
@@ -143,9 +146,10 @@ class _CircleIconButton extends StatelessWidget {
 /// [VideoPlayerController] rather than sharing the panel's, simplest way
 /// to avoid juggling controller ownership across two live widgets.
 class _FullscreenGuideVideo extends StatefulWidget {
-  const _FullscreenGuideVideo({required this.assetPath});
+  const _FullscreenGuideVideo({required this.assetPath, this.networkUrl});
 
   final String assetPath;
+  final String? networkUrl;
 
   @override
   State<_FullscreenGuideVideo> createState() => _FullscreenGuideVideoState();
@@ -157,7 +161,10 @@ class _FullscreenGuideVideoState extends State<_FullscreenGuideVideo> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(widget.assetPath)
+    _controller = widget.networkUrl != null
+        ? VideoPlayerController.networkUrl(Uri.parse(widget.networkUrl!))
+        : VideoPlayerController.asset(widget.assetPath);
+    _controller
       ..setLooping(true)
       ..initialize().then((_) {
         if (mounted) setState(() {});

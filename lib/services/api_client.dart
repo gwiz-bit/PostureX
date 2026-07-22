@@ -7,7 +7,7 @@ import '../config/api_config.dart';
 import '../admin/models/admin_models.dart';
 import '../models/app_notification.dart';
 import '../models/auth_response.dart';
-import '../models/plan.dart';
+import '../models/chat_message.dart';
 import '../models/profile_data.dart';
 import '../models/subscription.dart';
 import '../models/user_profile.dart';
@@ -335,93 +335,70 @@ class ApiClient {
     return AIConfig.fromJson(json as Map<String, dynamic>);
   }
 
-  // --- Admin: plans & promo codes ------------------------------------------
+  // --- Admin: plans (SubscriptionPlans) --------------------------------
 
-  Future<List<Plan>> fetchAdminPlans() async {
+  Future<List<AdminPlan>> fetchAdminPlans() async {
     final json = await _get('/api/v1/admin/plans', auth: true);
-    return (json as List).map((e) => Plan.fromJson(e as Map<String, dynamic>)).toList();
+    return (json as List).map((e) => AdminPlan.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<Plan> createAdminPlan({
+  Future<AdminPlan> createAdminPlan({
     required String name,
-    String? tagline,
-    required int priceVnd,
-    required int durationMonths,
-    String features = '',
+    required double priceMonthly,
+    String currency = 'VND',
+    String? features,
+    bool isActive = true,
   }) async {
     final json = await _post('/api/v1/admin/plans', auth: true, body: {
       'name': name,
-      'tagline': tagline,
-      'price_vnd': priceVnd,
-      'duration_months': durationMonths,
+      'price_monthly': priceMonthly,
+      'currency': currency,
       'features': features,
+      'is_active': isActive,
     });
-    return Plan.fromJson(json as Map<String, dynamic>);
+    return AdminPlan.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<Plan> updateAdminPlan(int planId, {bool? isActive}) async {
-    final json = await _patch('/api/v1/admin/plans/$planId', auth: true, body: {
-      if (isActive != null) 'is_active': isActive,
-    });
-    return Plan.fromJson(json as Map<String, dynamic>);
-  }
-
-  Future<void> deleteAdminPlan(int planId) async {
-    await _delete('/api/v1/admin/plans/$planId', auth: true);
-  }
-
-  Future<List<AdminPromoCode>> fetchAdminPromoCodes() async {
-    final json = await _get('/api/v1/admin/promo-codes', auth: true);
-    return (json as List).map((e) => AdminPromoCode.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  Future<AdminPromoCode> createAdminPromoCode({
-    required String code,
-    required int discountPercent,
-    DateTime? expiresAt,
+  Future<AdminPlan> updateAdminPlan(
+    int planId, {
+    String? name,
+    double? priceMonthly,
+    String? currency,
+    String? features,
+    bool? isActive,
   }) async {
-    final json = await _post('/api/v1/admin/promo-codes', auth: true, body: {
-      'code': code,
-      'discount_percent': discountPercent,
-      if (expiresAt != null) 'expires_at': expiresAt.toUtc().toIso8601String(),
-    });
-    return AdminPromoCode.fromJson(json as Map<String, dynamic>);
-  }
-
-  Future<AdminPromoCode> updateAdminPromoCode(int promoId, {bool? isActive}) async {
-    final json = await _patch('/api/v1/admin/promo-codes/$promoId', auth: true, body: {
+    final json = await _patch('/api/v1/admin/plans/$planId', auth: true, body: {
+      if (name != null) 'name': name,
+      if (priceMonthly != null) 'price_monthly': priceMonthly,
+      if (currency != null) 'currency': currency,
+      if (features != null) 'features': features,
       if (isActive != null) 'is_active': isActive,
     });
-    return AdminPromoCode.fromJson(json as Map<String, dynamic>);
+    return AdminPlan.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<void> deleteAdminPromoCode(int promoId) async {
-    await _delete('/api/v1/admin/promo-codes/$promoId', auth: true);
-  }
-
-  // --- Admin: revenue & notifications ------------------------------------
+  // --- Admin: revenue (Payments) ----------------------------------------
 
   Future<RevenueStats> fetchAdminRevenue() async {
     final json = await _get('/api/v1/admin/revenue', auth: true);
     return RevenueStats.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<List<AdminNotification>> fetchAdminNotifications() async {
-    final json = await _get('/api/v1/admin/notifications', auth: true);
-    return (json as List).map((e) => AdminNotification.fromJson(e as Map<String, dynamic>)).toList();
+  // --- Admin: broadcast notifications -------------------------------------
+
+  Future<List<BroadcastHistoryItem>> fetchBroadcastHistory() async {
+    final json = await _get('/api/v1/admin/notifications/broadcast', auth: true);
+    return (json as List)
+        .map((e) => BroadcastHistoryItem.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<AdminNotification> createAdminNotification({
-    required String title,
-    required String content,
-    required String audience,
-  }) async {
-    final json = await _post('/api/v1/admin/notifications', auth: true, body: {
+  Future<int> sendBroadcast({required String title, String? body}) async {
+    final json = await _post('/api/v1/admin/notifications/broadcast', auth: true, body: {
       'title': title,
-      'content': content,
-      'audience': audience,
+      'body': body,
     });
-    return AdminNotification.fromJson(json as Map<String, dynamic>);
+    return (json as Map<String, dynamic>)['recipients'] as int;
   }
 
   // --- Exercises ------------------------------------------------------
@@ -463,6 +440,47 @@ class ApiClient {
 
   Future<void> deleteAdminExercise(int exerciseId) async {
     await _delete('/api/v1/admin/exercises/$exerciseId', auth: true);
+  }
+
+  /// Uploads a guide video for [exerciseId] — shown to every user during a
+  /// live analyze session for that exercise instead of the bundled asset
+  /// fallback (see `guideVideoAssetFor`). Replaces any existing video.
+  Future<AdminExercise> uploadAdminExerciseVideo({
+    required int exerciseId,
+    required File file,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('/api/v1/admin/exercises/$exerciseId/video'),
+    );
+    request.headers.addAll(_headers(auth: true, json: false));
+    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+    final streamed = await _http.send(request);
+    final response = await http.Response.fromStream(streamed);
+    final json = _decode(response);
+    return AdminExercise.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AdminExercise> deleteAdminExerciseVideo(int exerciseId) async {
+    final json = await _delete('/api/v1/admin/exercises/$exerciseId/video', auth: true);
+    return AdminExercise.fromJson(json as Map<String, dynamic>);
+  }
+
+  // --- AI Coach ---------------------------------------------------------
+
+  /// Sends [message] to the AI Coach along with [history] (the caller's
+  /// own running conversation — the backend doesn't persist chat history)
+  /// so replies stay personalized to the user's real profile/workout data.
+  Future<String> sendCoachMessage({
+    required String message,
+    required List<ChatMessage> history,
+  }) async {
+    final json = await _post('/api/v1/coach/chat', auth: true, body: {
+      'message': message,
+      'history': history.map((m) => m.toJson()).toList(),
+    });
+    return (json as Map<String, dynamic>)['reply'] as String;
   }
 
   // --- Notifications ------------------------------------------------------

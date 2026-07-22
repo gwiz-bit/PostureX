@@ -1,6 +1,6 @@
 """CRUD operations cho bảng Notifications."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,8 @@ TYPE_SUBSCRIPTION = "subscription"
 # loại X gần đây chưa" — dùng chung nhãn thì một thông báo "đã huỷ gia hạn" sẽ
 # nuốt mất lời nhắc hết hạn của cả tuần sau đó.
 TYPE_SUBSCRIPTION_EXPIRY = "subscription_expiry"
+# Admin gửi thông báo hàng loạt (broadcast) từ màn quản trị.
+TYPE_ADMIN_BROADCAST = "admin_broadcast"
 
 
 async def create_notification(
@@ -107,3 +109,43 @@ async def mark_all_read(db: AsyncSession, user_id: int) -> int:
         .values(is_read=True)
     )
     return int(result.rowcount or 0)
+
+
+async def broadcast_notification(
+    db: AsyncSession, user_ids: list[int], title: str, body: str | None
+) -> int:
+    """Gửi cùng một thông báo cho nhiều user (từ màn admin).
+
+    Dùng chung một mốc `created_at` cho cả lô — nhờ vậy lịch sử broadcast có thể
+    gom nhóm lại bằng `GROUP BY (title, body, created_at)` thay vì phải thêm hẳn
+    một bảng "campaign" riêng cho một tính năng phụ.
+    """
+    now = datetime.now(timezone.utc)
+    notifications = [
+        Notification(user_id=uid, title=title, body=body, type=TYPE_ADMIN_BROADCAST, created_at=now)
+        for uid in user_ids
+    ]
+    db.add_all(notifications)
+    await db.flush()
+
+    for uid in user_ids:
+        dispatch_push(uid, title, body, TYPE_ADMIN_BROADCAST)
+
+    return len(notifications)
+
+
+async def list_broadcast_history(db: AsyncSession, limit: int = 20) -> list:
+    """Lịch sử các lần admin gửi thông báo hàng loạt, mới nhất trước."""
+    result = await db.execute(
+        select(
+            Notification.title,
+            Notification.body,
+            Notification.created_at,
+            func.count().label("recipients"),
+        )
+        .where(Notification.type == TYPE_ADMIN_BROADCAST)
+        .group_by(Notification.title, Notification.body, Notification.created_at)
+        .order_by(Notification.created_at.desc())
+        .limit(limit)
+    )
+    return result.all()

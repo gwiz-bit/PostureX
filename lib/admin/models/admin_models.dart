@@ -187,81 +187,136 @@ class AIConfig {
       );
 }
 
-class AdminPromoCode {
-  const AdminPromoCode({
+/// Gói cước quản trị — trỏ vào bảng `SubscriptionPlans` thật (hệ MoMo), khác
+/// với model `Plan` cũ (đã orphan, không còn dùng).
+class AdminPlan {
+  const AdminPlan({
     required this.id,
-    required this.code,
-    required this.discountPercent,
-    required this.expiresAt,
+    required this.name,
+    required this.priceMonthly,
+    required this.currency,
+    required this.features,
     required this.isActive,
   });
 
   final int id;
-  final String code;
-  final int discountPercent;
-  final DateTime? expiresAt;
+  final String name;
+  final double priceMonthly;
+  final String currency;
+  final String? features;
   final bool isActive;
 
-  factory AdminPromoCode.fromJson(Map<String, dynamic> json) => AdminPromoCode(
+  factory AdminPlan.fromJson(Map<String, dynamic> json) => AdminPlan(
         id: json['id'] as int,
-        code: json['code'] as String,
-        discountPercent: json['discount_percent'] as int,
-        expiresAt: json['expires_at'] == null ? null : DateTime.parse(json['expires_at'] as String),
+        name: json['name'] as String,
+        // Backend trả DECIMAL, JSON hoá thành chuỗi ("99000.00") chứ không phải số.
+        priceMonthly: double.parse(json['price_monthly'].toString()),
+        currency: json['currency'] as String,
+        features: json['features'] as String?,
         isActive: json['is_active'] as bool,
       );
 }
 
-class AdminTransaction {
-  const AdminTransaction({
+class AdminPayment {
+  const AdminPayment({
     required this.id,
     required this.userId,
-    required this.planId,
-    required this.amountVnd,
-    required this.paymentMethod,
+    required this.userEmail,
+    required this.planName,
+    required this.amount,
+    required this.currency,
     required this.status,
+    required this.paidAt,
     required this.createdAt,
   });
 
   final int id;
   final int userId;
-  final int planId;
-  final int amountVnd;
-  final String paymentMethod;
+  final String userEmail;
+  final String planName;
+  final double amount;
+  final String currency;
   final String status;
+  final DateTime? paidAt;
   final DateTime createdAt;
 
-  factory AdminTransaction.fromJson(Map<String, dynamic> json) => AdminTransaction(
+  factory AdminPayment.fromJson(Map<String, dynamic> json) => AdminPayment(
         id: json['id'] as int,
         userId: json['user_id'] as int,
-        planId: json['plan_id'] as int,
-        amountVnd: json['amount_vnd'] as int,
-        paymentMethod: json['payment_method'] as String,
+        userEmail: json['user_email'] as String,
+        planName: json['plan_name'] as String,
+        amount: double.parse(json['amount'].toString()),
+        currency: json['currency'] as String,
         status: json['status'] as String,
+        paidAt: json['paid_at'] == null ? null : DateTime.parse(json['paid_at'] as String),
         createdAt: DateTime.parse(json['created_at'] as String),
+      );
+}
+
+class RevenueByPlan {
+  const RevenueByPlan({
+    required this.planId,
+    required this.planName,
+    required this.revenue,
+    required this.paymentCount,
+  });
+
+  final int planId;
+  final String planName;
+  final double revenue;
+  final int paymentCount;
+
+  factory RevenueByPlan.fromJson(Map<String, dynamic> json) => RevenueByPlan(
+        planId: json['plan_id'] as int,
+        planName: json['plan_name'] as String,
+        revenue: double.parse(json['revenue'].toString()),
+        paymentCount: json['payment_count'] as int,
       );
 }
 
 class RevenueStats {
   const RevenueStats({
-    required this.totalRevenueVnd,
-    required this.totalTransactions,
-    required this.revenueByPlan,
-    required this.recentTransactions,
+    required this.totalRevenue,
+    required this.totalPaidPayments,
+    required this.byPlan,
+    required this.recentPayments,
   });
 
-  final int totalRevenueVnd;
-  final int totalTransactions;
-  final Map<String, int> revenueByPlan;
-  final List<AdminTransaction> recentTransactions;
+  final double totalRevenue;
+  final int totalPaidPayments;
+  final List<RevenueByPlan> byPlan;
+  final List<AdminPayment> recentPayments;
 
   factory RevenueStats.fromJson(Map<String, dynamic> json) => RevenueStats(
-        totalRevenueVnd: json['total_revenue_vnd'] as int,
-        totalTransactions: json['total_transactions'] as int,
-        revenueByPlan: (json['revenue_by_plan'] as Map<String, dynamic>)
-            .map((key, value) => MapEntry(key, value as int)),
-        recentTransactions: (json['recent_transactions'] as List)
-            .map((e) => AdminTransaction.fromJson(e as Map<String, dynamic>))
+        totalRevenue: double.parse(json['total_revenue'].toString()),
+        totalPaidPayments: json['total_paid_payments'] as int,
+        byPlan: (json['by_plan'] as List)
+            .map((e) => RevenueByPlan.fromJson(e as Map<String, dynamic>))
             .toList(),
+        recentPayments: (json['recent_payments'] as List)
+            .map((e) => AdminPayment.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class BroadcastHistoryItem {
+  const BroadcastHistoryItem({
+    required this.title,
+    required this.body,
+    required this.createdAt,
+    required this.recipients,
+  });
+
+  final String title;
+  final String? body;
+  final DateTime createdAt;
+  final int recipients;
+
+  factory BroadcastHistoryItem.fromJson(Map<String, dynamic> json) => BroadcastHistoryItem(
+        title: json['title'] as String,
+        body: json['body'] as String?,
+        createdAt: DateTime.parse(json['created_at'] as String),
+        recipients: json['recipients'] as int,
       );
 }
 
@@ -274,6 +329,7 @@ class AdminExercise {
     required this.difficulty,
     required this.exerciseType,
     required this.isActive,
+    required this.demoVideoUrl,
   });
 
   final int id;
@@ -283,6 +339,7 @@ class AdminExercise {
   final String? difficulty;
   final String exerciseType;
   final bool isActive;
+  final String? demoVideoUrl;
 
   factory AdminExercise.fromJson(Map<String, dynamic> json) => AdminExercise(
         id: json['id'] as int,
@@ -292,29 +349,6 @@ class AdminExercise {
         difficulty: json['difficulty'] as String?,
         exerciseType: json['exercise_type'] as String,
         isActive: json['is_active'] as bool,
-      );
-}
-
-class AdminNotification {
-  const AdminNotification({
-    required this.id,
-    required this.title,
-    required this.content,
-    required this.audience,
-    required this.createdAt,
-  });
-
-  final int id;
-  final String title;
-  final String content;
-  final String audience;
-  final DateTime createdAt;
-
-  factory AdminNotification.fromJson(Map<String, dynamic> json) => AdminNotification(
-        id: json['id'] as int,
-        title: json['title'] as String,
-        content: json['content'] as String,
-        audience: json['audience'] as String,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        demoVideoUrl: json['demo_video_url'] as String?,
       );
 }

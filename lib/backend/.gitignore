@@ -47,6 +47,8 @@ htmlcov/
 # Video storage content (giữ thư mục, bỏ qua nội dung)
 storage/videos/*
 !storage/videos/.gitkeep
+storage/exercise_videos/*
+!storage/exercise_videos/.gitkeep
 
 # Alembic
 alembic/versions/__pycache__/

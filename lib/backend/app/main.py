@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -54,6 +55,15 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+# Video hướng dẫn bài tập do admin upload — serve công khai (không cần
+# đăng nhập), khác với storage/videos (video tập luyện riêng tư của user,
+# không mount static vì không nên public).
+app.mount(
+    "/media/exercise-videos",
+    StaticFiles(directory=str(settings.get_exercise_video_storage_path())),
+    name="exercise-videos",
+)
 
 
 @app.get("/health", tags=["health"])

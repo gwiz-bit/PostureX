@@ -114,6 +114,7 @@ async def google_login(
         raise HTTPException(status_code=401, detail="Tài khoản Google chưa xác thực email.")
 
     user = await get_user_by_email(db, email)
+    is_new_user = user is None
     if user is None:
         user = await create_google_user(db, email=email, full_name=idinfo.get("name"))
     elif not user.is_email_verified:
@@ -121,7 +122,7 @@ async def google_login(
         await db.flush()
 
     token = create_access_token(user.id)
-    return TokenResponse(access_token=token)
+    return TokenResponse(access_token=token, is_new_user=is_new_user)
 
 
 @router.post("/forgot-password", response_model=MessageResponse)

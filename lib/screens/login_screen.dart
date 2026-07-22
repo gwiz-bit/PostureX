@@ -13,6 +13,7 @@ import '../widgets/or_divider.dart';
 import '../admin/screens/home_screen.dart' as admin;
 import 'forgot_password_screen.dart';
 import 'main_shell.dart';
+import 'onboarding/onboarding_flow.dart';
 import 'otp_verification_screen.dart';
 import 'register_screen.dart';
 
@@ -155,11 +156,14 @@ class _LoginScreenState extends State<LoginScreen> {
       } catch (_) {
         // Persisting the session is best-effort, same as the email/password flow.
       }
-      UserSession.hasCompletedOnboarding = true;
+      UserSession.hasCompletedOnboarding = !auth.isNewUser;
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => profile.isAdmin ? const admin.HomeScreen() : const MainShell(),
+          builder: (_) {
+            if (auth.isNewUser) return OnboardingFlow(name: profile.fullName ?? '');
+            return profile.isAdmin ? const admin.HomeScreen() : const MainShell();
+          },
         ),
       );
     } on ApiException catch (e) {

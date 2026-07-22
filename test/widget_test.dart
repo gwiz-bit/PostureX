@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:posturex/main.dart';
 import 'package:posturex/screens/main_shell.dart';
 import 'package:posturex/services/api_client.dart';
+import 'package:posturex/services/google_auth_service.dart';
 import 'package:posturex/services/token_storage.dart';
 import 'package:posturex/theme/app_theme.dart';
 import 'package:posturex/widgets/app_logo.dart';
@@ -28,6 +29,20 @@ class _FakeSecureStorageBackend implements SecureStorageBackend {
 
   @override
   Future<void> deleteAll() async => _values.clear();
+}
+
+/// No-op stand-in for `google_sign_in` — same rationale as
+/// [_FakeSecureStorageBackend]: no real platform channel under
+/// `flutter test`, so the real plugin's calls hang instead of failing.
+class _FakeGoogleAuthBackend implements GoogleAuthBackend {
+  @override
+  Future<String?> signInAndGetIdToken() async => null;
+
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<void> disconnect() async {}
 }
 
 /// Tracks the most recently registered `full_name` so `/api/v1/users/me`
@@ -118,6 +133,7 @@ final _mockClient = MockClient((request) async {
 void main() {
   ApiClient.instance = ApiClient(httpClient: _mockClient);
   TokenStorage.backend = _FakeSecureStorageBackend();
+  GoogleAuthService.backend = _FakeGoogleAuthBackend();
 
   testWidgets('App launches to the Login screen and can navigate to Register', (
     WidgetTester tester,

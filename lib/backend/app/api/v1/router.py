@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1.routes import (
     admin,
     auth,
+    coach,
     exercises,
     notifications,
     realtime,
@@ -25,3 +26,4 @@ api_router.include_router(admin.router)
 api_router.include_router(notifications.router)
 api_router.include_router(subscriptions.router)
 api_router.include_router(exercises.router)
+api_router.include_router(coach.router)

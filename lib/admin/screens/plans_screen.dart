@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../admin_theme.dart';
-import '../../theme/app_theme.dart';
-import '../../models/plan.dart';
 import '../models/admin_models.dart';
+import '../../theme/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../services/api_exception.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialogs.dart';
-import 'add_plan_screen.dart';
-import 'add_promo_screen.dart';
 
 class PlansScreen extends StatefulWidget {
   const PlansScreen({super.key});
@@ -17,8 +15,7 @@ class PlansScreen extends StatefulWidget {
 }
 
 class _PlansScreenState extends State<PlansScreen> {
-  List<Plan> _plans = [];
-  List<AdminPromoCode> _promos = [];
+  List<AdminPlan> _plans = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -34,15 +31,9 @@ class _PlansScreenState extends State<PlansScreen> {
       _errorMessage = null;
     });
     try {
-      final results = await Future.wait([
-        ApiClient.instance.fetchAdminPlans(),
-        ApiClient.instance.fetchAdminPromoCodes(),
-      ]);
+      final plans = await ApiClient.instance.fetchAdminPlans();
       if (!mounted) return;
-      setState(() {
-        _plans = results[0] as List<Plan>;
-        _promos = results[1] as List<AdminPromoCode>;
-      });
+      setState(() => _plans = plans);
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {
@@ -52,12 +43,18 @@ class _PlansScreenState extends State<PlansScreen> {
     }
   }
 
-  Future<void> _stopPlan(Plan p) async {
-    final ok = await showConfirmDialog(context, 'Stop selling ${p.name}?',
-        'Plan will be hidden from app. Existing subscribers keep their history (data retained).');
+  Future<void> _toggleActive(AdminPlan plan) async {
+    final targetActive = !plan.isActive;
+    final ok = await showConfirmDialog(
+      context,
+      targetActive ? 'Reactivate ${plan.name}?' : 'Deactivate ${plan.name}?',
+      targetActive
+          ? '${plan.name} will show up again in the app\'s plan picker.'
+          : 'Users who already own this plan keep it until it expires; new purchases are hidden.',
+    );
     if (!ok) return;
     try {
-      await ApiClient.instance.updateAdminPlan(p.id, isActive: false);
+      await ApiClient.instance.updateAdminPlan(plan.id, isActive: targetActive);
       if (mounted) _load();
     } on ApiException catch (e) {
       if (mounted) showToast(context, e.message);
@@ -66,74 +63,23 @@ class _PlansScreenState extends State<PlansScreen> {
     }
   }
 
-  void _openAddMenu() {
-    showModalBottomSheet(
+  Future<void> _openForm({AdminPlan? plan}) async {
+    final saved = await showModalBottomSheet<bool>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (c) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(height: 8),
-          ListTile(
-            leading: const CircleAvatar(
-                backgroundColor: kBlueBg,
-                child: Icon(Icons.inventory_2_outlined, color: kBlue)),
-            title: const Text('Add new plan',
-                style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('Name, price, duration, benefits'),
-            onTap: () async {
-              Navigator.pop(c);
-              final created = await Navigator.push<Plan>(context,
-                  MaterialPageRoute(builder: (_) => const AddPlanScreen()));
-              if (created != null && mounted) {
-                _load();
-                showToast(context, 'New plan saved');
-              }
-            },
-          ),
-          ListTile(
-            leading: const CircleAvatar(
-                backgroundColor: kAmberBg,
-                child: Icon(Icons.local_offer_outlined, color: kAmber)),
-            title: const Text('Add promo code',
-                style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('Code, discount %, expiry'),
-            onTap: () async {
-              Navigator.pop(c);
-              final created = await Navigator.push<AdminPromoCode>(context,
-                  MaterialPageRoute(builder: (_) => const AddPromoScreen()));
-              if (created != null && mounted) {
-                _load();
-                showToast(context, 'Promo code created');
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-        ]),
-      ),
+      builder: (_) => _PlanFormSheet(plan: plan),
     );
-  }
-
-  IconData _iconFor(String planName) {
-    switch (planName) {
-      case 'Advanced':
-        return Icons.star_border_rounded;
-      case 'Pro':
-        return Icons.workspace_premium_outlined;
-      default:
-        return Icons.card_giftcard_outlined;
-    }
+    if (saved == true && mounted) _load();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: adminAppBar('Plan Management',
-          '${_plans.length} plans · ${_promos.length} promo codes',
-          actions: [
-            IconButton(onPressed: _openAddMenu, icon: const Icon(Icons.add))
-          ]),
+      appBar: adminAppBar('Subscription Plans', '${_plans.length} plans',
+          actions: [IconButton(onPressed: () => _openForm(), icon: const Icon(Icons.add))]),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _isLoading
@@ -152,78 +98,164 @@ class _PlansScreenState extends State<PlansScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      const SectionLabel('Plans'),
                       ListCard(
-                        rows: _plans.map((p) {
+                        rows: _plans.map((plan) {
+                          final (bg, fg) = plan.isActive ? (kGreenBg, kGreen) : (kGrayBg, kGrayFg);
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 11),
                             child: Row(children: [
-                              CircleAvatar(
+                              const CircleAvatar(
                                   radius: 17,
-                                  backgroundColor: kBlueBg,
-                                  child: Icon(_iconFor(p.name), size: 17, color: kBlue)),
+                                  backgroundColor: kPurpleBg,
+                                  child: Icon(Icons.workspace_premium_outlined, size: 17, color: kPurple)),
                               const SizedBox(width: 10),
                               Expanded(
-                                  child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                    Text(p.name,
-                                        style: const TextStyle(
-                                            fontSize: 13, fontWeight: FontWeight.w600, color: kInk)),
-                                    Text(
-                                        p.priceVnd == 0
-                                            ? '0₫'
-                                            : '${p.priceVnd}₫ / ${p.durationMonths == 12 ? 'year' : 'month'}',
-                                        style: const TextStyle(fontSize: 11, color: kMuted)),
-                                  ])),
-                              StatusBadge(p.isActive ? 'Active' : 'Inactive',
-                                  p.isActive ? kGreenBg : kGrayBg,
-                                  p.isActive ? kGreen : kGrayFg),
-                              if (p.isActive && p.priceVnd > 0) ...[
-                                const SizedBox(width: 8),
-                                InkWell(
-                                    onTap: () => _stopPlan(p),
-                                    child: const Icon(Icons.block, size: 19, color: kRed)),
-                              ],
+                                child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(plan.name,
+                                          style: const TextStyle(
+                                              fontSize: 13, fontWeight: FontWeight.w600, color: kInk)),
+                                      Text(
+                                          plan.priceMonthly <= 0
+                                              ? 'Free'
+                                              : '${plan.priceMonthly.toStringAsFixed(0)} ${plan.currency}/month',
+                                          style: const TextStyle(fontSize: 11, color: kMuted)),
+                                    ]),
+                              ),
+                              StatusBadge(plan.isActive ? 'Selling' : 'Hidden', bg, fg),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                  onTap: () => _openForm(plan: plan),
+                                  child: const Icon(Icons.edit_outlined, size: 19, color: kBlue)),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                  onTap: () => _toggleActive(plan),
+                                  child: Icon(
+                                      plan.isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      size: 19,
+                                      color: plan.isActive ? kRed : kGreen)),
                             ]),
                           );
                         }).toList(),
                       ),
-                      const SizedBox(height: 16),
-                      const SectionLabel('Promo codes'),
-                      if (_promos.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: Text('No promo codes yet', style: TextStyle(color: kMuted))),
-                        )
-                      else
-                        ListCard(
-                          rows: _promos.map((m) {
-                            final expired = m.expiresAt != null && m.expiresAt!.isBefore(DateTime.now());
-                            final valid = m.isActive && !expired;
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 11),
-                              child: Row(children: [
-                                Expanded(
-                                    child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                      Text(m.code,
-                                          style: const TextStyle(
-                                              fontSize: 13, fontWeight: FontWeight.w600, color: kInk)),
-                                      Text(
-                                          '${m.discountPercent}% off'
-                                          '${m.expiresAt == null ? '' : ' · Expires ${m.expiresAt!.day.toString().padLeft(2, '0')}/${m.expiresAt!.month.toString().padLeft(2, '0')}'}',
-                                          style: const TextStyle(fontSize: 11, color: kMuted)),
-                                    ])),
-                                StatusBadge(valid ? 'Valid' : 'Expired',
-                                    valid ? kGreenBg : kGrayBg, valid ? kGreen : kGrayFg),
-                              ]),
-                            );
-                          }).toList(),
-                        ),
                     ],
                   ),
+      ),
+    );
+  }
+}
+
+class _PlanFormSheet extends StatefulWidget {
+  final AdminPlan? plan;
+  const _PlanFormSheet({this.plan});
+
+  @override
+  State<_PlanFormSheet> createState() => _PlanFormSheetState();
+}
+
+class _PlanFormSheetState extends State<_PlanFormSheet> {
+  late final _name = TextEditingController(text: widget.plan?.name ?? '');
+  late final _price = TextEditingController(
+      text: widget.plan == null ? '' : widget.plan!.priceMonthly.toStringAsFixed(0));
+  late final _currency = TextEditingController(text: widget.plan?.currency ?? 'VND');
+  late final _features = TextEditingController(text: widget.plan?.features ?? '');
+  bool _isSaving = false;
+  String? _error;
+
+  bool get _isEdit => widget.plan != null;
+
+  Future<void> _save() async {
+    final name = _name.text.trim();
+    final price = double.tryParse(_price.text.trim());
+    if (name.isEmpty || price == null || price < 0) {
+      setState(() => _error = 'Enter a valid name and a non-negative price.');
+      return;
+    }
+    setState(() {
+      _error = null;
+      _isSaving = true;
+    });
+    try {
+      if (_isEdit) {
+        await ApiClient.instance.updateAdminPlan(
+          widget.plan!.id,
+          name: name,
+          priceMonthly: price,
+          currency: _currency.text.trim().isEmpty ? 'VND' : _currency.text.trim(),
+          features: _features.text.trim().isEmpty ? null : _features.text.trim(),
+        );
+      } else {
+        await ApiClient.instance.createAdminPlan(
+          name: name,
+          priceMonthly: price,
+          currency: _currency.text.trim().isEmpty ? 'VND' : _currency.text.trim(),
+          features: _features.text.trim().isEmpty ? null : _features.text.trim(),
+        );
+      }
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Could not reach the server. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(_isEdit ? 'Edit plan' : 'New plan',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: kInk)),
+          const SizedBox(height: 16),
+          TextField(
+              controller: _name,
+              style: const TextStyle(color: kInk),
+              decoration: adminInput('Plan name (e.g. Pro)')),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+              flex: 2,
+              child: TextField(
+                  controller: _price,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: kInk),
+                  decoration: adminInput('Price / month')),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                  controller: _currency,
+                  style: const TextStyle(color: kInk),
+                  decoration: adminInput('Currency')),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          TextField(
+              controller: _features,
+              maxLines: 4,
+              style: const TextStyle(color: kInk),
+              decoration: adminInput('Features (one per line, optional)')),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!, style: const TextStyle(color: kRed, fontSize: 12)),
+          ],
+          const SizedBox(height: 18),
+          PrimaryButton(
+            label: _isSaving ? 'Saving...' : 'Save plan',
+            onPressed: _isSaving ? () {} : _save,
+          ),
+          const SizedBox(height: 8),
+        ]),
       ),
     );
   }

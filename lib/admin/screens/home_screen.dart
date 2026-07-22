@@ -8,14 +8,14 @@ import '../models/admin_models.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/dialogs.dart';
 import '../../screens/login_screen.dart';
-import 'revenue_screen.dart';
-import 'plans_screen.dart';
 import 'workouts_screen.dart';
 import 'videos_screen.dart';
 import 'ai_config_screen.dart';
-import 'notifications_screen.dart';
 import 'users_screen.dart';
 import 'exercises_screen.dart';
+import 'plans_screen.dart';
+import 'revenue_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -136,25 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ]),
             ],
             const SizedBox(height: 20),
-            const SectionLabel('Statistics & Plans'),
-            Row(children: [
-              Expanded(
-                  child: _ModuleCard(
-                      icon: Icons.bar_chart,
-                      label: 'Revenue',
-                      bg: kAmberBg,
-                      fg: kAmber,
-                      onTap: () => _openModule(const RevenueScreen()))),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _ModuleCard(
-                      icon: Icons.inventory_2_outlined,
-                      label: 'Plans',
-                      bg: kBlueBg,
-                      fg: kBlue,
-                      onTap: () => _openModule(const PlansScreen()))),
-            ]),
-            const SizedBox(height: 20),
             const SectionLabel('Content'),
             Row(children: [
               Expanded(
@@ -185,11 +166,30 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 12),
               Expanded(
                   child: _ModuleCard(
-                      icon: Icons.notifications_none,
+                      icon: Icons.campaign_outlined,
                       label: 'Notifications',
-                      bg: kCoralBg,
-                      fg: kCoral,
+                      bg: kBlueBg,
+                      fg: kBlue,
                       onTap: () => _openModule(const NotificationsScreen()))),
+            ]),
+            const SizedBox(height: 20),
+            const SectionLabel('Statistics & Plans'),
+            Row(children: [
+              Expanded(
+                  child: _ModuleCard(
+                      icon: Icons.payments_outlined,
+                      label: 'Revenue',
+                      bg: kGreenBg,
+                      fg: kGreen,
+                      onTap: () => _openModule(const RevenueScreen()))),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: _ModuleCard(
+                      icon: Icons.workspace_premium_outlined,
+                      label: 'Plans',
+                      bg: kPurpleBg,
+                      fg: kPurple,
+                      onTap: () => _openModule(const PlansScreen()))),
             ]),
             const SizedBox(height: 20),
             const SectionLabel('Users'),

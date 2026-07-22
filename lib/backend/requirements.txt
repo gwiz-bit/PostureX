@@ -10,15 +10,15 @@ alembic==1.14.0
 greenlet==3.5.3
 
 # Settings & validation
-pydantic==2.10.3
+pydantic==2.13.4
 pydantic-settings==2.6.1
-pydantic[email]==2.10.3
+pydantic[email]==2.13.4
 
 # Auth
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.2.0
-google-auth==2.37.0
+google-auth==2.55.2
 requests==2.34.2
 slowapi==0.1.10
 
@@ -26,6 +26,9 @@ slowapi==0.1.10
 mediapipe==0.10.35
 opencv-python-headless==4.11.0.86
 numpy==2.2.6
+
+# AI Coach chat (Gemini)
+google-genai==2.12.1
 
 # File handling
 aiofiles==24.1.0
@@ -36,6 +39,6 @@ apscheduler==3.11.0
 # Testing
 pytest==8.3.4
 pytest-asyncio==0.24.0
-httpx==0.28.0
+httpx==0.28.1
 # Test chay tren SQLite trong bo nho, khong can dung MySQL that (xem conftest.py)
 aiosqlite==0.22.1

@@ -8,6 +8,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 
+import '../config/api_config.dart';
 import '../models/frame_analysis_result.dart';
 import '../services/analyze_socket_service.dart';
 import '../services/api_client.dart';
@@ -80,6 +81,11 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   String? _transientError;
   Timer? _transientErrorTimer;
 
+  /// Admin-uploaded guide video for [widget.exercise], if one exists —
+  /// `null` until fetched (falls back to the bundled asset via
+  /// [guideVideoAssetFor] either while loading or if none was uploaded).
+  String? _guideVideoUrl;
+
   final _tts = FlutterTts();
 
   /// Tallied by mistake category (see [categorizeSquatError]), not raw
@@ -87,6 +93,12 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   /// fragment one recurring mistake into many near-duplicate entries —
   /// carried into [WorkoutSummaryScreen] when the session ends.
   final Map<String, int> _errorCounts = {};
+  /// Categories present in the previous frame — used so [_errorCounts]
+  /// increments once per mistake *episode* (rising edge) instead of once
+  /// per analyzed frame. At the ~9fps frame cap a mistake held for one
+  /// whole rep would otherwise inflate to 15-20+ counts for what was
+  /// really a single continuous mistake.
+  final Set<String> _activeErrorCategories = {};
   String? _lastErrorCategory;
   int _consecutiveErrorCount = 0;
 
@@ -96,6 +108,25 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     WidgetsBinding.instance.addObserver(this);
     _tts.setLanguage('vi-VN');
     _init();
+    _loadGuideVideo();
+  }
+
+  /// Best-effort, independent of [_init]'s camera/socket setup — a failed
+  /// fetch here should never block the analyze session, just leave the
+  /// panel on the bundled asset fallback.
+  Future<void> _loadGuideVideo() async {
+    try {
+      final exercises = await ApiClient.instance.fetchExercises();
+      final match = exercises.where(
+        (e) => e.name.toLowerCase() == widget.exercise.toLowerCase(),
+      );
+      final url = match.isEmpty ? null : match.first.demoVideoUrl;
+      if (mounted && url != null) {
+        setState(() => _guideVideoUrl = '${ApiConfig.baseUrl}$url');
+      }
+    } catch (_) {
+      // Keep the bundled asset fallback.
+    }
   }
 
   Future<void> _init() async {
@@ -229,8 +260,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         .whereType<String>()
         .toSet();
     for (final category in categories) {
-      _errorCounts[category] = (_errorCounts[category] ?? 0) + 1;
+      if (!_activeErrorCategories.contains(category)) {
+        _errorCounts[category] = (_errorCounts[category] ?? 0) + 1;
+      }
     }
+    _activeErrorCategories
+      ..clear()
+      ..addAll(categories);
 
     final primaryCategory = categories.isEmpty ? null : categories.first;
     if (primaryCategory != null && primaryCategory == _lastErrorCategory) {
@@ -414,7 +450,12 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         Expanded(
           flex: 2,
           child: GuideVideoPlayer(
+            // Re-keyed on the URL so the player rebuilds (and picks up the
+            // network video) once _loadGuideVideo resolves after the
+            // asset fallback has already started playing.
+            key: ValueKey(_guideVideoUrl ?? 'asset'),
             assetPath: guideVideoAssetFor(widget.exercise),
+            networkUrl: _guideVideoUrl,
           ),
         ),
         Expanded(flex: 3, child: _buildCameraPanel(controller)),
