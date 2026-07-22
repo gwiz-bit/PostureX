@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../admin/models/admin_models.dart';
 import '../models/auth_response.dart';
+import '../models/chat_message.dart';
 import '../models/plan.dart';
 import '../models/profile_data.dart';
 import '../models/user_profile.dart';
@@ -483,5 +484,46 @@ class ApiClient {
 
   Future<void> deleteAdminExercise(int exerciseId) async {
     await _delete('/api/v1/admin/exercises/$exerciseId', auth: true);
+  }
+
+  /// Uploads a guide video for [exerciseId] — shown to every user during a
+  /// live analyze session for that exercise instead of the bundled asset
+  /// fallback (see `guideVideoAssetFor`). Replaces any existing video.
+  Future<AdminExercise> uploadAdminExerciseVideo({
+    required int exerciseId,
+    required File file,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('/api/v1/admin/exercises/$exerciseId/video'),
+    );
+    request.headers.addAll(_headers(auth: true, json: false));
+    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+    final streamed = await _http.send(request);
+    final response = await http.Response.fromStream(streamed);
+    final json = _decode(response);
+    return AdminExercise.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AdminExercise> deleteAdminExerciseVideo(int exerciseId) async {
+    final json = await _delete('/api/v1/admin/exercises/$exerciseId/video', auth: true);
+    return AdminExercise.fromJson(json as Map<String, dynamic>);
+  }
+
+  // --- AI Coach ---------------------------------------------------------
+
+  /// Sends [message] to the AI Coach along with [history] (the caller's
+  /// own running conversation — the backend doesn't persist chat history)
+  /// so replies stay personalized to the user's real profile/workout data.
+  Future<String> sendCoachMessage({
+    required String message,
+    required List<ChatMessage> history,
+  }) async {
+    final json = await _post('/api/v1/coach/chat', auth: true, body: {
+      'message': message,
+      'history': history.map((m) => m.toJson()).toList(),
+    });
+    return (json as Map<String, dynamic>)['reply'] as String;
   }
 }

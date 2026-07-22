@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../admin_theme.dart';
 import '../models/admin_models.dart';
 import '../../theme/app_theme.dart';
@@ -8,6 +12,9 @@ import '../widgets/common_widgets.dart';
 import '../widgets/dialogs.dart';
 import 'add_exercise_screen.dart';
 
+const _allowedVideoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv'];
+const _maxVideoUploadBytes = 500 * 1024 * 1024;
+
 class ExercisesScreen extends StatefulWidget {
   const ExercisesScreen({super.key});
   @override
@@ -15,10 +22,12 @@ class ExercisesScreen extends StatefulWidget {
 }
 
 class _ExercisesScreenState extends State<ExercisesScreen> {
+  final _picker = ImagePicker();
   List<AdminExercise> _exercises = [];
   bool _isLoading = true;
   String? _errorMessage;
   String _query = '';
+  int? _uploadingVideoForId;
 
   @override
   void initState() {
@@ -89,6 +98,101 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
     }
   }
 
+  Future<void> _pickAndUploadVideo(AdminExercise ex) async {
+    final picked = await _picker.pickVideo(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    final dot = picked.path.lastIndexOf('.');
+    final extension = dot == -1 ? '' : picked.path.substring(dot).toLowerCase();
+    if (!_allowedVideoExtensions.contains(extension)) {
+      if (mounted) {
+        showToast(context, 'Unsupported format: $extension. Use mp4, mov, avi, webm, or mkv.');
+      }
+      return;
+    }
+
+    final file = File(picked.path);
+    final size = await file.length();
+    if (size > _maxVideoUploadBytes) {
+      if (mounted) showToast(context, 'File is too large. Max size is 500 MB.');
+      return;
+    }
+
+    setState(() => _uploadingVideoForId = ex.id);
+    try {
+      await ApiClient.instance.uploadAdminExerciseVideo(exerciseId: ex.id, file: file);
+      if (mounted) {
+        showToast(context, 'Guide video saved for ${ex.name}');
+        _load();
+      }
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, 'Could not reach the server. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _uploadingVideoForId = null);
+    }
+  }
+
+  Future<void> _removeVideo(AdminExercise ex) async {
+    final ok = await showConfirmDialog(context, 'Remove guide video?',
+        '${ex.name} will fall back to the app\'s default guide video (if any) instead.');
+    if (!ok) return;
+    setState(() => _uploadingVideoForId = ex.id);
+    try {
+      await ApiClient.instance.deleteAdminExerciseVideo(ex.id);
+      if (mounted) {
+        showToast(context, 'Guide video removed');
+        _load();
+      }
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, 'Could not reach the server. Check your connection.');
+    } finally {
+      if (mounted) setState(() => _uploadingVideoForId = null);
+    }
+  }
+
+  void _openVideoMenu(AdminExercise ex) {
+    final hasVideo = ex.demoVideoUrl != null;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (c) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const CircleAvatar(
+                backgroundColor: kBlueBg,
+                child: Icon(Icons.video_library_outlined, color: kBlue)),
+            title: Text(hasVideo ? 'Replace guide video' : 'Upload guide video',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text('Shown to users during a live ${ex.name} session'),
+            onTap: () {
+              Navigator.pop(c);
+              _pickAndUploadVideo(ex);
+            },
+          ),
+          if (hasVideo)
+            ListTile(
+              leading: const CircleAvatar(
+                  backgroundColor: kRedBg, child: Icon(Icons.delete_outline, color: kRed)),
+              title: const Text('Remove guide video',
+                  style: TextStyle(fontWeight: FontWeight.w600, color: kRed)),
+              onTap: () {
+                Navigator.pop(c);
+                _removeVideo(ex);
+              },
+            ),
+          const SizedBox(height: 12),
+        ]),
+      ),
+    );
+  }
+
   List<AdminExercise> get _filtered {
     if (_query.trim().isEmpty) return _exercises;
     final q = _query.trim().toLowerCase();
@@ -127,6 +231,8 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                       ListCard(
                         rows: _filtered.map((ex) {
                           final (bg, fg) = ex.isActive ? (kGreenBg, kGreen) : (kGrayBg, kGrayFg);
+                          final hasVideo = ex.demoVideoUrl != null;
+                          final isBusy = _uploadingVideoForId == ex.id;
                           final subtitle = [
                             if (ex.category != null) ex.category,
                             if (ex.difficulty != null) ex.difficulty,
@@ -151,6 +257,20 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                                     ]),
                               ),
                               StatusBadge(ex.isActive ? 'Published' : 'Hidden', bg, fg),
+                              const SizedBox(width: 8),
+                              isBusy
+                                  ? const SizedBox(
+                                      width: 19,
+                                      height: 19,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: kBlue),
+                                    )
+                                  : InkWell(
+                                      onTap: () => _openVideoMenu(ex),
+                                      child: Icon(
+                                          hasVideo ? Icons.video_camera_back : Icons.video_call_outlined,
+                                          size: 19,
+                                          color: hasVideo ? kBlue : kMuted),
+                                    ),
                               const SizedBox(width: 8),
                               InkWell(
                                   onTap: () => _toggleActive(ex),

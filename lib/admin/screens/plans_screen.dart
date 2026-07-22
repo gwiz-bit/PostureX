@@ -66,6 +66,61 @@ class _PlansScreenState extends State<PlansScreen> {
     }
   }
 
+  Future<void> _resumePlan(Plan p) async {
+    try {
+      await ApiClient.instance.updateAdminPlan(p.id, isActive: true);
+      if (mounted) _load();
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, 'Could not reach the server. Check your connection.');
+    }
+  }
+
+  Future<void> _deletePlan(Plan p) async {
+    final ok = await showConfirmDialog(context, 'Delete ${p.name}?',
+        'This permanently removes the plan. Past transactions referencing it are kept, but it can no longer be sold.');
+    if (!ok) return;
+    try {
+      await ApiClient.instance.deleteAdminPlan(p.id);
+      if (mounted) {
+        _load();
+        showToast(context, '${p.name} deleted');
+      }
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, 'Could not reach the server. Check your connection.');
+    }
+  }
+
+  Future<void> _togglePromo(AdminPromoCode m) async {
+    try {
+      await ApiClient.instance.updateAdminPromoCode(m.id, isActive: !m.isActive);
+      if (mounted) _load();
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, 'Could not reach the server. Check your connection.');
+    }
+  }
+
+  Future<void> _deletePromo(AdminPromoCode m) async {
+    final ok = await showConfirmDialog(context, 'Delete ${m.code}?', 'This permanently removes the promo code.');
+    if (!ok) return;
+    try {
+      await ApiClient.instance.deleteAdminPromoCode(m.id);
+      if (mounted) {
+        _load();
+        showToast(context, '${m.code} deleted');
+      }
+    } on ApiException catch (e) {
+      if (mounted) showToast(context, e.message);
+    } catch (_) {
+      if (mounted) showToast(context, 'Could not reach the server. Check your connection.');
+    }
+  }
+
   void _openAddMenu() {
     showModalBottomSheet(
       context: context,
@@ -185,6 +240,16 @@ class _PlansScreenState extends State<PlansScreen> {
                                     onTap: () => _stopPlan(p),
                                     child: const Icon(Icons.block, size: 19, color: kRed)),
                               ],
+                              if (!p.isActive) ...[
+                                const SizedBox(width: 8),
+                                InkWell(
+                                    onTap: () => _resumePlan(p),
+                                    child: const Icon(Icons.play_circle_outline, size: 19, color: kGreen)),
+                              ],
+                              const SizedBox(width: 8),
+                              InkWell(
+                                  onTap: () => _deletePlan(p),
+                                  child: const Icon(Icons.delete_outline, size: 19, color: kRed)),
                             ]),
                           );
                         }).toList(),
@@ -218,6 +283,19 @@ class _PlansScreenState extends State<PlansScreen> {
                                     ])),
                                 StatusBadge(valid ? 'Valid' : 'Expired',
                                     valid ? kGreenBg : kGrayBg, valid ? kGreen : kGrayFg),
+                                if (!expired) ...[
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                      onTap: () => _togglePromo(m),
+                                      child: Icon(
+                                          m.isActive ? Icons.pause_circle_outline : Icons.play_circle_outline,
+                                          size: 19,
+                                          color: m.isActive ? kRed : kGreen)),
+                                ],
+                                const SizedBox(width: 8),
+                                InkWell(
+                                    onTap: () => _deletePromo(m),
+                                    child: const Icon(Icons.delete_outline, size: 19, color: kRed)),
                               ]),
                             );
                           }).toList(),

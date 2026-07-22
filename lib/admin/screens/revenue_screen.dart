@@ -62,7 +62,7 @@ class _RevenueScreenState extends State<RevenueScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: adminAppBar('Revenue Management', 'Mock payments · live totals'),
+      appBar: adminAppBar('Revenue Management', 'Live totals from all transactions'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _isLoading

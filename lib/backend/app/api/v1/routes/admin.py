@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -25,6 +25,7 @@ from app.schemas.subscription import (
     PromoCodeUpdate,
     RevenueStats,
 )
+from app.services.exercise_video_service import exercise_video_service
 from app.services.video_service import video_service
 from app.utils.deps import get_current_admin
 
@@ -423,3 +424,51 @@ async def admin_delete_exercise(
     if exercise is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bài tập.")
     await exercise_crud.delete_exercise(db, exercise)
+
+
+@router.post("/exercises/{exercise_id}/video", response_model=ExerciseOut)
+async def admin_upload_exercise_video(
+    exercise_id: int,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+) -> ExerciseOut:
+    """Upload video hướng dẫn cho 1 bài tập — video này sẽ hiện lên cho
+    mọi user khi họ tập bài đó (thay thế video mẫu cứng trong app nếu có)."""
+    exercise = await exercise_crud.get_exercise_by_id(db, exercise_id)
+    if exercise is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bài tập.")
+
+    try:
+        new_url = await exercise_video_service.save(file)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    # Xóa file cũ (nếu có) sau khi file mới đã lưu thành công, tránh rác
+    # tích tụ mỗi lần admin đổi video cho cùng 1 bài tập.
+    old_url = exercise.demo_video_url
+    exercise.demo_video_url = new_url
+    await db.flush()
+    exercise_video_service.delete_by_url(old_url)
+
+    return ExerciseOut.model_validate(exercise)
+
+
+@router.delete("/exercises/{exercise_id}/video", response_model=ExerciseOut)
+async def admin_delete_exercise_video(
+    exercise_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+) -> ExerciseOut:
+    """Gỡ video hướng dẫn khỏi bài tập — quay về dùng video mẫu mặc định
+    trong app (nếu có) hoặc không có video."""
+    exercise = await exercise_crud.get_exercise_by_id(db, exercise_id)
+    if exercise is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bài tập.")
+
+    old_url = exercise.demo_video_url
+    exercise.demo_video_url = None
+    await db.flush()
+    exercise_video_service.delete_by_url(old_url)
+
+    return ExerciseOut.model_validate(exercise)

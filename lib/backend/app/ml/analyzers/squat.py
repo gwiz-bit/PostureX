@@ -1,6 +1,6 @@
 """Phân tích kỹ thuật squat: độ sâu, gối vượt mũi chân, lưng thẳng."""
 
-from app.ml.angle_utils import calculate_angle
+from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -36,14 +36,19 @@ class SquatAnalyzer(ExerciseAnalyzer):
         right_foot     = keypoints[32]   # right_foot_index
 
         # --- Tính góc gối ---
+        # Dùng góc 3D (x, y, z) thay vì chỉ 2D: khi người dùng quay thẳng
+        # mặt vào camera, gối gập chủ yếu theo chiều sâu (z) chứ không di
+        # chuyển rõ trên mặt phẳng ảnh (x, y) — nếu chỉ tính 2D, góc gần
+        # như không đổi và rep không bao giờ được đếm. z từ MediaPipe kém
+        # ổn định hơn x/y nên đây là điều chỉnh cần theo dõi thực tế.
         left_knee_angle: float | None = None
         right_knee_angle: float | None = None
 
         if _visible(left_hip, left_knee, left_ankle):
-            left_knee_angle = calculate_angle(left_hip, left_knee, left_ankle)
+            left_knee_angle = calculate_angle_3d(left_hip, left_knee, left_ankle)
 
         if _visible(right_hip, right_knee, right_ankle):
-            right_knee_angle = calculate_angle(right_hip, right_knee, right_ankle)
+            right_knee_angle = calculate_angle_3d(right_hip, right_knee, right_ankle)
 
         # Lấy góc gối trung bình để đếm rep
         knee_angle = _avg(left_knee_angle, right_knee_angle)

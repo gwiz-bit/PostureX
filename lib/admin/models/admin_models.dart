@@ -274,6 +274,7 @@ class AdminExercise {
     required this.difficulty,
     required this.exerciseType,
     required this.isActive,
+    required this.demoVideoUrl,
   });
 
   final int id;
@@ -283,6 +284,7 @@ class AdminExercise {
   final String? difficulty;
   final String exerciseType;
   final bool isActive;
+  final String? demoVideoUrl;
 
   factory AdminExercise.fromJson(Map<String, dynamic> json) => AdminExercise(
         id: json['id'] as int,
@@ -292,6 +294,7 @@ class AdminExercise {
         difficulty: json['difficulty'] as String?,
         exerciseType: json['exercise_type'] as String,
         isActive: json['is_active'] as bool,
+        demoVideoUrl: json['demo_video_url'] as String?,
       );
 }
 

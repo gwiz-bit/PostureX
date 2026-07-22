@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../models/user_session.dart';
 import '../services/api_client.dart';
+import '../services/google_auth_service.dart';
 import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
+import 'ai_coach_screen.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 import 'subscription_screen.dart';
@@ -243,6 +245,32 @@ class ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 24),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AiCoachScreen()),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 20),
+                  SizedBox(width: 12),
+                  Text(
+                    'AI Coach',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Spacer(),
+                  Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           const Text(
             'Premium',
             style: TextStyle(
@@ -341,6 +369,9 @@ class ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {
       // Best-effort — still log the user out locally either way.
     }
+    // Forgets the Google account so the next "Continue with Google" shows
+    // the account picker again instead of silently reusing this session.
+    await GoogleAuthService.disconnect();
     UserSession.logOut();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(

@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # Luu tru video
     VIDEO_STORAGE_PATH: str = "storage/videos"
 
+    # Luu tru video huong dan bai tap (admin upload, public, khac voi
+    # storage/videos la video tap luyen rieng tu cua user)
+    EXERCISE_VIDEO_STORAGE_PATH: str = "storage/exercise_videos"
+
     # CORS
     ALLOWED_ORIGINS: list[str] = ["*"]
 
@@ -49,6 +53,10 @@ class Settings(BaseSettings):
     # when verifying ID tokens from the Flutter app's google_sign_in flow.
     GOOGLE_CLIENT_ID: str = ""
 
+    # AI Coach chat — Gemini API key from aistudio.google.com/apikey.
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-flash-latest"
+
     def get_database_url(self) -> str:
         """Tao async connection URL cho MySQL qua aiomysql."""
         user = urllib.parse.quote_plus(self.DB_USER)
@@ -60,6 +68,12 @@ class Settings(BaseSettings):
     def get_video_storage_path(self) -> Path:
         """Tra ve duong dan thu muc luu video dang Path."""
         path = Path(self.VIDEO_STORAGE_PATH)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def get_exercise_video_storage_path(self) -> Path:
+        """Tra ve duong dan thu muc luu video huong dan bai tap."""
+        path = Path(self.EXERCISE_VIDEO_STORAGE_PATH)
         path.mkdir(parents=True, exist_ok=True)
         return path
 
