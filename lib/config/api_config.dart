@@ -1,33 +1,31 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 /// Backend connection settings.
 ///
-/// The FastAPI backend is expected to be running on the dev machine at port
-/// 9000 (`uvicorn app.main:app --reload --host 0.0.0.0 --port 9000`).
-///
-/// [_host] defaults to `10.0.2.2` — the Android emulator's alias for the host
-/// machine's `localhost`. A real phone cannot resolve that, so builds targeting
-/// a physical device must pass the dev machine's LAN IP instead:
-///
-///     flutter build apk --debug --dart-define=API_HOST=192.168.1.9
-///
-/// Any host used here must also be whitelisted for cleartext HTTP in
-/// `android/app/src/main/res/xml/network_security_config.xml`, otherwise
-/// Android silently blocks the request.
+/// The FastAPI backend is expected to be running locally on port 9000
+/// (`uvicorn app.main:app --reload --port 9000`). The host to reach it at
+/// depends on *where the app itself is running*, not the backend:
+/// - Android emulator: `10.0.2.2` (the emulator's alias for the host
+///   machine's `localhost` — the emulator has its own separate loopback,
+///   so plain `localhost` would point back at the emulator itself).
+/// - Windows/web/desktop, or a physical device: `localhost` (physical
+///   devices instead need the host machine's real LAN IP — see SETUP.md).
 class ApiConfig {
   ApiConfig._();
 
-  static const String _host = String.fromEnvironment(
-    'API_HOST',
-    defaultValue: '10.0.2.2',
-  );
+  static bool get _isAndroidEmulator => !kIsWeb && Platform.isAndroid;
 
-  static const String baseUrl = 'http://$_host:9000';
-  static const String wsUrl = 'ws://$_host:9000';
+  static String get baseUrl =>
+      _isAndroidEmulator ? 'http://10.0.2.2:9000' : 'http://localhost:9000';
+
+  static String get wsUrl => _isAndroidEmulator ? 'ws://10.0.2.2:9000' : 'ws://localhost:9000';
 
   /// The "Web application" OAuth 2.0 client ID from Google Cloud Console
   /// (Credentials page) — NOT the Android client ID. Passed as
   /// `GoogleSignIn(serverClientId: ...)` so the ID token it returns has an
   /// `aud` claim the backend's `GOOGLE_CLIENT_ID` (same value) can verify.
-  /// TODO: fill in once created — see lib/backend/.env's GOOGLE_CLIENT_ID.
   static const String googleWebClientId =
       '879931217481-eeqak275h11nji6v93j8a9s65rc7pjt3.apps.googleusercontent.com';
 }

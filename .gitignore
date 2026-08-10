@@ -46,3 +46,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Gradle build output (regenerated on every build, machine-specific —
+# tracking it just causes noisy merge conflicts with no real content)
+/android/build/
+/android/app/build/

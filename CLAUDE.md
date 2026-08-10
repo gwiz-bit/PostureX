@@ -31,10 +31,17 @@ There is no attached mobile simulator/device in this environment — development
 
 ### Backend (run from `lib/backend/`)
 
+```powershell
+.\run.ps1                             # one-shot: venv, deps, .env, model, DB, then uvicorn — safe to re-run anytime
+```
+
+`run.ps1` handles first-time setup on a fresh clone (creates `.env` from `.env.example` and stops so you can fill in `DB_PASSWORD`, then on the next run creates the venv, installs deps, downloads the MediaPipe model, initializes the DB schema if empty) and is idempotent on repeat runs — on an already-populated DB it only fills in tables missing from `Base.metadata` (via `ensure_tables.py`, which unlike `create_tables.py` never drops `videos`/`workouts`). Use it after every `git pull` that adds a new model, instead of running the pieces below by hand:
+
 ```bash
 pip install -r requirements.txt
 python download_models.py             # fetch the MediaPipe pose model (app/ml/models/*.task)
-python create_tables.py               # create MySQL tables (also: sql/postureX123_schema.sql)
+python create_tables.py               # first-time init only — DROPS+recreates videos/workouts every run
+python ensure_tables.py               # safe to re-run — only creates tables missing from Base.metadata
 python create_admin.py                # seed an admin user
 uvicorn app.main:app --reload --port 9000   # port 9000 is what the Flutter app expects
 pytest                                # backend tests (tests/)
