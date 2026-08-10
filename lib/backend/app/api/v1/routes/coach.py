@@ -9,10 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.crud.exercise import get_active_exercises
 from app.crud.profile import get_profile
 from app.models.user import User
 from app.models.workout import Workout
-from app.schemas.coach import CoachChatRequest, CoachChatResponse
+from app.schemas.coach import AiPlanResponse, CoachChatRequest, CoachChatResponse
 from app.services import ai_coach_service
 from app.utils.deps import get_current_user
 
@@ -171,3 +172,32 @@ async def chat(
         )
 
     return CoachChatResponse(reply=reply)
+
+
+@router.post("/plan", response_model=AiPlanResponse)
+async def generate_plan(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> AiPlanResponse:
+    """Sinh lịch tập + dinh dưỡng 7 ngày (Mon..Sun) cá nhân hóa bằng AI, dựa
+    trên hồ sơ thể chất + lịch sử tập thật — client dùng kết quả này để thay
+    thế lịch tập mẫu cố định trên Home."""
+    if not settings.GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI Coach chưa được cấu hình trên server.",
+        )
+
+    user_context = await _build_user_context(db, current_user)
+    exercises = await get_active_exercises(db)
+    try:
+        return await ai_coach_service.generate_plan(
+            user_context=user_context,
+            exercise_names=[e.name for e in exercises],
+        )
+    except Exception as e:
+        logger.warning("AI plan generation failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Không thể tạo lịch tập lúc này. Thử lại sau.",
+        )

@@ -4,6 +4,7 @@ import '../models/user_session.dart';
 import '../models/workout.dart';
 import '../models/workout_plan.dart';
 import '../services/api_client.dart';
+import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/app_logo.dart';
@@ -25,12 +26,81 @@ class HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<Workout> _workouts = [];
+  bool _isGeneratingPlan = false;
+
+  Future<void> _generateAiPlan() async {
+    setState(() => _isGeneratingPlan = true);
+    try {
+      final aiPlan = await ApiClient.instance.generateAiPlan();
+      UserSession.plan.applyAiWeek([
+        for (final day in aiPlan.days)
+          (
+            dayLabel: day.dayLabel,
+            sessionName: day.sessionName,
+            isRest: day.isRest,
+            exercises: [
+              for (final e in day.exercises)
+                PlannedExercise(name: e.name, setsReps: e.setsReps),
+            ],
+            nutritionTip: day.nutritionTip,
+          ),
+      ]);
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Your personalized plan is ready!'),
+      ));
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not reach the server. Check your connection.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingPlan = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _load();
+    _maybeSendWorkoutReminder();
   }
+
+  /// If today has a scheduled session in [UserSession.plan], tells the
+  /// backend to create a workout reminder (+ nutrition tip, if the plan has
+  /// one for today) so it shows up in Notifications and pushes to the
+  /// device. Fire-and-forget — a failed reminder shouldn't block Home from
+  /// loading, and the backend re-checks dedup anyway so silently retrying
+  /// next time Home loads is harmless.
+  Future<void> _maybeSendWorkoutReminder() async {
+    final today = DateTime.now();
+    final alreadySentToday = UserSession.lastWorkoutReminderDate != null &&
+        _isSameDay(UserSession.lastWorkoutReminderDate!, today);
+    if (alreadySentToday) return;
+
+    final todayPlan = UserSession.plan.planFor(today);
+    if (todayPlan == null || todayPlan.isRestDay) return;
+
+    try {
+      await ApiClient.instance.sendWorkoutReminder(
+        sessionName: todayPlan.sessionName,
+        exercises: [for (final e in todayPlan.exercises) e.name],
+        nutritionTip: todayPlan.nutritionTip,
+      );
+      UserSession.lastWorkoutReminderDate = today;
+    } catch (_) {
+      // Best-effort — no connectivity shouldn't surface an error on Home.
+    }
+  }
+
+  static bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   /// Public so [MainShell] can force a fresh fetch when this tab is
   /// selected — matches [ProgressScreenState.reload]/[ProfileScreenState.reload].
@@ -266,9 +336,33 @@ class HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 2),
-          Text(
-            'Tap a day to see that session',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Tap a day to see that session',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _isGeneratingPlan ? null : _generateAiPlan,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                icon: _isGeneratingPlan
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                      )
+                    : const Icon(Icons.auto_awesome_rounded, size: 16),
+                label: Text(
+                  _isGeneratingPlan ? 'Generating...' : 'Personalize with AI',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           SectionCard(

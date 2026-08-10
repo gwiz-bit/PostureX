@@ -2,15 +2,17 @@
 
 from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.analyzers.base import ExerciseAnalyzer
+from app.ml.analyzers.common import avg as _avg
+from app.ml.analyzers.common import is_visible as _visible
+from app.ml.analyzers.common import visible_points as _visible_points
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
-from app.schemas.analysis import FrameAnalysisResult, KeyAngles, Point
+from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 
 # Ngưỡng góc (độ)
 KNEE_DEPTH_THRESHOLD = 95.0      # Gối phải gập ≤ ngưỡng này mới đủ sâu
 KNEE_OVERSHOOT_RATIO = 0.05      # Gối không được vượt qua mũi chân quá 5% chiều rộng frame
 BACK_STRAIGHT_MIN = 150.0        # Góc hông-vai-cổ phải ≥ ngưỡng này (lưng thẳng)
-VISIBILITY_THRESHOLD = 0.5       # Chỉ xét khớp nếu độ tin cậy đủ cao
 
 
 class SquatAnalyzer(ExerciseAnalyzer):
@@ -110,27 +112,3 @@ class SquatAnalyzer(ExerciseAnalyzer):
                 "right_ankle": right_ankle,
             }),
         )
-
-
-# --- Helper functions ---
-
-def _visible(*kps: Keypoint) -> bool:
-    """Trả True nếu tất cả keypoint có visibility đủ cao."""
-    return all(kp.visibility >= VISIBILITY_THRESHOLD for kp in kps)
-
-
-def _avg(a: float | None, b: float | None) -> float | None:
-    """Trả trung bình hai giá trị; nếu cả hai None thì trả None."""
-    if a is not None and b is not None:
-        return (a + b) / 2
-    return a if a is not None else b
-
-
-def _visible_points(joints: dict[str, Keypoint]) -> dict[str, Point]:
-    """Chuyển các Keypoint đủ tin cậy thành Point để trả về client vẽ
-    skeleton — bỏ qua khớp che khuất/không rõ thay vì gửi tọa độ rác."""
-    return {
-        name: Point(x=kp.x, y=kp.y, visibility=kp.visibility)
-        for name, kp in joints.items()
-        if kp.visibility >= VISIBILITY_THRESHOLD
-    }

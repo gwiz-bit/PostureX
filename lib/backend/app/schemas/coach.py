@@ -19,3 +19,24 @@ class CoachChatRequest(BaseModel):
 
 class CoachChatResponse(BaseModel):
     reply: str
+
+
+class PlanExerciseOut(BaseModel):
+    name: str
+    sets_reps: str
+
+
+class PlanDayOut(BaseModel):
+    day_label: str = Field(pattern="^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$")
+    session_name: str
+    is_rest: bool
+    exercises: list[PlanExerciseOut]
+    # Gợi ý dinh dưỡng ngắn cho ngày đó — kể cả ngày nghỉ (ăn gì để phục hồi).
+    nutrition_tip: str
+
+
+class AiPlanResponse(BaseModel):
+    """Lịch tập + dinh dưỡng 7 ngày (Mon..Sun) do Gemini soạn riêng cho user,
+    dựa trên hồ sơ thể chất + lịch sử tập thật — thay cho lịch mẫu cố định
+    sinh ở client lúc onboarding."""
+    days: list[PlanDayOut] = Field(min_length=7, max_length=7)

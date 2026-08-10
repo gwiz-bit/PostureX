@@ -6,8 +6,16 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.base import ExerciseAnalyzer
+from app.ml.analyzers.bench_press import BenchPressAnalyzer
+from app.ml.analyzers.cat_cow import CatCowAnalyzer
+from app.ml.analyzers.deadlift import DeadliftAnalyzer
+from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
+from app.ml.analyzers.lunge import LungeAnalyzer
+from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
+from app.ml.analyzers.plank import PlankAnalyzer
+from app.ml.analyzers.row import RowAnalyzer
+from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.pose_estimator import PoseEstimator
 from app.ml.session_state import SessionState
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
@@ -19,20 +27,42 @@ router = APIRouter(tags=["realtime"])
 # Khởi tạo PoseEstimator một lần cho toàn ứng dụng
 _pose_estimator = PoseEstimator(model_complexity=1)
 
-# Registry ánh xạ tên bài tập -> analyzer class
+# Registry ánh xạ tên bài tập -> analyzer class. Key phải khớp đúng chuỗi
+# `exercise` client gửi lên khi khởi tạo phiên (không phân biệt hoa/thường —
+# xem `_get_analyzer` bên dưới).
 ANALYZER_REGISTRY: dict[str, type[ExerciseAnalyzer]] = {
     "squat": SquatAnalyzer,
+    "row": RowAnalyzer,
+    "bench press": BenchPressAnalyzer,
+    "dumbbell bench press": BenchPressAnalyzer,
+    "plank": PlankAnalyzer,
+    "lunge": LungeAnalyzer,
+    "deadlift": DeadliftAnalyzer,
+    "overhead press": OverheadPressAnalyzer,
+    "barbell overhead press": OverheadPressAnalyzer,
+    "hip thrust": HipThrustAnalyzer,
+    "cat-cow": CatCowAnalyzer,
 }
 
 
 def _get_analyzer(exercise: str, session: SessionState) -> ExerciseAnalyzer:
-    """Tạo analyzer tương ứng với tên bài tập."""
+    """Tạo analyzer tương ứng với tên bài tập.
+
+    KHÔNG truyền `session.rep_counter` vào analyzer — mỗi bài có ngưỡng
+    góc down/up riêng (vd Row co khuỷu ở ~70°, Deadlift đứng thẳng ở
+    ~165°), còn `SessionState` chỉ tạo `RepCounter()` mặc định (90/160).
+    Để analyzer tự tạo RepCounter đúng ngưỡng bài đó, rồi đồng bộ ngược lại
+    vào session — các chỗ khác (nhánh "không phát hiện người", log lúc ngắt
+    kết nối) đọc `session.rep_counter` nên phải luôn là CÙNG một instance.
+    """
     cls = ANALYZER_REGISTRY.get(exercise.lower())
     if cls is None:
         # Mặc định dùng squat nếu chưa hỗ trợ bài tập đó
         logger.warning("Bài tập '%s' chưa được hỗ trợ, dùng squat mặc định.", exercise)
         cls = SquatAnalyzer
-    return cls(rep_counter=session.rep_counter)
+    analyzer = cls()
+    session.rep_counter = analyzer.rep_counter
+    return analyzer
 
 
 def _decode_frame(data: bytes | str) -> bytes:

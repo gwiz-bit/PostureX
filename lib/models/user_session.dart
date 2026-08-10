@@ -45,6 +45,13 @@ class UserSession {
     fitnessLevel: _defaultFitnessLevel,
   );
 
+  /// Date (day-only) the workout-day reminder was last sent to the backend
+  /// this run — guards [HomeScreenState] from calling
+  /// `sendWorkoutReminder` on every rebuild. Not persisted across app
+  /// restarts; the backend has its own server-side dedup for that case
+  /// (see `POST /notifications/workout-reminder`).
+  static DateTime? lastWorkoutReminderDate;
+
   static void completeOnboarding({
     required String name,
     required OnboardingProfile profile,

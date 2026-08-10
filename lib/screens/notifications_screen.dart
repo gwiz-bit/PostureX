@@ -4,6 +4,7 @@ import '../models/app_notification.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import '../widgets/section_card.dart';
+import 'notification_detail_screen.dart';
 
 /// Danh sách thông báo trong app (`GET /api/v1/notifications`).
 ///
@@ -48,6 +49,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _openDetail(AppNotification notification) async {
+    await _markRead(notification);
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => NotificationDetailScreen(notification: notification)),
+    );
   }
 
   Future<void> _markRead(AppNotification notification) async {
@@ -161,7 +170,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) => _NotificationTile(
         notification: _notifications[index],
-        onTap: () => _markRead(_notifications[index]),
+        onTap: () => _openDetail(_notifications[index]),
       ),
     );
   }

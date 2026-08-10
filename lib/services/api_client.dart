@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import '../admin/models/admin_models.dart';
+import '../models/ai_plan.dart';
 import '../models/app_notification.dart';
 import '../models/auth_response.dart';
 import '../models/chat_message.dart';
@@ -483,6 +484,14 @@ class ApiClient {
     return (json as Map<String, dynamic>)['reply'] as String;
   }
 
+  /// Generates a personalized 7-day (Mon..Sun) workout + nutrition plan from
+  /// the user's real profile and workout history — used to replace the
+  /// static onboarding-template calendar on Home with an AI-tailored one.
+  Future<AiPlan> generateAiPlan() async {
+    final json = await _post('/api/v1/coach/plan', auth: true);
+    return AiPlan.fromJson(json as Map<String, dynamic>);
+  }
+
   // --- Notifications ------------------------------------------------------
 
   Future<List<AppNotification>> fetchNotifications() async {
@@ -505,6 +514,22 @@ class ApiClient {
 
   Future<void> markAllNotificationsRead() async {
     await _patch('/api/v1/notifications/read-all', auth: true);
+  }
+
+  /// Tells the backend today is a scheduled workout day (per the client-only
+  /// [WorkoutPlan]) so it can create + push a workout reminder notification,
+  /// plus a nutrition-tip notification when one is available. Server-side
+  /// deduped — safe to call every time Home loads.
+  Future<void> sendWorkoutReminder({
+    required String sessionName,
+    required List<String> exercises,
+    String? nutritionTip,
+  }) async {
+    await _post('/api/v1/notifications/workout-reminder', auth: true, body: {
+      'session_name': sessionName,
+      'exercises': exercises,
+      'nutrition_tip': nutritionTip,
+    });
   }
 
   // --- Subscriptions & payments -------------------------------------------

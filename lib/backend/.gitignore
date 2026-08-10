@@ -50,6 +50,10 @@ storage/videos/*
 storage/exercise_videos/*
 !storage/exercise_videos/.gitkeep
 
+# Video nguồn thô dùng để gán demo_video_url thủ công cho thư viện bài tập —
+# tài nguyên tham khảo, không phải code, quá nặng để commit lên repo.
+video/
+
 # Alembic
 alembic/versions/__pycache__/
 

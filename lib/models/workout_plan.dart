@@ -9,11 +9,21 @@ class PlannedExercise {
 /// One day of a [WorkoutPlan] — either a training session or a rest day
 /// (when [exercises] is empty).
 class DayPlan {
-  const DayPlan({required this.date, required this.sessionName, required this.exercises});
+  const DayPlan({
+    required this.date,
+    required this.sessionName,
+    required this.exercises,
+    this.nutritionTip,
+  });
 
   final DateTime date;
   final String sessionName;
   final List<PlannedExercise> exercises;
+
+  /// Set only for days generated/refreshed by the AI Coach's plan generator
+  /// (see [WorkoutPlan.applyAiWeek]) — `null` for the static onboarding
+  /// templates, which don't have per-day nutrition guidance.
+  final String? nutritionTip;
 
   bool get isRestDay => exercises.isEmpty;
 }
@@ -70,6 +80,49 @@ class WorkoutPlan {
       if (_dateOnly(day.date) == target) return day;
     }
     return null;
+  }
+
+  /// Replaces the session name + exercise list for the day matching [date],
+  /// in place — used by the Home calendar's day-editor sheet. Leaves
+  /// [DayPlan.nutritionTip] untouched unless [nutritionTip] is passed
+  /// explicitly, so manually editing exercises doesn't wipe out an
+  /// AI-generated tip. No-op if [date] isn't one of this plan's 28 days.
+  void updateDay(
+    DateTime date,
+    String sessionName,
+    List<PlannedExercise> exercises, {
+    String? nutritionTip,
+  }) {
+    final target = _dateOnly(date);
+    final index = days.indexWhere((d) => _dateOnly(d.date) == target);
+    if (index == -1) return;
+    days[index] = DayPlan(
+      date: days[index].date,
+      sessionName: exercises.isEmpty ? 'Rest' : sessionName,
+      exercises: exercises,
+      nutritionTip: nutritionTip ?? days[index].nutritionTip,
+    );
+  }
+
+  /// Applies a 7-day (Mon..Sun) AI-generated plan across every week of this
+  /// 4-week grid, matching each day by weekday — e.g. the AI's "Mon" entry
+  /// is applied to all 4 Mondays in the grid. Keeps the calendar's 28-day
+  /// shape while making every week reflect the personalized plan, rather
+  /// than only refreshing the current week and leaving stale template days
+  /// further out.
+  void applyAiWeek(List<({String dayLabel, String sessionName, bool isRest, List<PlannedExercise> exercises, String nutritionTip})> week) {
+    final byLabel = {for (final d in week) d.dayLabel: d};
+    for (var i = 0; i < days.length; i++) {
+      final label = _weekdayLabels[days[i].date.weekday - 1];
+      final aiDay = byLabel[label];
+      if (aiDay == null) continue;
+      days[i] = DayPlan(
+        date: days[i].date,
+        sessionName: aiDay.isRest ? 'Rest' : aiDay.sessionName,
+        exercises: aiDay.isRest ? const [] : aiDay.exercises,
+        nutritionTip: aiDay.nutritionTip,
+      );
+    }
   }
 
   /// 0-based week index (0..3) for a date within the plan, clamped to range.

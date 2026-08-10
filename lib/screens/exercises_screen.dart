@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
+import 'exercise_detail_screen.dart';
 
 class ExercisesScreen extends StatefulWidget {
   const ExercisesScreen({super.key});
@@ -147,7 +148,11 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
               for (final exercise in filtered) ...[
                 SectionCard(
                   padding: const EdgeInsets.all(16),
-                  onTap: () {},
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ExerciseDetailScreen(exercise: exercise),
+                    ),
+                  ),
                   child: Row(
                     children: [
                       IconBadge(icon: _iconFor(exercise.category)),

@@ -22,6 +22,10 @@ TYPE_SUBSCRIPTION = "subscription"
 TYPE_SUBSCRIPTION_EXPIRY = "subscription_expiry"
 # Admin gửi thông báo hàng loạt (broadcast) từ màn quản trị.
 TYPE_ADMIN_BROADCAST = "admin_broadcast"
+# Nhắc "hôm nay có lịch tập" + gợi ý dinh dưỡng trong ngày, bắn khi client mở
+# Home và thấy hôm nay là ngày tập theo lịch cá nhân hóa (xem routes/notifications.py).
+TYPE_WORKOUT_REMINDER = "workout_reminder"
+TYPE_NUTRITION = "nutrition"
 
 
 async def create_notification(
@@ -67,6 +71,24 @@ async def users_notified_since(
         .distinct()
     )
     return set(result.scalars().all())
+
+
+async def has_notification_since(
+    db: AsyncSession, user_id: int, type_: str, since: datetime
+) -> bool:
+    """User này đã nhận thông báo loại `type_` kể từ mốc `since` chưa —
+    chống trùng cho các endpoint client tự kích hoạt (vd nhắc lịch tập), nơi
+    client có thể gọi lại nhiều lần trong cùng một ngày (mở app nhiều lần)."""
+    result = await db.execute(
+        select(Notification.id)
+        .where(
+            Notification.user_id == user_id,
+            Notification.type == type_,
+            Notification.created_at >= since,
+        )
+        .limit(1)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def get_notifications_by_user(db: AsyncSession, user_id: int) -> list[Notification]:
