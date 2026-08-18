@@ -223,7 +223,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     if (event.frame != null) {
       final frame = event.frame!;
       _awaitingResponse = false;
-      if (!frame.errors.contains(_noPersonMessage)) {
+      // "top" = đang đứng nghỉ/chưa vào tư thế (giữa các rep, hoặc trước khi
+      // bắt đầu) — không tính vào độ chính xác, nếu không đứng yên trước
+      // camera mà chưa tập gì cũng bị chấm gần 100% (không đúng động tác thì
+      // cũng chẳng có gì để chấm sai). Chỉ tính khung hình khi analyzer báo
+      // đang thực sự trong động tác (going_down/bottom/going_up, hoặc
+      // "holding" với Plank).
+      if (!frame.errors.contains(_noPersonMessage) && frame.phase != 'top') {
         _correctnessSamples.add(frame.correct);
       }
       if (frame.repCount > _repCount && frame.correct) {

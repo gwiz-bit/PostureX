@@ -8,6 +8,7 @@ import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/app_logo.dart';
+import 'analyze_session_screen.dart';
 import 'notifications_screen.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/plan_calendar.dart';
@@ -63,6 +64,56 @@ class HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _isGeneratingPlan = false);
     }
+  }
+
+  /// "Full Body Check" quick-start card — lets the user pick which of its
+  /// three exercises to check now, same pattern as the Workout tab's
+  /// routine picker (each key has a real backend analyzer registered in
+  /// `ANALYZER_REGISTRY`).
+  void _startFullBodyCheck(BuildContext context) {
+    const exercises = [
+      ('Squat', 'squat'),
+      ('Row', 'row'),
+      ('Plank', 'plank'),
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Text(
+                'Full Body Check',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            for (final (label, key) in exercises)
+              ListTile(
+                leading: const Icon(Icons.play_circle_fill_rounded, color: AppColors.primary),
+                title: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => AnalyzeSessionScreen(exercise: key)),
+                  );
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -384,7 +435,7 @@ class HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
           SectionCard(
-            onTap: () {},
+            onTap: () => _startFullBodyCheck(context),
             child: Row(
               children: [
                 const IconBadge(customIcon: AppLogo()),
