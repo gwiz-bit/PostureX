@@ -17,10 +17,24 @@ class ApiConfig {
 
   static bool get _isAndroidEmulator => !kIsWeb && Platform.isAndroid;
 
-  static String get baseUrl =>
-      _isAndroidEmulator ? 'http://10.0.2.2:9000' : 'http://localhost:9000';
+  /// Production override — pass at build time, e.g.:
+  /// `flutter build ios --dart-define=API_BASE_URL=https://api.posturex.app`
+  /// Empty by default, which falls back to the local-dev URLs below so
+  /// nothing changes for `flutter run` during development.
+  static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
 
-  static String get wsUrl => _isAndroidEmulator ? 'ws://10.0.2.2:9000' : 'ws://localhost:9000';
+  static String get baseUrl {
+    if (_baseUrlOverride.isNotEmpty) return _baseUrlOverride;
+    return _isAndroidEmulator ? 'http://10.0.2.2:9000' : 'http://localhost:9000';
+  }
+
+  static String get wsUrl {
+    if (_baseUrlOverride.isNotEmpty) {
+      final uri = Uri.parse(_baseUrlOverride);
+      return uri.replace(scheme: uri.scheme == 'https' ? 'wss' : 'ws').toString();
+    }
+    return _isAndroidEmulator ? 'ws://10.0.2.2:9000' : 'ws://localhost:9000';
+  }
 
   /// The "Web application" OAuth 2.0 client ID from Google Cloud Console
   /// (Credentials page) — NOT the Android client ID. Passed as

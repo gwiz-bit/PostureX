@@ -37,6 +37,12 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>PostureX cần quyền truy cập camera để phân tích tư thế tập luyện của bạn theo thời gian thực và để quay video bài tập.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PostureX cần quyền truy cập micro để ghi âm khi bạn quay video bài tập bằng camera.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PostureX cần quyền truy cập thư viện ảnh để bạn có thể chọn video bài tập đã quay sẵn cho việc phân tích.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -4,8 +4,10 @@ import base64
 import json
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from jose import JWTError
 
+from app.core.security import decode_token
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
@@ -84,15 +86,31 @@ def _decode_frame(data: bytes | str) -> bytes:
 
 
 @router.websocket("/ws/analyze")
-async def analyze_realtime(websocket: WebSocket) -> None:
+async def analyze_realtime(websocket: WebSocket, token: str | None = Query(default=None)) -> None:
     """
     WebSocket endpoint phân tích tư thế theo từng frame.
+
+    Xác thực: client bắt buộc gửi access token qua query string
+    (`/ws/analyze?token=...`), không dùng header Authorization — nhiều
+    WebSocket client (kể cả trên web) không cho set header tuỳ ý lúc
+    handshake. Từ chối kết nối trước khi accept() nếu thiếu/token sai.
 
     Giao thức:
       1. Client gửi JSON init: {"exercise": "squat"}
       2. Client gửi liên tục frame JPEG (bytes hoặc base64)
       3. Server trả JSON FrameAnalysisResult sau mỗi frame
     """
+    if token is None:
+        await websocket.close(code=1008, reason="Thiếu token xác thực.")
+        return
+    try:
+        payload = decode_token(token)
+        if payload.get("sub") is None:
+            raise JWTError("Thiếu subject")
+    except JWTError:
+        await websocket.close(code=1008, reason="Token không hợp lệ hoặc đã hết hạn.")
+        return
+
     await websocket.accept()
     session: SessionState | None = None
     analyzer: ExerciseAnalyzer | None = None

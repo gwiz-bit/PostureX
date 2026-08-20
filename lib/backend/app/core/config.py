@@ -20,8 +20,9 @@ class Settings(BaseSettings):
     DB_USER: str = "root"
     DB_PASSWORD: str = "123456"
 
-    # JWT
-    SECRET_KEY: str = "change-me-in-production"
+    # JWT — bat buoc dat qua .env/env var, khong co fallback: neu thieu, Settings()
+    # se raise ValidationError ngay luc khoi dong thay vi am tham dung khoa yeu.
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
 

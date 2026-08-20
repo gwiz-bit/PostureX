@@ -11,6 +11,7 @@ import '../widgets/tag_chip.dart';
 import 'ai_coach_screen.dart';
 import 'edit_profile_screen.dart';
 import 'login_screen.dart';
+import 'privacy_policy_screen.dart';
 import 'subscription_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -306,6 +307,32 @@ class ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 24),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.privacy_tip_outlined, color: AppColors.primary, size: 20),
+                  SizedBox(width: 12),
+                  Text(
+                    'Privacy Policy',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Spacer(),
+                  Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           SectionCard(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             onTap: () => _confirmLogOut(context),
