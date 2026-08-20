@@ -6,7 +6,7 @@ cong cho dong doi qua kenh rieng tu (chat, drive rieng...), tuyet doi
 khong commit/push len git du repo public hay private.
 
 Cach dung:
-    venv\\Scripts\\python.exe sql\\export_data.py
+    venv\\Scripts\\python.exe scripts\\export_data.py
 """
 
 import shutil
@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.config import settings  # noqa: E402
 
-OUTPUT_FILE = Path(__file__).parent / "data_dump.sql"
+OUTPUT_FILE = Path(__file__).resolve().parent.parent / "sql" / "data_dump.sql"
 
 # Cac vi tri pho bien cua mysqldump.exe tren Windows neu khong co san
 # trong PATH — them vao day neu may ban cai o cho khac.

@@ -10,8 +10,6 @@ PostureX — "Your AI-Powered Fitness Coach". Three things live in this one repo
 2. **The FastAPI backend** (`lib/backend/`) — a full Python service (MySQL + JWT auth + MediaPipe pose analysis). Yes, it is nested under `lib/`, which is otherwise Dart-only; Flutter ignores non-Dart files there, so the layout works, but do not expect `lib/` to mean "Dart source" in this repo.
 3. **The admin app** (`lib/admin/`) — a second Flutter app with its own `main()`, still running entirely on mock data.
 
-`posturex_flutter/` is an **abandoned earlier prototype** (a complete second Flutter project, `description: "PostureX - AI posture correction app prototype"`). Nothing references it and it is not part of any build. Do not edit it, and do not treat its `lib/` as this app's source.
-
 ## Commands
 
 ### Flutter app
@@ -35,14 +33,14 @@ There is no attached mobile simulator/device in this environment — development
 .\run.ps1                             # one-shot: venv, deps, .env, model, DB, then uvicorn — safe to re-run anytime
 ```
 
-`run.ps1` handles first-time setup on a fresh clone (creates `.env` from `.env.example` and stops so you can fill in `DB_PASSWORD`, then on the next run creates the venv, installs deps, downloads the MediaPipe model, initializes the DB schema if empty) and is idempotent on repeat runs — on an already-populated DB it only fills in tables missing from `Base.metadata` (via `ensure_tables.py`, which unlike `create_tables.py` never drops `videos`/`workouts`). Use it after every `git pull` that adds a new model, instead of running the pieces below by hand:
+`run.ps1` handles first-time setup on a fresh clone (creates `.env` from `.env.example` and stops so you can fill in `DB_PASSWORD`, then on the next run creates the venv, installs deps, downloads the MediaPipe model, initializes the DB schema if empty) and is idempotent on repeat runs — on an already-populated DB it only fills in tables missing from `Base.metadata` (via `scripts/ensure_tables.py`, which unlike `scripts/create_tables.py` never drops `videos`/`workouts`). Use it after every `git pull` that adds a new model, instead of running the pieces below by hand. All one-off maintenance scripts (DB setup, admin seeding, model download, data export/import, manual job triggers) live in `lib/backend/scripts/` — nothing script-like sits loose at the `lib/backend/` top level:
 
 ```bash
 pip install -r requirements.txt
-python download_models.py             # fetch the MediaPipe pose model (app/ml/models/*.task)
-python create_tables.py               # first-time init only — DROPS+recreates videos/workouts every run
-python ensure_tables.py               # safe to re-run — only creates tables missing from Base.metadata
-python create_admin.py                # seed an admin user
+python scripts/download_models.py     # fetch the MediaPipe pose model (app/ml/models/*.task)
+python scripts/create_tables.py       # first-time init only — DROPS+recreates videos/workouts every run
+python scripts/ensure_tables.py       # safe to re-run — only creates tables missing from Base.metadata
+python scripts/create_admin.py        # seed an admin user
 uvicorn app.main:app --reload --port 9000   # port 9000 is what the Flutter app expects
 pytest                                # backend tests (tests/)
 ```
@@ -104,7 +102,7 @@ Only a subset of the answers has backend columns (`gender`, `height_cm`, `weight
 
 Standard FastAPI layering: `api/v1/routes/` (auth, users, workouts, videos, realtime, admin) → `crud/` → `models/` (SQLAlchemy, async MySQL via aiomysql) with `schemas/` for Pydantic I/O. `core/` holds settings, DB session, and JWT/password security.
 
-The interesting part is `app/ml/`: `pose_estimator.py` runs the MediaPipe pose landmarker (`app/ml/models/pose_landmarker_full.task`, fetched by `download_models.py` — it is a binary, not in git as source), `angle_utils.py` computes joint angles, `rep_counter.py` does state-machine rep counting, and `analyzers/` holds per-exercise technique critique. **`ANALYZER_REGISTRY` in `routes/realtime.py` currently maps only `"squat"`** — any other exercise name silently falls back to `SquatAnalyzer`. Adding an exercise means adding an `ExerciseAnalyzer` subclass (see `analyzers/base.py`) and registering it there.
+The interesting part is `app/ml/`: `pose_estimator.py` runs the MediaPipe pose landmarker (`app/ml/models/pose_landmarker_full.task`, fetched by `scripts/download_models.py` — it is a binary, gitignored, not committed as source), `angle_utils.py` computes joint angles, `rep_counter.py` does state-machine rep counting, and `analyzers/` holds per-exercise technique critique. **`ANALYZER_REGISTRY` in `routes/realtime.py` currently maps only `"squat"`** — any other exercise name silently falls back to `SquatAnalyzer`. Adding an exercise means adding an `ExerciseAnalyzer` subclass (see `analyzers/base.py`) and registering it there.
 
 ### Hand-drawn marks (no image/font assets)
 

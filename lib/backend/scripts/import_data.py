@@ -8,7 +8,7 @@ CANH BAO: se DROP va tao lai database (data_dump.sql bat dau bang
 du lieu quan trong nao khac trong database dich.
 
 Cach dung:
-    venv\\Scripts\\python.exe sql\\import_data.py
+    venv\\Scripts\\python.exe scripts\\import_data.py
 """
 
 import shutil
@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.config import settings  # noqa: E402
 
-DUMP_FILE = Path(__file__).parent / "data_dump.sql"
+DUMP_FILE = Path(__file__).resolve().parent.parent / "sql" / "data_dump.sql"
 
 _FALLBACK_PATHS = [
     r"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe",

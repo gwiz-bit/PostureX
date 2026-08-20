@@ -79,15 +79,15 @@ riêng tư — **không** qua git, xem ghi chú bên dưới), đặt file đó 
 `lib/backend/sql/data_dump.sql` rồi chạy:
 
 ```powershell
-venv\Scripts\python.exe sql\import_data.py
+venv\Scripts\python.exe scripts\import_data.py
 ```
 
 **Cách B — tạo database trống, tự thêm dữ liệu:**
 
 ```powershell
-venv\Scripts\python.exe sql\run_schema.py
-venv\Scripts\python.exe create_tables.py
-venv\Scripts\python.exe create_admin.py admin@posturex.com Admin123 "Super Admin"
+venv\Scripts\python.exe scripts\run_schema.py
+venv\Scripts\python.exe scripts\create_tables.py
+venv\Scripts\python.exe scripts\create_admin.py admin@posturex.com Admin123 "Super Admin"
 ```
 
 ⚠️ Cả 2 cách trên đều **xóa sạch và tạo lại** database `poturex123` nếu đã tồn tại — chỉ chạy khi chắc chắn chưa có dữ liệu quan trọng trong đó.
@@ -98,7 +98,7 @@ Sau khi tự tạo thêm tài khoản/dữ liệu trên máy mình, chạy lện
 tạo lại file dữ liệu mới nhất:
 
 ```powershell
-venv\Scripts\python.exe sql\export_data.py
+venv\Scripts\python.exe scripts\export_data.py
 ```
 
 Lệnh này ghi ra `lib/backend/sql/data_dump.sql` — **file này bị gitignore, không tự động lên git khi bạn push code**. Muốn chia sẻ, tự gửi file này cho đồng đội qua kênh riêng tư (chat, Zalo, Google Drive share riêng...), không đăng công khai hay push lên git.

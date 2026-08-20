@@ -5,6 +5,10 @@ khong bi lech voi cau hinh that cua app — sua o .env, khong sua o day.
 """
 
 import asyncio
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import aiomysql
 

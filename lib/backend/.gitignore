@@ -54,6 +54,10 @@ storage/exercise_videos/*
 # tài nguyên tham khảo, không phải code, quá nặng để commit lên repo.
 video/
 
+# Model MediaPipe (~9.4 MB) — tải về bằng scripts/download_models.py,
+# không commit binary vào git (xem README/CLAUDE.md).
+app/ml/models/*.task
+
 # Alembic
 alembic/versions/__pycache__/
 

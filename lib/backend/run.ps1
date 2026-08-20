@@ -29,7 +29,7 @@ if (-not (Test-Path ".env")) {
 }
 
 # 4. Model MediaPipe (download_models.py tu bo qua neu da co san)
-& venv\Scripts\python.exe download_models.py
+& venv\Scripts\python.exe scripts\download_models.py
 
 # 5. Database — lan dau (database rong) thi tao schema + bang + admin mau,
 #    tu lan sau chi dong bo bang con thieu, khong dong gi du lieu da co.
@@ -47,13 +47,13 @@ print(asyncio.run(check()))
 
 if ($hasUsers -ne "True") {
     Write-Host "Database rong -- khoi tao schema + tai khoan admin mau..."
-    & venv\Scripts\python.exe sql\run_schema.py
-    & venv\Scripts\python.exe create_tables.py
-    & venv\Scripts\python.exe create_admin.py admin@posturex.com Admin123 "Super Admin"
+    & venv\Scripts\python.exe scripts\run_schema.py
+    & venv\Scripts\python.exe scripts\create_tables.py
+    & venv\Scripts\python.exe scripts\create_admin.py admin@posturex.com Admin123 "Super Admin"
     Write-Host "Da tao admin: admin@posturex.com / Admin123"
 } else {
     Write-Host "Database da co du lieu -- chi dong bo bang con thieu..."
-    & venv\Scripts\python.exe ensure_tables.py
+    & venv\Scripts\python.exe scripts\ensure_tables.py
 }
 
 # 6. Chay server

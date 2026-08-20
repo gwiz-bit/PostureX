@@ -11,7 +11,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 ///   machine's `localhost` — the emulator has its own separate loopback,
 ///   so plain `localhost` would point back at the emulator itself).
 /// - Windows/web/desktop, or a physical device: `localhost` (physical
-///   devices instead need the host machine's real LAN IP — see SETUP.md).
+///   devices instead need the host machine's real LAN IP — see docs/SETUP.md).
 class ApiConfig {
   ApiConfig._();
 

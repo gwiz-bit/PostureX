@@ -91,7 +91,7 @@ pip install "bcrypt==4.2.0"
 ## Buoc 5 — Tai model AI (MediaPipe)
 
 ```powershell
-python download_models.py
+python scripts\download_models.py
 ```
 
 Cho den khi hien `Done! (9.0 MB)`. Model luu tai:
@@ -132,11 +132,11 @@ xem `sql/postureX123_schema.sql`) cho phan tai khoan/phan quyen, cong voi
 ```powershell
 # 1) Tao Roles/Users/UserProfiles + toan bo bang tham chieu (Exercises, Goals...)
 #    XOA VA TAO LAI database poturex123 tu dau — chi chay khi muon reset sach.
-python sql\run_schema.py
+python scripts\run_schema.py
 
 # 2) Tao rieng videos/workouts (FK tro toi Users.UserId) — an toan chay lai nhieu lan,
 #    KHONG dung toi Users/Roles.
-python create_tables.py
+python scripts\create_tables.py
 # Tables created successfully.
 ```
 
@@ -149,7 +149,7 @@ python create_tables.py
 ## Buoc 8 — Tao tai khoan Admin
 
 ```powershell
-python create_admin.py admin@posturex.com Admin123 "Super Admin"
+python scripts\create_admin.py admin@posturex.com Admin123 "Super Admin"
 # Admin account created: admin@posturex.com
 ```
 
@@ -293,7 +293,7 @@ posture-x-backend/
 │   │   ├── rep_counter.py             # State machine dem rep
 │   │   ├── session_state.py           # Trang thai per-connection
 │   │   ├── models/
-│   │   │   └── pose_landmarker_full.task   # Model AI (tai bang download_models.py)
+│   │   │   └── pose_landmarker_full.task   # Model AI (tai bang scripts/download_models.py)
 │   │   └── analyzers/
 │   │       ├── base.py                # Abstract ExerciseAnalyzer
 │   │       └── squat.py               # Phan tich squat, feedback TV
@@ -328,9 +328,10 @@ posture-x-backend/
 │   ├── test_health.py
 │   └── test_angle_utils.py
 |
-├── create_tables.py                   # Tao bang DB (chay 1 lan)
-├── create_admin.py                    # Tao tai khoan admin dau tien
-├── download_models.py                 # Tai MediaPipe model
+├── scripts/                            # Script chay tay (setup DB, seed admin, tai model...)
+│   ├── create_tables.py               # Tao bang DB (chay 1 lan)
+│   ├── create_admin.py                # Tao tai khoan admin dau tien
+│   └── download_models.py             # Tai MediaPipe model
 ├── .env                               # Cau hinh thuc (KHONG commit)
 ├── .env.example                       # Mau cau hinh
 ├── requirements.txt
@@ -467,10 +468,10 @@ curl -X PATCH http://localhost:9000/api/v1/admin/config `
 | `Access denied for user 'root'@'localhost'` | Sai password/user trong `.env` | Kiem tra lai `DB_USER`/`DB_PASSWORD` |
 | `Unknown database 'posturex'` | Chua tao database | Chay `CREATE DATABASE posturex;` trong MySQL truoc |
 | `Can't connect to MySQL server` | Sai `DB_HOST`/`DB_PORT`, hoac MySQL chua chay | Kiem tra service MySQL dang chay va dung port (xem Buoc 2) |
-| `Cannot add foreign key constraint` khi `create_tables.py` tao bang moi (khong co FK) | Metadata FK "rac" con sot trong database cu | `DROP DATABASE poturex123; CREATE DATABASE poturex123 ...;` roi chay lai `sql\run_schema.py` |
+| `Cannot add foreign key constraint` khi `create_tables.py` tao bang moi (khong co FK) | Metadata FK "rac" con sot trong database cu | `DROP DATABASE poturex123; CREATE DATABASE poturex123 ...;` roi chay lai `scripts\run_schema.py` |
 | `ping() missing 1 required positional argument: 'reconnect'` | Bug tuong thich SQLAlchemy 2.0.36 + aiomysql khi bat `pool_pre_ping` | Da tat san trong `app/core/database.py` (`pool_pre_ping=False`) |
 | `[Errno 10048]` port 8000 bi giu | Windows socket zombie | Dung `--port 9000` hoac restart may |
-| Model khong tim thay | Chua tai model | `python download_models.py` |
+| Model khong tim thay | Chua tai model | `python scripts\download_models.py` |
 | Swagger hien loi do o import | VS Code dung sai Python | Ctrl+Shift+P -> Python: Select Interpreter -> chon `.\venv\Scripts\python.exe` |
 
 ---

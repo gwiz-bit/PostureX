@@ -2,6 +2,9 @@
 
 import asyncio
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import select
 
@@ -18,7 +21,7 @@ async def create_admin(email: str, password: str, full_name: str = "Admin") -> N
     async with AsyncSessionLocal() as db:
         admin_role = await get_role_by_name(db, ADMIN_ROLE_NAME)
         if admin_role is None:
-            print("Loi: Role 'Admin' chua ton tai — chay `python sql/run_schema.py` truoc.")
+            print("Loi: Role 'Admin' chua ton tai — chay `python scripts/run_schema.py` truoc.")
             return
 
         result = await db.execute(select(User).where(User.email == email))
