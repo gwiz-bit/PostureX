@@ -1,6 +1,10 @@
-"""Tao bang videos/workouts (Users/Roles do sql/run_schema.py quan ly, khong dong o day)."""
+"""Tao bang videos/workouts (Users/Roles do scripts/run_schema.py quan ly, khong dong o day)."""
 
 import asyncio
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import select, text
 

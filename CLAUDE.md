@@ -38,14 +38,14 @@ Note that `flutter pub get` and Android builds rewrite the generated plugin regi
 .\run.ps1                             # one-shot: venv, deps, .env, model, DB, then uvicorn — safe to re-run anytime
 ```
 
-`run.ps1` handles first-time setup on a fresh clone (creates `.env` from `.env.example` and stops so you can fill in `DB_PASSWORD`, then on the next run creates the venv, installs deps, downloads the MediaPipe model, initializes the DB schema if empty) and is idempotent on repeat runs — on an already-populated DB it only fills in tables missing from `Base.metadata` (via `ensure_tables.py`, which unlike `create_tables.py` never drops `videos`/`workouts`). Use it after every `git pull` that adds a new model, instead of running the pieces below by hand:
+`run.ps1` handles first-time setup on a fresh clone (creates `.env` from `.env.example` and stops so you can fill in `DB_PASSWORD`, then on the next run creates the venv, installs deps, downloads the MediaPipe model, initializes the DB schema if empty) and is idempotent on repeat runs — on an already-populated DB it only fills in tables missing from `Base.metadata` (via `scripts/ensure_tables.py`, which unlike `scripts/create_tables.py` never drops `videos`/`workouts`). Use it after every `git pull` that adds a new model, instead of running the pieces below by hand. All one-off maintenance scripts (DB setup, admin seeding, model download, data export/import, manual job triggers) live in `lib/backend/scripts/` — nothing script-like sits loose at the `lib/backend/` top level:
 
 ```bash
 pip install -r requirements.txt
-python download_models.py             # fetch the MediaPipe pose model (app/ml/models/*.task)
-python create_tables.py               # first-time init only — DROPS+recreates videos/workouts every run
-python ensure_tables.py               # safe to re-run — only creates tables missing from Base.metadata
-python create_admin.py                # seed an admin user
+python scripts/download_models.py     # fetch the MediaPipe pose model (app/ml/models/*.task)
+python scripts/create_tables.py       # first-time init only — DROPS+recreates videos/workouts every run
+python scripts/ensure_tables.py       # safe to re-run — only creates tables missing from Base.metadata
+python scripts/create_admin.py        # seed an admin user
 uvicorn app.main:app --reload --port 9000   # port 9000 is what the Flutter app expects
 pytest                                # backend tests (tests/) — 84 currently, all passing
 pytest --cov=app                      # coverage (58% at last measure)
@@ -63,7 +63,7 @@ Config comes from `lib/backend/.env` (see `.env.example`): MySQL connection, `SE
 
 ### Client ⇄ backend split
 
-The app talks to the backend over REST (`http`) and one WebSocket. `ApiConfig` (`lib/config/api_config.dart`) picks the host from `Platform.isAndroid`: `10.0.2.2:9000` on Android, `localhost:9000` everywhere else. That switch is automatic — **don't hand-edit it for emulator testing**, which older notes used to call for. `10.0.2.2` is the emulator's alias for the *host loopback*, so a backend bound to `127.0.0.1` is reachable from the emulator; `--host 0.0.0.0` is only needed for a physical device over LAN (which also needs the machine's real IP, not `10.0.2.2` — see SETUP.md). `googleWebClientId` there must stay in sync with the backend's `GOOGLE_CLIENT_ID`, since the backend verifies the ID token's `aud` claim against it.
+The app talks to the backend over REST (`http`) and one WebSocket. `ApiConfig` (`lib/config/api_config.dart`) resolves the host in two layers: a build-time `--dart-define=API_BASE_URL=…` override wins when set (and `wsUrl` derives `ws`/`wss` from its scheme), otherwise it falls back to `Platform.isAndroid` — `10.0.2.2:9000` on Android, `localhost:9000` everywhere else. Both layers are automatic — **don't hand-edit the file for emulator testing**, which older notes used to call for. `10.0.2.2` is the emulator's alias for the *host loopback*, so a backend bound to `127.0.0.1` is reachable from the emulator; `--host 0.0.0.0` is only needed for a physical device over LAN (which also needs the machine's real IP, not `10.0.2.2` — see docs/SETUP.md). `googleWebClientId` there must stay in sync with the backend's `GOOGLE_CLIENT_ID`, since the backend verifies the ID token's `aud` claim against it.
 
 - `ApiClient` (`lib/services/api_client.dart`) — a thin singleton wrapper over the REST API (`ApiClient.instance`). Its `http.Client` is injectable so tests can pass a `MockClient`; `instance` is deliberately non-`final` for the same reason. Non-2xx responses throw `ApiException` carrying the backend's `detail` string.
 - `TokenStorage` (`lib/services/token_storage.dart`) — persists the session in Android Keystore / iOS Keychain via `flutter_secure_storage`, never SharedPreferences. It delegates to a swappable `SecureStorageBackend` because the real plugin has no platform channel in the widget-test harness.
@@ -94,7 +94,7 @@ SplashScreen (auto-advances) → LoginScreen ⇄ RegisterScreen → OtpVerificat
 
 Registration is **OTP-gated**: `register()` creates an unverified account and emails a code; the account cannot log in until `verifyOtp()` succeeds, and that call is what returns the access token (so it doubles as the first login). Google Sign-In (`lib/services/google_auth_service.dart` → `POST /api/v1/auth/google`) auto-registers server-side on first use, so it is both login and register in one call.
 
-**Admin routing is server-driven.** After a successful login `LoginScreen` branches on `profile.isAdmin` — a field the backend fills from the `Roles` table — and pushes `admin.HomeScreen()` instead of `MainShell()`. There is no hardcoded-credential backdoor any more (an earlier `admin@gmail.com` / `123456` short-circuit was removed), and no mock data: `lib/admin/services/` does not exist, and all 11 admin screens go through `ApiClient`'s ~22 `/api/v1/admin/*` methods against the real server. To get into the admin area you need a real account whose role is `Admin` — `python create_admin.py` seeds one.
+**Admin routing is server-driven.** After a successful login `LoginScreen` branches on `profile.isAdmin` — a field the backend fills from the `Roles` table — and pushes `admin.HomeScreen()` instead of `MainShell()`. There is no hardcoded-credential backdoor any more (an earlier `admin@gmail.com` / `123456` short-circuit was removed), and no mock data: `lib/admin/services/` does not exist, and all 11 admin screens go through `ApiClient`'s ~22 `/api/v1/admin/*` methods against the real server. To get into the admin area you need a real account whose role is `Admin` — `python scripts/create_admin.py` seeds one.
 
 ### State: a static session, not a state management package
 
@@ -118,7 +118,7 @@ Only a subset of the answers has backend columns (`gender`, `height_cm`, `weight
 
 Standard FastAPI layering: `api/v1/routes/` (auth, users, workouts, videos, realtime, admin, notifications, subscriptions, exercises, coach) → `crud/` → `models/` (SQLAlchemy, async MySQL via aiomysql) with `schemas/` for Pydantic I/O. `core/` holds settings, DB session, rate limiting, and JWT/password security; `services/` holds the outbound integrations (email, Gemini, MoMo, FCM push, reminders).
 
-The interesting part is `app/ml/`: `pose_estimator.py` runs the MediaPipe pose landmarker (`app/ml/models/pose_landmarker_full.task`, fetched by `download_models.py` — it is a binary, not in git as source), `angle_utils.py` computes joint angles, `rep_counter.py` does state-machine rep counting, and `analyzers/` holds per-exercise technique critique. `ANALYZER_REGISTRY` in `routes/realtime.py` maps **11 exercise-name keys onto 9 analyzer classes** (bench press and overhead press each answer to two spellings); anything not in the map silently falls back to `SquatAnalyzer` with a logged warning. Adding an exercise means adding an `ExerciseAnalyzer` subclass (see `analyzers/base.py`) and registering it there.
+The interesting part is `app/ml/`: `pose_estimator.py` runs the MediaPipe pose landmarker (`app/ml/models/pose_landmarker_full.task`, fetched by `scripts/download_models.py` — it is a binary, gitignored, not committed as source), `angle_utils.py` computes joint angles, `rep_counter.py` does state-machine rep counting, and `analyzers/` holds per-exercise technique critique. `ANALYZER_REGISTRY` in `routes/realtime.py` maps **11 exercise-name keys onto 9 analyzer classes** (bench press and overhead press each answer to two spellings); anything not in the map silently falls back to `SquatAnalyzer` with a logged warning. Adding an exercise means adding an `ExerciseAnalyzer` subclass (see `analyzers/base.py`) and registering it there.
 
 The analyzers are **hand-written angle thresholds, not a trained model** — `squat.py` hardcodes `KNEE_DEPTH_THRESHOLD = 95.0` and friends. Note that the DB *also* carries this knowledge: `ExercisePostureRules` and `PostureErrorTypes` are seeded with joint triples, min/max angles, and Vietnamese voice prompts, and **nothing reads them**. The two sources have already drifted (DB says back-straight ≥160°, `squat.py` uses 150°). Changing a threshold in the DB does nothing; edit the analyzer.
 

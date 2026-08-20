@@ -34,7 +34,7 @@ cp .env.example .env
 # mysql -u root -p -e "CREATE DATABASE posturex CHARACTER SET utf8mb4;"
 
 # 6. Tạo bảng
-python create_tables.py
+python scripts\create_tables.py
 
 # 7. Khởi động server
 uvicorn app.main:app --reload --port 9000

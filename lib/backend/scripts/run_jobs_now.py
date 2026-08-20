@@ -14,6 +14,9 @@ KHONG gui them thong bao. Muon thay no gui lai thi xoa thong bao cu trong DB.
 
 import asyncio
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.database import AsyncSessionLocal, engine
 from app.models import notification as _n  # noqa: F401  dang ky model

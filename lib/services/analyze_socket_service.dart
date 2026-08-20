@@ -6,6 +6,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../config/api_config.dart';
 import '../models/frame_analysis_result.dart';
+import '../models/user_session.dart';
 
 /// One of the three message shapes the analyze socket can emit for a given
 /// inbound WebSocket message. Exactly one field is non-null.
@@ -28,7 +29,8 @@ class AnalyzeSocketEvent {
 /// Wraps the `/api/v1/ws/analyze` protocol: connect, announce the exercise,
 /// stream frames, and receive per-frame pose analysis. See BA.md /
 /// app/api/v1/routes/realtime.py on the backend for the wire protocol —
-/// there is no auth on this endpoint (a known backend gap, not fixed here).
+/// the endpoint requires the current session's access token as a `token`
+/// query param (checked before the server accepts the handshake).
 class AnalyzeSocketService {
   WebSocketChannel? _channel;
   StreamController<AnalyzeSocketEvent>? _events;
@@ -36,9 +38,12 @@ class AnalyzeSocketService {
   Stream<AnalyzeSocketEvent> get events => _events!.stream;
 
   Future<void> connect(String exercise) async {
-    final channel = WebSocketChannel.connect(
-      Uri.parse('${ApiConfig.wsUrl}/api/v1/ws/analyze'),
+    final uri = Uri.parse('${ApiConfig.wsUrl}/api/v1/ws/analyze').replace(
+      queryParameters: UserSession.accessToken != null
+          ? {'token': UserSession.accessToken}
+          : null,
     );
+    final channel = WebSocketChannel.connect(uri);
     await channel.ready;
     _channel = channel;
     _events = StreamController<AnalyzeSocketEvent>.broadcast();

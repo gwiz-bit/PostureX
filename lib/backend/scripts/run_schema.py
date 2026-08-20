@@ -1,7 +1,7 @@
 """Chạy sql/postureX123_schema.sql len MySQL. Doc config tu .env (app.core.config).
 
 Cach dung:
-    venv\\Scripts\\python.exe sql\\run_schema.py
+    venv\\Scripts\\python.exe scripts\\run_schema.py
 """
 
 import asyncio
@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.config import settings  # noqa: E402
 
-SCHEMA_FILE = Path(__file__).parent / "postureX123_schema.sql"
+SCHEMA_FILE = Path(__file__).resolve().parent.parent / "sql" / "postureX123_schema.sql"
 
 
 def split_statements(sql: str) -> list[str]:

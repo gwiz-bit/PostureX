@@ -50,7 +50,7 @@ class PoseEstimator:
         if not model_path.exists():
             raise FileNotFoundError(
                 f"Model không tìm thấy tại: {model_path}\n"
-                "Chạy: python download_models.py"
+                "Chạy: python scripts/download_models.py"
             )
 
         base_options = mp_python.BaseOptions(model_asset_path=str(model_path))
