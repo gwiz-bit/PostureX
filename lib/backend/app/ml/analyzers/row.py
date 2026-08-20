@@ -1,8 +1,8 @@
 """Phân tích kỹ thuật Row (kéo tạ về thân): độ co khuỷu tay, lưng thẳng."""
 
-from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles

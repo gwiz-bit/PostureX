@@ -42,3 +42,10 @@ pytest-asyncio==0.24.0
 httpx==0.28.1
 # Test chay tren SQLite trong bo nho, khong can dung MySQL that (xem conftest.py)
 aiosqlite==0.22.1
+# Do coverage — BE-15 dat muc tieu >=80%, phai do duoc moi biet dang o dau:
+#   venv\Scripts\python.exe -m pytest --cov=app
+pytest-cov==7.1.0
+
+# Lint/format (BE-01) — cau hinh o pyproject.toml
+#   venv\Scripts\ruff.exe check .     /  ruff format .
+ruff==0.16.3

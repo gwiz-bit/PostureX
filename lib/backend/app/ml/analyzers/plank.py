@@ -17,9 +17,9 @@ gì. Client (analyze_session_screen.dart) chỉ tính điểm chính xác cho c�
 frame có `phase != "top"`, nên phải xác định đúng lúc nào user THỰC SỰ đang
 giữ plank trước khi tính điểm cho khung hình đó."""
 
-from app.ml.angle_utils import calculate_angle
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.common import is_visible, visible_points
+from app.ml.angle_utils import calculate_angle
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles

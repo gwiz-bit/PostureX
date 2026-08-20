@@ -1,11 +1,9 @@
 """Admin endpoints — chỉ user có is_admin=True mới truy cập được."""
 
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.crud import admin as admin_crud
@@ -13,7 +11,6 @@ from app.crud import exercise as exercise_crud
 from app.crud import subscription as sub_crud
 from app.crud.notification import broadcast_notification, list_broadcast_history
 from app.crud.user import get_user_by_id
-from app.crud.video import get_video_by_id
 from app.models.user import User
 from app.schemas.admin import (
     AdminPaymentOut,
@@ -147,6 +144,7 @@ async def delete_workout(
 ) -> None:
     """Xóa một buổi tập."""
     from sqlalchemy import select
+
     from app.models.workout import Workout
     result = await db.execute(select(Workout).where(Workout.id == workout_id))
     workout = result.scalar_one_or_none()
@@ -168,6 +166,7 @@ async def list_all_videos(
 ) -> list[dict]:
     """Xem tất cả video của mọi user."""
     from sqlalchemy import select
+
     from app.models.video import Video
     result = await db.execute(
         select(Video).order_by(Video.created_at.desc()).offset(skip).limit(limit)
@@ -195,6 +194,7 @@ async def delete_video(
 ) -> None:
     """Xóa video (file vật lý + bản ghi DB)."""
     from sqlalchemy import select
+
     from app.models.video import Video
     result = await db.execute(select(Video).where(Video.id == video_id))
     vid = result.scalar_one_or_none()

@@ -1,8 +1,8 @@
 """Phân tích kỹ thuật Lunge: độ sâu gối trước, gối trước không vượt mũi chân."""
 
-from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.common import is_visible, visible_points
+from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles

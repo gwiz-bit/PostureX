@@ -32,8 +32,21 @@ class Settings(BaseSettings):
     # storage/videos la video tap luyen rieng tu cua user)
     EXERCISE_VIDEO_STORAGE_PATH: str = "storage/exercise_videos"
 
-    # CORS
-    ALLOWED_ORIGINS: list[str] = ["*"]
+    # CORS — KHONG bao gio dat ["*"] o day. Middleware chay kem
+    # allow_credentials=True, ma "cho phep moi origin" + "cho phep gui kem
+    # credential" la to hop bi spec CORS cam; Starlette lach bang cach doi lai
+    # dung Origin cua nguoi goi, tuc la BAT KY trang web nao cung duoc phep doc
+    # response cua API nay.
+    #
+    # ALLOWED_ORIGINS: danh sach origin tuyet doi (production dien vao .env,
+    # dang JSON: ALLOWED_ORIGINS=["https://posturex.vn"]).
+    # ALLOWED_ORIGIN_REGEX: mau cho localhost moi cong — `flutter run -d chrome`
+    # bat cong ngau nhien nen khong the liet ke cung. De trong de tat han.
+    #
+    # App Android/iOS/Windows KHONG gui header Origin nen khong bi CORS dung toi;
+    # phan nay chi anh huong ban chay tren trinh duyet.
+    ALLOWED_ORIGINS: list[str] = []
+    ALLOWED_ORIGIN_REGEX: str = r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"
 
     # SMTP — gui email OTP xac thuc dang ky
     SMTP_HOST: str = "smtp.gmail.com"

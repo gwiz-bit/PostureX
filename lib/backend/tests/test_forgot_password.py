@@ -15,12 +15,12 @@ from app.core.database import AsyncSessionLocal
 from app.core.security import hash_password, verify_password
 from app.crud.password_reset import create_reset_token
 from app.crud.role import get_role_by_name
+from app.main import app
 from app.models import role as _role  # noqa: F401 dang ky model cho relationship
 from app.models import video as _video  # noqa: F401
 from app.models import workout as _workout  # noqa: F401
 from app.models.role import USER_ROLE_NAME
 from app.models.user import User
-from app.main import app
 
 
 async def _create_verified_user(email: str) -> User:
@@ -163,3 +163,29 @@ async def test_forgot_password_rate_limited_after_five_requests() -> None:
 
     assert statuses[:5] == [200] * 5
     assert statuses[5] == 429
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_response_uses_detail_key_in_vietnamese() -> None:
+    """Thân response 429 phải có khoá `detail`, không phải `error`.
+
+    Đây không phải chuyện thẩm mỹ: `_decode` trong lib/services/api_client.dart
+    chỉ đọc khoá `detail`. Handler mặc định của slowapi trả `{"error": ...}` nên
+    app Flutter rơi vào câu mặc định "Something went wrong. Please try again."
+    và người dùng không biết mình bị chặn vì thao tác quá nhiều. Test này khoá
+    hình dạng đó lại — xem `rate_limit_handler` trong app/core/rate_limit.py.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for _ in range(6):
+            resp = await client.post(
+                "/api/v1/auth/forgot-password",
+                json={"email": "rate-limit-shape-test@example.com"},
+            )
+
+    assert resp.status_code == 429
+    body = resp.json()
+    assert "error" not in body, "handler mặc định của slowapi đã quay lại"
+    assert isinstance(body.get("detail"), str)
+    assert "quá nhiều lần" in body["detail"]
+    # headers_enabled=True nên client biết được phải chờ bao lâu.
+    assert "retry-after" in {k.lower() for k in resp.headers}

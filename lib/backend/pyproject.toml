@@ -1,0 +1,78 @@
+# Cau hinh lint/format cho backend Python (BE-01).
+#
+# Chay tu thu muc lib/backend:
+#   venv\Scripts\ruff.exe check .          # bao loi
+#   venv\Scripts\ruff.exe check . --fix    # tu sua nhung loi sua duoc
+#   venv\Scripts\ruff.exe format .         # dinh dang lai code
+#
+# Bo quy tac duoi day duoc chon sao cho code HIEN TAI da sach (`ruff check .`
+# ra "All checks passed"). Co y nhu vay: mot cong lint bat den do 200 loi ngay
+# ngay dau thi ca nhom se bo qua no. Muon siet them thi go dan tung dong trong
+# `ignore` ben duoi rui sua het loi cua dong do — xem ghi chu tung dong.
+
+[tool.ruff]
+# 110 thay vi 79/88 mac dinh: code hien tai da viet o do rong nay, dong dai
+# nhat trong repo la 109 ky tu. Ha xuong 100 se bat 24 dong phai xuong hang
+# ma khong lam code de doc hon.
+line-length = 110
+target-version = "py311"
+extend-exclude = ["venv", "storage", "__pycache__"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle — loi
+    "W",    # pycodestyle — canh bao
+    "F",    # pyflakes — bien/import thua, ten khong ton tai
+    "I",    # isort — thu tu import
+    "B",    # flake8-bugbear — bay logic thuong gap
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade — cu phap cu
+]
+
+ignore = [
+    # Go dong nay ra roi chay `--fix` de doi 30 cho `datetime.timezone.utc`
+    # thanh `datetime.UTC`. Thuan tham my, khong sua duoc loi gi — de lai vi
+    # no cham vao 12 file va lam ban diff cua nhung thay doi that.
+    "UP017",
+    # `if a: if b:` gop lai thanh `if a and b:`. Trong cac analyzer, if long
+    # nhau dang phan tach "kiem tra khop co nhin thay" va "kiem tra goc" —
+    # gop lai kho doc hon.
+    "SIM102",
+    # `raise ... from e`. Nen sua that (8 cho), nhung no doi noi dung traceback
+    # nen tach ra lam rieng, dung tron vao lan them lint nay.
+    "B904",
+    # `contextlib.suppress` thay cho try/except/pass — 1 cho trong realtime.py,
+    # nam trong nhanh xu ly loi WebSocket, doi sang dang khac de gay nham.
+    "SIM105",
+    # `class Phase(str, Enum)` -> `StrEnum` trong ml/rep_counter.py. KHONG phai
+    # doi thuan tham my: `str(Phase.TOP)` dang tra "Phase.TOP", doi sang StrEnum
+    # se tra "top". Code hien tai luon dung `.value` nen chac la khong sao,
+    # nhung day la thu doi hanh vi — phai co test truoc khi dong vao.
+    "UP042",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test duoc phep dat ten ham dai va dung assert tu do.
+"tests/*" = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dung `Depends(...)`, `Query(...)`, `File(...)` lam gia tri mac dinh
+# cua tham so — dung y do framework, khong phai loi B008. Khong khai bao cho
+# ruff biet thi no bao 105 loi gia trong toan bo route.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.File",
+    "fastapi.Form",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"

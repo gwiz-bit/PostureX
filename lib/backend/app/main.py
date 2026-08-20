@@ -7,12 +7,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.core.rate_limit import limiter
+from app.core.rate_limit import limiter, rate_limit_handler
 from app.core.scheduler import shutdown_scheduler, start_scheduler
 
 logging.basicConfig(
@@ -40,15 +39,23 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiting (slowapi) — dung cho /auth/forgot-password de chong spam
-# email/do email dang ky nguoi dung.
+# Rate limiting (slowapi) — chong spam email o /auth/forgot-password va chong
+# do mat khau o /auth/login.
+#
+# Dung `rate_limit_handler` cua rieng minh thay cho handler mac dinh cua slowapi:
+# handler mac dinh tra {"error": "..."} tieng Anh, ma app Flutter chi doc khoa
+# "detail" nen se hien cau chung chung "Something went wrong". Xem chu thich
+# day du trong app/core/rate_limit.py.
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
-# CORS mở cho Flutter dev (thu hẹp origins trong production)
+# CORS — mặc định chỉ mở cho localhost (Flutter web lúc dev). Production khai
+# báo origin thật qua ALLOWED_ORIGINS trong .env; xem chú thích ở config.py về
+# lý do không được dùng ["*"].
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origin_regex=settings.ALLOWED_ORIGIN_REGEX or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

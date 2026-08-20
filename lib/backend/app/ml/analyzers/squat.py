@@ -1,10 +1,10 @@
 """Phân tích kỹ thuật squat: độ sâu, gối vượt mũi chân, lưng thẳng."""
 
-from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.common import avg as _avg
 from app.ml.analyzers.common import is_visible as _visible
 from app.ml.analyzers.common import visible_points as _visible_points
+from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles

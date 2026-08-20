@@ -9,8 +9,8 @@ from app.core.database import AsyncSessionLocal, engine
 from app.core.security import hash_password
 from app.crud.role import get_role_by_name
 from app.crud.user import generate_unique_username
+from app.models import role as _  # noqa: F401 register all models
 from app.models.role import ADMIN_ROLE_NAME
-from app.models import role as _, video as __, workout as ___  # noqa: F401 register all models
 from app.models.user import User
 
 

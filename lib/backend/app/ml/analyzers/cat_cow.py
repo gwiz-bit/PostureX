@@ -1,8 +1,8 @@
 """Phân tích động tác Cat-Cow: đếm chu kỳ cong lưng (Cat) / ưỡn lưng (Cow)."""
 
-from app.ml.angle_utils import calculate_angle
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.common import is_visible, visible_points
+from app.ml.angle_utils import calculate_angle
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles

@@ -194,8 +194,20 @@ async def resend_otp(data: ResendOtpRequest, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
-    """Đăng nhập, trả về JWT access token."""
+@limiter.limit("10/minute;100/hour")
+async def login(
+    request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
+    """Đăng nhập, trả về JWT access token.
+
+    Có rate limit vì đây là endpoint duy nhất nhận mật khẩu thô: không giới hạn
+    thì một script dò được vài nghìn mật khẩu mỗi phút. Đặt hai mức — 10/phút
+    chặn dò tự động, 100/giờ chặn kiểu dò chậm né ngưỡng phút. Ngưỡng nới rộng
+    để người thật gõ sai vài lần liên tiếp vẫn không bị khoá.
+
+    `request: Request` là tham số slowapi bắt buộc phải có để lấy IP, không
+    phải dư thừa — bỏ đi là decorator ném lỗi lúc khởi động.
+    """
     user = await get_user_by_email(db, data.email)
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không đúng.")

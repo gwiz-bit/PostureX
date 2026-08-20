@@ -1,6 +1,5 @@
 """Unit tests cho angle_utils."""
 
-import pytest
 
 from app.ml.angle_utils import calculate_angle
 from app.ml.pose_estimator import Keypoint
@@ -31,7 +30,6 @@ def test_right_angle_returns_90() -> None:
 
 def test_acute_angle() -> None:
     """Kiểm tra góc nhọn ~ 45°."""
-    import math
     a = kp(0.0, 1.0)
     b = kp(0.0, 0.0)
     c = kp(1.0, 1.0)
