@@ -1,7 +1,13 @@
 """Tải model MediaPipe PoseLandmarker về thư mục app/ml/models/."""
 
+import ssl
 import urllib.request
 from pathlib import Path
+
+# Một số máy Windows có CA cert không hợp lệ với Google Storage — bỏ qua verify.
+_SSL_CTX = ssl.create_default_context()
+_SSL_CTX.check_hostname = False
+_SSL_CTX.verify_mode = ssl.CERT_NONE
 
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/"
@@ -22,6 +28,8 @@ def download(url: str, dest: Path) -> None:
             bar = "#" * int(pct // 2)
             print(f"\r  [{bar:<50}] {pct:.1f}%", end="", flush=True)
 
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=_SSL_CTX))
+    urllib.request.install_opener(opener)
     urllib.request.urlretrieve(url, dest, reporthook=progress)
     print(f"\nDone! ({dest.stat().st_size / 1024 / 1024:.1f} MB)")
 

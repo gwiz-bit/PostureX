@@ -369,6 +369,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         title: 'Set your workout days',
         initialSelectedDays: _profile.workoutDays,
         initialReminderEnabled: _profile.reminderEnabled,
+        maxSelection: _profile.workoutsPerWeek,
         onBack: _back,
         continueLabel: 'Finish',
         onContinue: _finish,

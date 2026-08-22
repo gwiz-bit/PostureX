@@ -17,6 +17,7 @@ class WorkoutDaysStep extends StatefulWidget {
     this.subtitle,
     this.onBack,
     this.continueLabel = 'Continue',
+    this.maxSelection,
   });
 
   static const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -29,6 +30,7 @@ class WorkoutDaysStep extends StatefulWidget {
   final bool initialReminderEnabled;
   final VoidCallback? onBack;
   final String continueLabel;
+  final int? maxSelection;
   final void Function(Set<String> days, bool reminderEnabled) onContinue;
 
   @override
@@ -51,6 +53,20 @@ class _WorkoutDaysStepState extends State<WorkoutDaysStep> {
       onContinue: () => widget.onContinue(_selectedDays, _reminderEnabled),
       body: Column(
         children: [
+          if (widget.maxSelection != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                'Select ${widget.maxSelection} day${widget.maxSelection! > 1 ? 's' : ''} (${_selectedDays.length}/${widget.maxSelection})',
+                style: TextStyle(
+                  color: _selectedDays.length == widget.maxSelection
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 12,
@@ -66,7 +82,10 @@ class _WorkoutDaysStepState extends State<WorkoutDaysStep> {
                       if (_selectedDays.contains(day)) {
                         _selectedDays.remove(day);
                       } else {
-                        _selectedDays.add(day);
+                        final max = widget.maxSelection;
+                        if (max == null || _selectedDays.length < max) {
+                          _selectedDays.add(day);
+                        }
                       }
                     }),
                   ),
