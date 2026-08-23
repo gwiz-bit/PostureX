@@ -19,7 +19,7 @@ cd PostureX
 **Cách nhanh — 1 lệnh làm hết (khuyên dùng):**
 
 ```powershell
-cd lib\backend
+cd backend
 .\run.ps1
 ```
 
@@ -34,7 +34,7 @@ Các bước dưới đây là để hiểu/điều chỉnh thủ công từng p
 cần làm nếu `run.ps1` đã chạy được.
 
 ```powershell
-cd lib\backend
+cd backend
 python -m venv venv
 venv\Scripts\pip install -r requirements.txt
 ```
@@ -76,7 +76,7 @@ GOOGLE_CLIENT_ID=879931217481-eeqak275h11nji6v93j8a9s65rc7pjt3.apps.googleuserco
 **Cách A — lấy dữ liệu của người khác gửi cho bạn (khuyên dùng nếu có):**
 nếu ai đó trong team đã gửi bạn file `data_dump.sql` (qua chat/Zalo/Drive
 riêng tư — **không** qua git, xem ghi chú bên dưới), đặt file đó vào
-`lib/backend/sql/data_dump.sql` rồi chạy:
+`backend/sql/data_dump.sql` rồi chạy:
 
 ```powershell
 venv\Scripts\python.exe scripts\import_data.py
@@ -101,7 +101,7 @@ tạo lại file dữ liệu mới nhất:
 venv\Scripts\python.exe scripts\export_data.py
 ```
 
-Lệnh này ghi ra `lib/backend/sql/data_dump.sql` — **file này bị gitignore, không tự động lên git khi bạn push code**. Muốn chia sẻ, tự gửi file này cho đồng đội qua kênh riêng tư (chat, Zalo, Google Drive share riêng...), không đăng công khai hay push lên git.
+Lệnh này ghi ra `backend/sql/data_dump.sql` — **file này bị gitignore, không tự động lên git khi bạn push code**. Muốn chia sẻ, tự gửi file này cho đồng đội qua kênh riêng tư (chat, Zalo, Google Drive share riêng...), không đăng công khai hay push lên git.
 
 ⚠️ File này chứa dữ liệu user thật (email, mật khẩu đã hash) — vì repo GitHub của dự án có thể là Public, tuyệt đối không commit/push file này lên git dưới mọi hình thức.
 
@@ -145,7 +145,7 @@ flutter run
 ## 6. Thứ tự khởi động mỗi lần code lại
 
 1. Bật MySQL
-2. Chạy backend: `.\run.ps1` (trong `lib\backend`) — hoặc thủ công: `venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 9000`
+2. Chạy backend: `.\run.ps1` (trong `backend`) — hoặc thủ công: `venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 9000`
 3. Chạy app Flutter: `flutter run`
 
 Backend **không tự chạy nền** — mỗi lần tắt máy/terminal phải khởi động lại thủ công theo bước 2.

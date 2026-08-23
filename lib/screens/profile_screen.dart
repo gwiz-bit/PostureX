@@ -8,11 +8,11 @@ import '../theme/app_theme.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
-import 'ai_coach_screen.dart';
+import '../features/coach/presentation/screens/ai_coach_screen.dart';
 import 'edit_profile_screen.dart';
-import 'login_screen.dart';
+import '../features/auth/presentation/screens/login_screen.dart';
 import 'privacy_policy_screen.dart';
-import 'subscription_screen.dart';
+import '../features/subscription/presentation/screens/subscription_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

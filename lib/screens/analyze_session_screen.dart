@@ -9,10 +9,11 @@ import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 
 import '../config/api_config.dart';
+import '../core/errors/failures.dart';
+import '../features/exercises/exercises_module.dart';
+import '../features/workout/workout_module.dart';
 import '../models/frame_analysis_result.dart';
 import '../services/analyze_socket_service.dart';
-import '../services/api_client.dart';
-import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
 import '../utils/exercise_videos.dart';
 import '../utils/squat_error_tips.dart';
@@ -116,7 +117,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   /// panel on the bundled asset fallback.
   Future<void> _loadGuideVideo() async {
     try {
-      final exercises = await ApiClient.instance.fetchExercises();
+      final exercises = await ExercisesModule.getExercises()();
       final match = exercises.where(
         (e) => e.name.toLowerCase() == widget.exercise.toLowerCase(),
       );
@@ -351,14 +352,14 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     // trong khi lịch sử của họ trống.
     String? saveError;
     try {
-      await ApiClient.instance.createWorkout(
+      await WorkoutModule.createWorkout()(
         exercise: widget.exercise,
         totalReps: _repCount,
         durationSeconds: durationSeconds,
         accuracyScore: accuracyScore,
         startedAt: startedAt,
       );
-    } on ApiException catch (e) {
+    } on AppFailure catch (e) {
       saveError = e.message;
     } catch (_) {
       saveError = 'Không lưu được buổi tập. Kiểm tra kết nối mạng.';

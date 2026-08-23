@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../features/workout/domain/entities/workout.dart';
 import '../models/user_session.dart';
-import '../models/workout.dart';
 import '../models/workout_plan.dart';
 import '../services/api_client.dart';
 import '../services/api_exception.dart';
@@ -9,7 +9,7 @@ import '../theme/app_theme.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/app_logo.dart';
 import 'analyze_session_screen.dart';
-import 'notifications_screen.dart';
+import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/plan_calendar.dart';
 import '../widgets/score_ring.dart';

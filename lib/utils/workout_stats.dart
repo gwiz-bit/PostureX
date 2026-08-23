@@ -1,4 +1,4 @@
-import '../models/workout.dart';
+import '../features/workout/domain/entities/workout.dart';
 
 /// Aggregates computed from a user's workout history — shared by the
 /// Progress and Profile screens so the averaging logic isn't duplicated.

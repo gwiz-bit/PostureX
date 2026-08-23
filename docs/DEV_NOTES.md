@@ -113,7 +113,7 @@ python create_admin.py test@posturex.com Test123 "Tester"
 **Bảng `device_tokens` sau khi DB bị nạp lại** — nó do SQLAlchemy quản lý, không nằm trong schema SQL của nhóm. Tạo lại **KHÔNG được chạy `create_tables.py`** (nó có `DROP TABLE workouts`!). Chạy đoạn này:
 
 ```python
-# trong lib/backend, voi venv da kich hoat
+# trong backend/, voi venv da kich hoat
 import asyncio
 from app.core.database import Base, engine
 from app.models import device_token, role, user, video, workout, notification, subscription
@@ -205,9 +205,8 @@ Tất cả nằm trong **một** repo Flutter:
 
 | Thành phần                       | Vị trí                                                                                        |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| App Flutter (người dùng)        | `lib/`                                                                                        |
-| App Admin (dữ liệu giả)         | `lib/admin/` — có `main()` riêng                                                         |
-| **Backend FastAPI (Python)** | **`lib/backend/`** — nằm trong `lib/` nhưng Flutter bỏ qua file không phải Dart |
+| App Flutter (người dùng + admin) | `lib/` — **một `main()` duy nhất**; admin là các màn hình trong `lib/features/admin_*/`, vào bằng tài khoản `is_admin` thật (không còn mock) |
+| **Backend FastAPI (Python)** | **`backend/`** — thư mục riêng ở gốc repo, ngang hàng `lib/` (trước đây từng nằm trong `lib/backend/`, đã dời ra) |
 
 ---
 
@@ -217,7 +216,7 @@ Tất cả nằm trong **một** repo Flutter:
 * **MySQL 8.0.46** (local)
   * Host/Port: `localhost:3306` · DB: **`poturex123`** (thiếu chữ "s" là chủ ý — đúng tên nhóm đặt)
   * User: `root` · Password: `123456`
-  * Cấu hình đọc từ **`lib/backend/.env`** (copy từ `.env.example`). File `.env` bị gitignore nên
+  * Cấu hình đọc từ **`backend/.env`** (copy từ `.env.example`). File `.env` bị gitignore nên
     mỗi người phải tự tạo — **và mật khẩu MySQL trong `.env.example` là của máy người khác, phải sửa lại.**
 * **Cổng backend: 9000** (KHÔNG phải 8000 như tài liệu cũ). `lib/config/api_config.dart` chờ ở 9000.
 * **Tài khoản:** DB đã bị nạp lại 13/07 → `test@posturex.com` **không còn**. Xem mục *"Tài khoản"* ở cuối tài liệu. **Luôn `SELECT UserId, Email FROM Users;` trước khi đụng vào dữ liệu.**
@@ -229,7 +228,7 @@ Tất cả nằm trong **một** repo Flutter:
 ### 1. Backend (PowerShell riêng, để nguyên chạy)
 
 ```powershell
-cd lib\backend
+cd backend
 py -3.12 -m venv venv            # chỉ lần đầu
 venv\Scripts\activate
 pip install -r requirements.txt  # chỉ lần đầu
@@ -245,8 +244,7 @@ Kiểm tra: [http://localhost:9000/health](http://localhost:9000/health) → `{"
 
 ```powershell
 flutter pub get
-flutter run -d emulator-5554                # app người dùng
-flutter run -t lib/admin/admin_main.dart    # app admin (dữ liệu giả)
+flutter run -d emulator-5554   # 1 app duy nhất — đăng nhập tài khoản is_admin để vào khu admin
 ```
 
 ---
@@ -293,7 +291,7 @@ Thấy JSON ⇒ mạng thông, cứ cài. Không thấy ⇒ lỗi ở firewall/m
 ## 🧪 Lệnh kiểm tra nhanh
 
 ```powershell
-# Backend (từ lib\backend, đã activate venv)
+# Backend (từ backend/, đã activate venv)
 python test_connection.py                     # kết nối MySQL
 uvicorn app.main:app --reload --host 0.0.0.0 --port 9000
 curl http://localhost:9000/health
@@ -311,9 +309,9 @@ flutter run -d emulator-5554
 
 ## 🧠 AI phân tích tư thế (phần lõi, vẫn nguyên vẹn)
 
-* `lib/backend/app/ml/pose_estimator.py` — MediaPipe, 33 điểm khớp
-* `lib/backend/app/ml/rep_counter.py` — đếm rep theo góc gập gối (state machine)
-* `lib/backend/app/ml/analyzers/squat.py` — phản hồi lỗi squat, tiếng Việt, thời gian thực
+* `backend/app/ml/pose_estimator.py` — MediaPipe, 33 điểm khớp
+* `backend/app/ml/rep_counter.py` — đếm rep theo góc gập gối (state machine)
+* `backend/app/ml/analyzers/squat.py` — phản hồi lỗi squat, tiếng Việt, thời gian thực
 * WebSocket: **`ws://<host>:9000/api/v1/ws/analyze`**
 
 ⚠️ **Chỉ hỗ trợ squat.** `ANALYZER_REGISTRY` trong `routes/realtime.py` chỉ đăng ký `"squat"`;

@@ -125,7 +125,7 @@ sequenceDiagram
 ## 4. Phiên phân tích tư thế realtime (WebSocket)
 
 `AnalyzeSessionScreen` → `AnalyzeSocketService`. Xem
-[lib/backend/app/api/v1/routes/realtime.py](../lib/backend/app/api/v1/routes/realtime.py).
+[backend/app/api/v1/routes/realtime.py](../backend/app/api/v1/routes/realtime.py).
 
 ```mermaid
 sequenceDiagram

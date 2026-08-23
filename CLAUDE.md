@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PostureX — "Your AI-Powered Fitness Coach". Two things live in this one repo:
 
-1. **The Flutter app** (`lib/`, minus `lib/backend`) — the user-facing posture/fitness app, ~70 Dart files across 24 screens, plus the 11-screen admin area in `lib/admin/`.
-2. **The FastAPI backend** (`lib/backend/`) — a full Python service (MySQL + JWT auth + MediaPipe pose analysis). Yes, it is nested under `lib/`, which is otherwise Dart-only; Flutter ignores non-Dart files there, so the layout works, but do not expect `lib/` to mean "Dart source" in this repo.
+1. **The Flutter app** (`lib/`) — the user-facing posture/fitness app, ~70 Dart files across 24 screens, plus the 11-screen admin area under `lib/features/admin_*/`. Most features (including all of admin) follow Clean Architecture: `domain/{entities,repositories,usecases}` → `data/{datasources,repositories}` → `presentation/{controllers,screens}`, plus a `<feature>_module.dart` composition root — no DI framework, modules wire dependencies by hand.
+2. **The FastAPI backend** (`backend/`, a sibling of `lib/` at the repo root) — a full Python service (MySQL + JWT auth + MediaPipe pose analysis), talked to over REST/WebSocket only. It used to be nested at `lib/backend/`; it was moved to the repo root since `lib/` is otherwise Dart-only and the nesting had no upside.
 
-**There is exactly one `main()`**, in `lib/main.dart` — `grep -rln "^void main()" lib/` proves it. `lib/admin/` is *not* a separate app: it is a set of screens inside the same binary, entered by logging in with an account the backend marks `is_admin`. Older notes describing an `admin_main.dart` entry point and a `-t` flag to launch it are wrong; that file does not exist.
+**There is exactly one `main()`**, in `lib/main.dart` — `grep -rln "^void main()" lib/` proves it. The admin area is *not* a separate app: it is a set of screens inside the same binary, entered by logging in with an account the backend marks `is_admin`. Older notes describing an `admin_main.dart` entry point and a `-t` flag to launch it are wrong; that file does not exist.
 
 ## Commands
 
@@ -32,13 +32,13 @@ An **Android emulator is available** and has been verified end to end (`flutter 
 
 Note that `flutter pub get` and Android builds rewrite the generated plugin registrants under `linux/`, `macos/`, and `windows/`. Those edits are build artifacts, not work — don't sweep them into an unrelated commit.
 
-### Backend (run from `lib/backend/`)
+### Backend (run from `backend/`)
 
 ```powershell
 .\run.ps1                             # one-shot: venv, deps, .env, model, DB, then uvicorn — safe to re-run anytime
 ```
 
-`run.ps1` handles first-time setup on a fresh clone (creates `.env` from `.env.example` and stops so you can fill in `DB_PASSWORD`, then on the next run creates the venv, installs deps, downloads the MediaPipe model, initializes the DB schema if empty) and is idempotent on repeat runs — on an already-populated DB it only fills in tables missing from `Base.metadata` (via `scripts/ensure_tables.py`, which unlike `scripts/create_tables.py` never drops `videos`/`workouts`). Use it after every `git pull` that adds a new model, instead of running the pieces below by hand. All one-off maintenance scripts (DB setup, admin seeding, model download, data export/import, manual job triggers) live in `lib/backend/scripts/` — nothing script-like sits loose at the `lib/backend/` top level:
+`run.ps1` handles first-time setup on a fresh clone (creates `.env` from `.env.example` and stops so you can fill in `DB_PASSWORD`, then on the next run creates the venv, installs deps, downloads the MediaPipe model, initializes the DB schema if empty) and is idempotent on repeat runs — on an already-populated DB it only fills in tables missing from `Base.metadata` (via `scripts/ensure_tables.py`, which unlike `scripts/create_tables.py` never drops `videos`/`workouts`). Use it after every `git pull` that adds a new model, instead of running the pieces below by hand. All one-off maintenance scripts (DB setup, admin seeding, model download, data export/import, manual job triggers) live in `backend/scripts/` — nothing script-like sits loose at the `backend/` top level:
 
 ```bash
 pip install -r requirements.txt
@@ -55,7 +55,7 @@ ruff format .                         # formatter
 
 `ruff`'s rule set is tuned in `pyproject.toml` so `ruff check .` is **green on the current tree** — a gate that opens red on 200 pre-existing issues just gets ignored. Several rules sit in `ignore` with a comment each explaining what it would cost to turn back on; ratchet them one at a time rather than widening `select`. One entry is load-bearing rather than stylistic: `flake8-bugbear.extend-immutable-calls` lists `fastapi.Depends`/`Query`/`File`/…, without which B008 fires ~105 false positives across every route.
 
-Config comes from `lib/backend/.env` (see `.env.example`): MySQL connection, `SECRET_KEY`, SMTP credentials for OTP email, `GOOGLE_CLIENT_ID`, `GEMINI_API_KEY` (AI Coach), optional MoMo merchant keys (BE-14 — the defaults in `config.py` are MoMo's *public sandbox* keys, so payments work on a fresh clone), and optional FCM credentials (BE-13 — push is skipped silently when unset). `GOOGLE_CLIENT_ID` must stay byte-identical to `googleWebClientId` in `lib/config/api_config.dart`. Interactive API docs at `/docs`.
+Config comes from `backend/.env` (see `.env.example`): MySQL connection, `SECRET_KEY`, SMTP credentials for OTP email, `GOOGLE_CLIENT_ID`, `GEMINI_API_KEY` (AI Coach), optional MoMo merchant keys (BE-14 — the defaults in `config.py` are MoMo's *public sandbox* keys, so payments work on a fresh clone), and optional FCM credentials (BE-13 — push is skipped silently when unset). `GOOGLE_CLIENT_ID` must stay byte-identical to `googleWebClientId` in `lib/config/api_config.dart`. Interactive API docs at `/docs`.
 
 **`.env` encoding trap.** `slowapi` slurps `.env` on import purely because the file exists (`Config(".env")` in `slowapi/extension.py`), and `starlette.config.Config` opens it *without specifying an encoding* — so on a Vietnamese-locale Windows box the cp1252 codec hits the file's UTF-8 comments and the server dies at import with `UnicodeDecodeError: 'charmap' codec can't decode byte 0x81`, before uvicorn ever binds. `app/core/rate_limit.py` defuses this by passing `config_filename=os.devnull`; don't revert that to the default. The symptom only appears on some machines, so "works on mine" proves nothing here.
 
@@ -94,7 +94,7 @@ SplashScreen (auto-advances) → LoginScreen ⇄ RegisterScreen → OtpVerificat
 
 Registration is **OTP-gated**: `register()` creates an unverified account and emails a code; the account cannot log in until `verifyOtp()` succeeds, and that call is what returns the access token (so it doubles as the first login). Google Sign-In (`lib/services/google_auth_service.dart` → `POST /api/v1/auth/google`) auto-registers server-side on first use, so it is both login and register in one call.
 
-**Admin routing is server-driven.** After a successful login `LoginScreen` branches on `profile.isAdmin` — a field the backend fills from the `Roles` table — and pushes `admin.HomeScreen()` instead of `MainShell()`. There is no hardcoded-credential backdoor any more (an earlier `admin@gmail.com` / `123456` short-circuit was removed), and no mock data: `lib/admin/services/` does not exist, and all 11 admin screens go through `ApiClient`'s ~22 `/api/v1/admin/*` methods against the real server. To get into the admin area you need a real account whose role is `Admin` — `python scripts/create_admin.py` seeds one.
+**Admin routing is server-driven.** After a successful login `LoginScreen` branches on `profile.isAdmin` — a field the backend fills from the `Roles` table — and pushes `admin.HomeScreen()` instead of `MainShell()`. There is no hardcoded-credential backdoor any more (an earlier `admin@gmail.com` / `123456` short-circuit was removed), and no mock data: all 11 admin screens (`lib/features/admin_*/`) go through `ApiClient`'s ~22 `/api/v1/admin/*` methods, wrapped behind each admin feature's own repository/use-case layer, against the real server. To get into the admin area you need a real account whose role is `Admin` — `python scripts/create_admin.py` seeds one.
 
 ### State: a static session, not a state management package
 
@@ -114,7 +114,7 @@ Only a subset of the answers has backend columns (`gender`, `height_cm`, `weight
 
 `WorkoutPlan.generate(...)` (`lib/models/workout_plan.dart`) is a pure function that turns onboarding answers (selected weekdays, weekly frequency, focus areas, fitness level) into a 4-week, calendar-aligned plan (always starts on the most recent Sunday so the grid shows full weeks). Session content is templated (`Full Body`, `Upper Push`, `Upper Pull`, `Lower & Core`) and rotated across the user's chosen training days. Despite `PlanGeneratingScreen`'s framing and the backend's existence, **plan generation is still local and calls nothing** — the AI in this app is the pose analysis, not the planning.
 
-### Backend layout (`lib/backend/app/`)
+### Backend layout (`backend/app/`)
 
 Standard FastAPI layering: `api/v1/routes/` (auth, users, workouts, videos, realtime, admin, notifications, subscriptions, exercises, coach) → `crud/` → `models/` (SQLAlchemy, async MySQL via aiomysql) with `schemas/` for Pydantic I/O. `core/` holds settings, DB session, rate limiting, and JWT/password security; `services/` holds the outbound integrations (email, Gemini, MoMo, FCM push, reminders).
 
@@ -139,7 +139,7 @@ The only bundled asset is `assets/video/` (currently `squat.mp4`, ~1.9 MB, playe
 
 ### Theming
 
-`lib/theme/app_theme.dart` defines the single source of truth for colors (`AppColors`, dark background with a coral-orange `primary` accent) and `AppTheme.dark` (Material 3 `ThemeData`). Reuse `AppColors.*` rather than hardcoding hex values in widgets. The admin screens carry their own palette in `lib/admin/admin_theme.dart`, but since they render inside the same `MaterialApp` that `lib/main.dart` builds, the ambient `ThemeData` is still `AppTheme.dark`.
+`lib/theme/app_theme.dart` defines the single source of truth for colors (`AppColors`, dark background with a coral-orange `primary` accent) and `AppTheme.dark` (Material 3 `ThemeData`). Reuse `AppColors.*` rather than hardcoding hex values in widgets. The admin screens carry their own palette in `lib/theme/admin_theme.dart` (plus shared widgets in `lib/widgets/admin/`), but since they render inside the same `MaterialApp` that `lib/main.dart` builds, the ambient `ThemeData` is still `AppTheme.dark`.
 
 ### Testing patterns/gotchas (see `test/widget_test.dart`)
 

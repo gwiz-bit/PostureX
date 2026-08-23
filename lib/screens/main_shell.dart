@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../features/exercises/presentation/screens/exercises_screen.dart';
+import '../features/workout/presentation/screens/progress_screen.dart';
+import '../features/workout/presentation/screens/workout_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
-import 'exercises_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
-import 'progress_screen.dart';
-import 'workout_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});

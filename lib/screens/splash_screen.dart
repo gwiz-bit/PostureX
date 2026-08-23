@@ -5,8 +5,8 @@ import '../services/api_client.dart';
 import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
-import '../admin/screens/home_screen.dart' as admin;
-import 'login_screen.dart';
+import '../features/admin_dashboard/presentation/screens/home_screen.dart' as admin;
+import '../features/auth/presentation/screens/login_screen.dart';
 import 'main_shell.dart';
 
 /// First screen shown on launch — animates the PostureX mark and wordmark

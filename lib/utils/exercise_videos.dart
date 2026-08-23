@@ -10,7 +10,7 @@
 ///
 /// Add a new entry here once a verified (not just correctly-named) video
 /// asset exists for that exercise — see the 94 unverified files still
-/// sitting in `lib/backend/video/`.
+/// sitting in `backend/video/`.
 const Map<String, String> _guideVideoByExercise = {
   'squat': 'assets/video/squat.mp4',
 };
