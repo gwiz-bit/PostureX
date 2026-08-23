@@ -13,6 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Bake sẵn model MediaPipe vào image lúc build — tránh phải tải lại mỗi
+# lần container khởi động lại (đặc biệt quan trọng trên PaaS free tier
+# hay ngủ/restart, kiểu Render).
+RUN python scripts/download_models.py
+
 # Tạo thư mục lưu video
 RUN mkdir -p storage/videos
 
