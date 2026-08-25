@@ -61,7 +61,7 @@ class UserSession {
     weightKg = profile.currentWeightKg;
     age = profile.age;
     weeklyGoal = profile.workoutsPerWeek;
-    fitnessLevel = profile.fitnessLevel;
+    fitnessLevel = profile.fitnessLevel ?? _defaultFitnessLevel;
     focusAreas = profile.focusAreas.isEmpty ? {'Full body'} : profile.focusAreas;
     plan = WorkoutPlan.generate(
       workoutDays: profile.workoutDays,

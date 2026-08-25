@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../models/onboarding_options.dart';
 import '../../models/onboarding_profile.dart';
+import '../../models/profile_limits.dart';
 import '../../models/user_session.dart';
 import '../../services/api_client.dart';
 import '../../theme/app_theme.dart';
@@ -78,20 +80,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         step: 1,
         totalSteps: totalSteps,
         title: 'Choose your goals',
-        options: const [
-          'Improve posture',
-          'Build muscle',
-          'Burn fat',
-          'Increase endurance',
-          'Boost mental strength',
-          'Weight loss',
-          'Balance',
-          'Flexibility',
-          'Relieve stress',
-          'Optimize workouts',
-          'Agility',
-          'Reduce back pain',
-        ],
+        options: OnboardingOptions.goals,
         initialSelected: _profile.goals,
         onBack: _back,
         onContinue: (value) {
@@ -154,7 +143,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         step: 4,
         totalSteps: totalSteps,
         title: 'Choose your focus areas',
-        options: const ['Back', 'Arm', 'Shoulder', 'Abs', 'Chest', 'Leg', 'Glutes', 'Full body'],
+        options: OnboardingOptions.focusAreas,
         initialSelected: _profile.focusAreas,
         onBack: _back,
         onContinue: (value) {
@@ -244,8 +233,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         totalSteps: totalSteps,
         title: 'How tall are you?',
         unit: 'cm',
-        min: 140,
-        max: 220,
+        min: ProfileLimits.heightCmMin,
+        max: ProfileLimits.heightCmMax,
         initialValue: _profile.heightCm,
         tipEmoji: '🧐',
         tipTitle: 'Calculating your BMI',
@@ -262,8 +251,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         totalSteps: totalSteps,
         title: 'How old are you?',
         unit: '',
-        min: 14,
-        max: 90,
+        min: OnboardingOptions.ageMin,
+        max: OnboardingOptions.ageMax,
         initialValue: _profile.age,
         tipEmoji: '🚀',
         tipTitle: 'Personalized for your age',
@@ -280,8 +269,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         totalSteps: totalSteps,
         title: 'What is your current weight?',
         unit: 'kg',
-        min: 35,
-        max: 180,
+        min: ProfileLimits.weightKgMin,
+        max: ProfileLimits.weightKgMax,
         initialValue: _profile.currentWeightKg,
         tipEmoji: '💪',
         tipTitle: 'Track your progress over time',
@@ -298,8 +287,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         totalSteps: totalSteps,
         title: 'What is your target weight?',
         unit: 'kg',
-        min: 35,
-        max: 180,
+        min: ProfileLimits.weightKgMin,
+        max: ProfileLimits.weightKgMax,
         initialValue: _profile.targetWeightKg,
         tipEmoji: '🏆',
         tipTitle: 'Set a realistic goal',
@@ -315,13 +304,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         step: 11,
         totalSteps: totalSteps,
         title: 'Any health issues?',
-        options: const [
-          'Back or hernia',
-          'Arms and shoulders',
-          'Hip joints',
-          'Knee',
-          'Post-injury recovery',
-        ],
+        options: OnboardingOptions.healthIssues,
         initialSelected: _profile.healthIssues,
         onBack: _back,
         onContinue: (value) {
@@ -334,14 +317,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         step: 12,
         totalSteps: totalSteps,
         title: 'What equipment do you have?',
-        options: const [
-          'Full gym',
-          'Barbells',
-          'Dumbbells',
-          'Kettlebells',
-          'Resistance bands',
-          'Machines',
-        ],
+        options: OnboardingOptions.equipment,
         initialSelected: _profile.equipment,
         onBack: _back,
         onContinue: (value) {
@@ -356,6 +332,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         title: 'How often would you like to work out?',
         subtitle: 'Our recommended plan adapts to how often you train.',
         initialValue: _profile.workoutsPerWeek,
+        min: OnboardingOptions.workoutsPerWeekMin,
+        max: OnboardingOptions.workoutsPerWeekMax,
         onBack: _back,
         onContinue: (value) {
           _profile.workoutsPerWeek = value;

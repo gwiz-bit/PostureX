@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/profile_limits.dart';
 import '../models/user_session.dart';
 import '../services/api_client.dart';
 import '../services/api_exception.dart';
@@ -175,7 +176,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       controller: _heightController,
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
-                      validator: _numberValidator,
+                      validator: _heightValidator,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -187,7 +188,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       controller: _weightController,
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
-                      validator: _numberValidator,
+                      validator: _weightValidator,
                     ),
                   ),
                 ],
@@ -298,9 +299,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  String? _numberValidator(String? value) {
+  String? _heightValidator(String? value) {
     final n = double.tryParse((value ?? '').trim());
-    if (n == null || n <= 0) return 'Enter a valid number';
+    if (n == null) return 'Enter a valid number';
+    if (n < ProfileLimits.heightCmMin || n > ProfileLimits.heightCmMax) {
+      return 'Enter a height between ${ProfileLimits.heightCmMin}-${ProfileLimits.heightCmMax} cm';
+    }
+    return null;
+  }
+
+  String? _weightValidator(String? value) {
+    final n = double.tryParse((value ?? '').trim());
+    if (n == null) return 'Enter a valid number';
+    if (n < ProfileLimits.weightKgMin || n > ProfileLimits.weightKgMax) {
+      return 'Enter a weight between ${ProfileLimits.weightKgMin}-${ProfileLimits.weightKgMax} kg';
+    }
     return null;
   }
 }

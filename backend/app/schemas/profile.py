@@ -6,12 +6,17 @@ from pydantic import BaseModel, Field
 class ProfileUpdate(BaseModel):
     age: int | None = Field(default=None, ge=1, le=120)
     gender: str | None = Field(default=None, pattern="^(Male|Female|Other)$")
-    height_cm: float | None = None
-    weight_kg: float | None = None
+    # Bounds mirror the Flutter app's own picker ranges (only client that
+    # calls this route today) — see lib/models/profile_limits.dart. Kept
+    # here too since the backend can't trust the client not to send
+    # garbage (negative/zero/absurdly large values) directly to the API.
+    height_cm: float | None = Field(default=None, ge=140, le=220)
+    weight_kg: float | None = Field(default=None, ge=35, le=180)
     fitness_level: str | None = Field(
         default=None, pattern="^(Beginner|Intermediate|Advanced)$"
     )
-    weekly_goal: int | None = None
+    # Mirrors lib/models/onboarding_options.dart's workoutsPerWeek range.
+    weekly_goal: int | None = Field(default=None, ge=1, le=7)
 
 
 class ProfileOut(BaseModel):

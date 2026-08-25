@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/onboarding_validators.dart';
 import '../../theme/app_theme.dart';
 import 'onboarding_scaffold.dart';
 
@@ -31,7 +32,7 @@ class SingleSelectListStep extends StatefulWidget {
   final String title;
   final String? subtitle;
   final List<SingleSelectOption> options;
-  final String initialValue;
+  final String? initialValue;
   final VoidCallback? onBack;
   final void Function(String value) onContinue;
 
@@ -40,7 +41,7 @@ class SingleSelectListStep extends StatefulWidget {
 }
 
 class _SingleSelectListStepState extends State<SingleSelectListStep> {
-  late String _selected = widget.initialValue;
+  late String? _selected = widget.initialValue;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +51,8 @@ class _SingleSelectListStepState extends State<SingleSelectListStep> {
       title: widget.title,
       subtitle: widget.subtitle,
       onBack: widget.onBack,
-      onContinue: () => widget.onContinue(_selected),
+      continueEnabled: OnboardingValidators.isSingleSelectValid(_selected),
+      onContinue: () => widget.onContinue(_selected!),
       body: Column(
         children: [
           for (final option in widget.options) ...[

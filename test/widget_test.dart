@@ -304,9 +304,47 @@ void main() {
 
     expect(find.text('Choose your goals'), findsOneWidget);
 
-    // Steps 1-13 all default to a valid selection, so Continue is always
-    // enabled — step 14 (workout days) is reached after 13 taps.
-    for (var i = 0; i < 13; i++) {
+    // Step 1: goals (multi-select, optional) — Continue works with nothing picked.
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 2: gender — single-select steps have no default anymore, so
+    // Continue stays disabled until a option is explicitly tapped.
+    expect(find.text('Choose your gender'), findsOneWidget);
+    await tester.tap(find.text('Male'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 3: motivation — same.
+    expect(find.text('What motivates your exercise?'), findsOneWidget);
+    await tester.tap(find.text('Health and wellness'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 4: focus areas (multi-select, optional).
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 5: fitness level — same as gender/motivation.
+    expect(find.text('Choose your fitness level'), findsOneWidget);
+    await tester.tap(find.text('Beginner'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 6: activity level — same.
+    expect(find.text('Choose your activity level'), findsOneWidget);
+    await tester.tap(find.text('Moderate active'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Steps 7-13: height/age/weight wheels, health issues, equipment,
+    // and the frequency slider all default to a valid value, so Continue
+    // stays enabled without an explicit tap.
+    for (var i = 0; i < 7; i++) {
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
     }
