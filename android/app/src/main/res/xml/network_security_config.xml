@@ -4,7 +4,13 @@
         <!-- Android emulator's alias for the dev machine's localhost -->
         <domain includeSubdomains="false">10.0.2.2</domain>
         <!-- Dev machine's LAN IP, for testing on a physical phone over Wi-Fi.
-             Must match the API_HOST value passed at build time. -->
-        <domain includeSubdomains="false">192.168.1.9</domain>
+             Must match the API_BASE_URL host passed at build time — update
+             this whenever `ipconfig` reports a different IP (Wi-Fi change,
+             router re-lease, etc). -->
+        <domain includeSubdomains="false">172.20.10.2</domain>
+        <!-- Cloudfly trial VPS backend — plain HTTP (no domain/SSL set up yet),
+             so cleartext must stay allowed for this exact IP until it's
+             fronted by HTTPS. -->
+        <domain includeSubdomains="false">103.179.172.246</domain>
     </domain-config>
 </network-security-config>
