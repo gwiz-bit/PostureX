@@ -69,7 +69,7 @@ class Settings(BaseSettings):
 
     # AI Coach chat — Gemini API key from aistudio.google.com/apikey.
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-flash-latest"
+    GEMINI_MODEL: str = "gemini-3.5-flash"
 
     # MoMo (AIO v2) — cong thanh toan dang dung.
     #
