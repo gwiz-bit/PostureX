@@ -89,25 +89,36 @@ class _NumberWheelStepState extends State<NumberWheelStep> {
           const SizedBox(height: 24),
           SizedBox(
             height: 220,
-            child: CupertinoPicker(
-              scrollController: _controller,
-              itemExtent: 44,
-              backgroundColor: Colors.transparent,
-              selectionOverlay: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              onSelectedItemChanged: (index) => setState(() => _value = widget.min + index),
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                for (var i = 0; i < count; i++)
-                  Center(
-                    child: Text(
-                      _format(widget.min + i),
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
-                    ),
+                // Highlight pill painted BEHIND the picker so the selected
+                // number's text renders on top of it. CupertinoPicker's own
+                // `selectionOverlay` paints above the scrolling list, which
+                // would hide the number underneath an opaque background.
+                Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                ),
+                CupertinoPicker(
+                  scrollController: _controller,
+                  itemExtent: 44,
+                  backgroundColor: Colors.transparent,
+                  selectionOverlay: null,
+                  onSelectedItemChanged: (index) => setState(() => _value = widget.min + index),
+                  children: [
+                    for (var i = 0; i < count; i++)
+                      Center(
+                        child: Text(
+                          _format(widget.min + i),
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
