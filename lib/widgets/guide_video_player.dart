@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../models/user_session.dart';
 import '../theme/app_theme.dart';
+
+/// `/media/exercise-videos/*` requires a signed-in session (see
+/// `backend/app/main.py`) — attach the same bearer token `ApiClient` uses,
+/// since `VideoPlayerController.networkUrl` bypasses `ApiClient` entirely.
+Map<String, String> _guideVideoAuthHeaders() {
+  final token = UserSession.accessToken;
+  return token == null ? {} : {'Authorization': 'Bearer $token'};
+}
 
 /// Looping demo-technique video panel for [AnalyzeSessionScreen]'s top
 /// 40% split. Plays [networkUrl] (an admin-uploaded guide video served
@@ -26,7 +35,10 @@ class _GuideVideoPlayerState extends State<GuideVideoPlayer> {
   void initState() {
     super.initState();
     _controller = widget.networkUrl != null
-        ? VideoPlayerController.networkUrl(Uri.parse(widget.networkUrl!))
+        ? VideoPlayerController.networkUrl(
+            Uri.parse(widget.networkUrl!),
+            httpHeaders: _guideVideoAuthHeaders(),
+          )
         : VideoPlayerController.asset(widget.assetPath);
     _controller
       ..setLooping(true)
@@ -162,7 +174,10 @@ class _FullscreenGuideVideoState extends State<_FullscreenGuideVideo> {
   void initState() {
     super.initState();
     _controller = widget.networkUrl != null
-        ? VideoPlayerController.networkUrl(Uri.parse(widget.networkUrl!))
+        ? VideoPlayerController.networkUrl(
+            Uri.parse(widget.networkUrl!),
+            httpHeaders: _guideVideoAuthHeaders(),
+          )
         : VideoPlayerController.asset(widget.assetPath);
     _controller
       ..setLooping(true)

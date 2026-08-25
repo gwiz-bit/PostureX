@@ -4,15 +4,17 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.rate_limit import limiter, rate_limit_handler
 from app.core.scheduler import shutdown_scheduler, start_scheduler
+from app.models.user import User
+from app.utils.deps import get_current_user
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -63,14 +65,23 @@ app.add_middleware(
 
 app.include_router(api_router)
 
-# Video hướng dẫn bài tập do admin upload — serve công khai (không cần
-# đăng nhập), khác với storage/videos (video tập luyện riêng tư của user,
-# không mount static vì không nên public).
-app.mount(
-    "/media/exercise-videos",
-    StaticFiles(directory=str(settings.get_exercise_video_storage_path())),
-    name="exercise-videos",
-)
+# Video hướng dẫn bài tập do admin upload — bất kỳ user đã đăng nhập nào
+# cũng xem được (không giới hạn theo quyền), nhưng khác StaticFiles cũ ở
+# chỗ không còn public hoàn toàn ra Internet: nhiều video trong thư viện
+# là nội dung có bản quyền mua từ bên thứ ba (vd MoveKit), license không
+# chắc cho phép phát tán file gốc qua URL công khai không cần đăng nhập —
+# yêu cầu Bearer token giảm rủi ro đó (giống storage/videos, vốn cũng
+# chưa từng public).
+@app.get("/media/exercise-videos/{filename}")
+async def get_exercise_video(
+    filename: str,
+    current_user: User = Depends(get_current_user),
+) -> FileResponse:
+    storage_dir = settings.get_exercise_video_storage_path().resolve()
+    file_path = (storage_dir / filename).resolve()
+    if storage_dir not in file_path.parents or not file_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy video.")
+    return FileResponse(file_path)
 
 
 @app.get("/health", tags=["health"])

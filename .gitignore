@@ -2,6 +2,10 @@
 .env
 .env.local
 
+# Server access guide (SSH key path, DB password, deploy commands) — real
+# credentials, must never reach git even if this repo ever goes public.
+docs/DEPLOY_SERVER.md
+
 # Claude Code
 .claude/
 
