@@ -147,6 +147,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 hint: '123456',
                 icon: Icons.pin_outlined,
                 controller: _otpController,
+                enabled: !_isSubmitting,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
                 validator: (value) {

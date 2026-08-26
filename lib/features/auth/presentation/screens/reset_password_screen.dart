@@ -114,6 +114,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 hint: 'Paste the code from your email',
                 icon: Icons.vpn_key_outlined,
                 controller: _tokenController,
+                enabled: !_isSubmitting,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) return 'Enter the reset code';
@@ -126,6 +127,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 hint: 'Create a new password',
                 icon: Icons.lock_outline_rounded,
                 controller: _passwordController,
+                enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -140,6 +142,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 hint: 'Re-enter your new password',
                 icon: Icons.lock_outline_rounded,
                 controller: _confirmPasswordController,
+                enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
                 validator: (value) {

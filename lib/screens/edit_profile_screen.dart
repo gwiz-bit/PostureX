@@ -159,6 +159,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 hint: 'Your name',
                 icon: Icons.person_outline_rounded,
                 controller: _nameController,
+                enabled: !_isSubmitting,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) return 'Enter your name';
@@ -174,6 +175,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       hint: '178',
                       icon: Icons.straighten_rounded,
                       controller: _heightController,
+                      enabled: !_isSubmitting,
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
                       validator: _heightValidator,
@@ -186,6 +188,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       hint: '75',
                       icon: Icons.monitor_weight_outlined,
                       controller: _weightController,
+                      enabled: !_isSubmitting,
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
                       validator: _weightValidator,
@@ -199,6 +202,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 hint: '26',
                 icon: Icons.cake_outlined,
                 controller: _ageController,
+                enabled: !_isSubmitting,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -228,6 +232,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 hint: 'Leave blank to keep current',
                 icon: Icons.lock_outline_rounded,
                 controller: _newPasswordController,
+                enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -242,6 +247,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 hint: 'Re-enter your new password',
                 icon: Icons.lock_outline_rounded,
                 controller: _confirmPasswordController,
+                enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
                 validator: (value) {

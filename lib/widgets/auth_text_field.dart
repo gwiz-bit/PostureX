@@ -16,6 +16,7 @@ class AuthTextField extends StatefulWidget {
     this.keyboardType,
     this.textInputAction,
     this.validator,
+    this.enabled = true,
   });
 
   final String label;
@@ -26,6 +27,11 @@ class AuthTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final String? Function(String?)? validator;
+
+  /// Set to `false` while a submit request is in flight so the field reads
+  /// as locked instead of silently accepting edits the pending request
+  /// won't see.
+  final bool enabled;
 
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
@@ -50,6 +56,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
         const SizedBox(height: 8),
         TextFormField(
           controller: widget.controller,
+          enabled: widget.enabled,
           obscureText: widget.isPassword && _obscured,
           keyboardType: widget.keyboardType,
           textInputAction: widget.textInputAction,
@@ -66,7 +73,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
                       color: AppColors.textSecondary,
                       size: 20,
                     ),
-                    onPressed: () => setState(() => _obscured = !_obscured),
+                    onPressed: widget.enabled ? () => setState(() => _obscured = !_obscured) : null,
                   )
                 : null,
             filled: true,

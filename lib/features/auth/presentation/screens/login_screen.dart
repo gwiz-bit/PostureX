@@ -173,6 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 hint: 'you@example.com',
                 icon: Icons.mail_outline_rounded,
                 controller: _emailController,
+                enabled: !_isSubmitting,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -187,6 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 hint: 'Enter your password',
                 icon: Icons.lock_outline_rounded,
                 controller: _passwordController,
+                enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
                 validator: (value) {

@@ -140,6 +140,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hint: 'Your name',
                 icon: Icons.person_outline_rounded,
                 controller: _nameController,
+                enabled: !_isSubmitting,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) return 'Enter your name';
@@ -152,6 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hint: 'you@example.com',
                 icon: Icons.mail_outline_rounded,
                 controller: _emailController,
+                enabled: !_isSubmitting,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -166,6 +168,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hint: 'Create a password',
                 icon: Icons.lock_outline_rounded,
                 controller: _passwordController,
+                enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -180,6 +183,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hint: 'Re-enter your password',
                 icon: Icons.lock_outline_rounded,
                 controller: _confirmPasswordController,
+                enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
                 validator: (value) {
