@@ -74,6 +74,9 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   Map<String, Point>? _keypoints;
   final List<bool> _correctnessSamples = [];
 
+  CameraLensDirection _lensDirection = CameraLensDirection.front;
+  bool _isFlipping = false;
+
   bool _awaitingResponse = false;
   DateTime? _lastFrameSentAt;
   DateTime? _sessionStart;
@@ -140,7 +143,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     try {
       final cameras = await availableCameras();
       final camera = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.back,
+        (c) => c.lensDirection == _lensDirection,
         orElse: () => cameras.first,
       );
       _rotationDegrees = camera.sensorOrientation;
@@ -174,7 +177,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     try {
       final cameras = await availableCameras();
       final camera = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.back,
+        (c) => c.lensDirection == _lensDirection,
         orElse: () => cameras.first,
       );
       final controller = CameraController(
@@ -194,6 +197,50 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       setState(() {});
     } catch (_) {
       // Best-effort resume — leave the user on whatever state they were in.
+    }
+  }
+
+  Future<void> _flipCamera() async {
+    if (_isFlipping) return;
+    setState(() => _isFlipping = true);
+    final newDirection = _lensDirection == CameraLensDirection.front
+        ? CameraLensDirection.back
+        : CameraLensDirection.front;
+    final wasStreaming =
+        _status == _SessionStatus.running && !_isPaused;
+    try {
+      if (_controller?.value.isStreamingImages ?? false) {
+        await _controller!.stopImageStream();
+      }
+      await _controller?.dispose();
+      _controller = null;
+
+      final cameras = await availableCameras();
+      final camera = cameras.firstWhere(
+        (c) => c.lensDirection == newDirection,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(
+        camera,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+        _lensDirection = newDirection;
+        _rotationDegrees = camera.sensorOrientation;
+        _isFlipping = false;
+      });
+      if (wasStreaming) {
+        await controller.startImageStream(_onCameraFrame);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isFlipping = false);
     }
   }
 
@@ -483,28 +530,43 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
             // instead of being blown up by FittedBox scaling from an
             // arbitrary small base size), then cover-scaled just enough to
             // fill the panel height with no letterboxing.
+            //
+            // When the sensor is rotated 90/270° (portrait capture on Android),
+            // controller.value.aspectRatio returns the pre-rotation landscape
+            // ratio. Inverting it gives the actual portrait display ratio so
+            // CameraPreview renders without horizontal distortion (which
+            // otherwise makes people look short/wide).
             ClipRect(
               child: FittedBox(
                 fit: BoxFit.cover,
-                child: SizedBox(
-                  width: constraints.maxWidth,
-                  height: constraints.maxWidth / controller.value.aspectRatio,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CameraPreview(controller),
-                      // Coordinates come from the same rotated JPEG sent to
-                      // the backend (see _encodeCameraImage), so they line
-                      // up with CameraPreview as long as both are scaled
-                      // together by the same FittedBox above.
-                      CustomPaint(
-                        painter: SkeletonPainter(
-                          keypoints: _keypoints,
-                          correct: _correct,
-                        ),
+                child: Builder(
+                  builder: (context) {
+                    final bool sensorIsPortrait =
+                        _rotationDegrees == 90 || _rotationDegrees == 270;
+                    final double displayAspect = sensorIsPortrait
+                        ? 1.0 / controller.value.aspectRatio
+                        : controller.value.aspectRatio;
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxWidth / displayAspect,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CameraPreview(controller),
+                          // Coordinates come from the same rotated JPEG sent to
+                          // the backend (see _encodeCameraImage), so they line
+                          // up with CameraPreview as long as both are scaled
+                          // together by the same FittedBox above.
+                          CustomPaint(
+                            painter: SkeletonPainter(
+                              keypoints: _keypoints,
+                              correct: _correct,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -557,6 +619,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                         ),
                       ),
                       const Spacer(),
+                      IconButton(
+                        onPressed: _isFlipping ? null : _flipCamera,
+                        icon: const Icon(
+                          Icons.flip_camera_android_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
                       IconButton(
                         onPressed: _togglePause,
                         icon: Icon(
