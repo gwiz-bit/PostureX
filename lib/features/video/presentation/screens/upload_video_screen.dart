@@ -88,7 +88,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'mp4, mov, avi, webm, mkv — up to 500 MB',
+                        'mp4, mov, avi, webm, mkv — up to 50 MB',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                       ),
                       const SizedBox(height: 16),

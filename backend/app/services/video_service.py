@@ -15,7 +15,7 @@ class VideoService:
     """Lưu file video và tạo bản ghi metadata bất đồng bộ."""
 
     ALLOWED_EXTENSIONS = {".mp4", ".mov", ".avi", ".webm", ".mkv"}
-    MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024  # 500 MB
+    MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 
     async def save(
         self,
@@ -50,7 +50,7 @@ class VideoService:
                 if total_bytes > self.MAX_FILE_SIZE_BYTES:
                     await out.close()
                     storage_path.unlink(missing_ok=True)
-                    raise ValueError("File vượt quá kích thước tối đa 500 MB.")
+                    raise ValueError("File vượt quá kích thước tối đa 50 MB.")
                 await out.write(chunk)
 
         video = Video(

@@ -32,12 +32,23 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         shutdown_scheduler()
 
 
+# Swagger/ReDoc chỉ bật khi DEBUG. Trên server thật /docs phơi toàn bộ
+# endpoint, tham số và cấu trúc dữ liệu cho bất kỳ ai gõ đúng URL — tiện lúc
+# dev, nhưng là tấm bản đồ dọn sẵn cho người dò lỗ hổng một khi backend đã ra
+# Internet.
+#
+# Phải tắt cả `openapi_url` chứ không chỉ `docs_url`: FastAPI phục vụ
+# /openapi.json độc lập với trang Swagger, mà file đó mới là toàn bộ đặc tả.
+# Tắt mỗi giao diện là giấu cái cửa sổ chứ không khoá cửa.
+_docs_enabled = settings.DEBUG
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="AI-powered gym technique analysis backend",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
     lifespan=lifespan,
 )
 

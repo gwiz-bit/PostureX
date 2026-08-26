@@ -15,7 +15,7 @@ void main() {
       expect(error, contains('Unsupported format'));
     });
 
-    test('rejects a file over the 500 MB cap', () {
+    test('rejects a file over the 50 MB cap', () {
       final error = usecase(path: '/tmp/squat.mp4', sizeBytes: kMaxVideoUploadBytes + 1);
       expect(error, contains('too large'));
     });

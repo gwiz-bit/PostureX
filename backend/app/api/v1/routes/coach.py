@@ -3,12 +3,13 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.crud.exercise import get_active_exercises
 from app.crud.profile import get_profile
 from app.models.user import User
@@ -146,13 +147,26 @@ async def _build_user_context(db: AsyncSession, user: User) -> str:
 
 
 @router.post("/chat", response_model=CoachChatResponse)
+@limiter.limit("10/minute;100/hour")
 async def chat(
+    request: Request,
     data: CoachChatRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> CoachChatResponse:
     """Gửi 1 câu hỏi tới AI Coach, kèm ngữ cảnh hồ sơ + lịch sử tập thật của
-    user hiện tại để lời khuyên cá nhân hóa."""
+    user hiện tại để lời khuyên cá nhân hóa.
+
+    Có rate limit vì đây là endpoint tiêu tiền thật: mỗi request là một lượt
+    gọi Gemini, tính vào quota của khoá API trong .env. Không giới hạn thì
+    một tài khoản chạy vòng lặp là đốt sạch hạn mức, và mọi người dùng khác
+    mất luôn AI Coach. Đặt hai mức — 10/phút vẫn rộng rãi cho hội thoại của
+    người thật (nhanh nhất cũng vài giây mới gõ xong một câu), 100/giờ chặn
+    kiểu gọi đều đều né ngưỡng phút.
+
+    `request: Request` là tham số slowapi bắt buộc phải có để lấy IP, không
+    phải dư thừa — bỏ đi là decorator ném lỗi lúc khởi động.
+    """
     if not settings.GEMINI_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -175,13 +189,23 @@ async def chat(
 
 
 @router.post("/plan", response_model=AiPlanResponse)
+@limiter.limit("5/minute;20/hour")
 async def generate_plan(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> AiPlanResponse:
     """Sinh lịch tập + dinh dưỡng 7 ngày (Mon..Sun) cá nhân hóa bằng AI, dựa
     trên hồ sơ thể chất + lịch sử tập thật — client dùng kết quả này để thay
-    thế lịch tập mẫu cố định trên Home."""
+    thế lịch tập mẫu cố định trên Home.
+
+    Giới hạn chặt hơn /chat vì mỗi lượt sinh lịch tốn nhiều token hơn hẳn —
+    prompt kèm toàn bộ danh sách bài tập trong DB, đầu ra là structured
+    output cho cả 7 ngày — trong khi nhu cầu thật chỉ vài lần mỗi tuần.
+    5/phút vẫn đủ để bấm lại ngay khi lịch chưa ưng ý, 20/giờ chặn lạm dụng.
+
+    Xem chú thích ở `chat` về lý do bắt buộc có `request: Request`.
+    """
     if not settings.GEMINI_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

@@ -1,5 +1,5 @@
 const kAdminExerciseVideoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv'];
-const kAdminExerciseMaxVideoBytes = 500 * 1024 * 1024;
+const kAdminExerciseMaxVideoBytes = 50 * 1024 * 1024;
 
 /// Pure validation, no I/O — extracted out of `_ExercisesScreenState` so the
 /// extension/size rules are unit-testable without a widget pump.
@@ -15,7 +15,7 @@ class ValidateExerciseVideoFile {
       return 'Unsupported format: $extension. Use mp4, mov, avi, webm, or mkv.';
     }
     if (sizeBytes > kAdminExerciseMaxVideoBytes) {
-      return 'File is too large. Max size is 500 MB.';
+      return 'File is too large. Max size is 50 MB.';
     }
     return null;
   }

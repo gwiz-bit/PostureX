@@ -1,5 +1,5 @@
 const kAllowedVideoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv'];
-const kMaxVideoUploadBytes = 500 * 1024 * 1024;
+const kMaxVideoUploadBytes = 50 * 1024 * 1024;
 
 /// Pure validation, no I/O — extracted out of the upload screen so the
 /// format/size rules are unit-testable without picking a real file.
@@ -15,7 +15,7 @@ class ValidateVideoFile {
       return 'Unsupported format: $extension. Use mp4, mov, avi, webm, or mkv.';
     }
     if (sizeBytes > kMaxVideoUploadBytes) {
-      return 'File is too large. Max size is 500 MB.';
+      return 'File is too large. Max size is 50 MB.';
     }
     return null;
   }
