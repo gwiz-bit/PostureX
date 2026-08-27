@@ -1,0 +1,43 @@
+{
+  // API_BASE_URL la hang so BIEN DICH (String.fromEnvironment trong
+  // lib/config/api_config.dart), khong phai bien moi truong doc luc chay.
+  // Bam nut Run ma khong co --dart-define thi app roi ve mac dinh dev
+  // (10.0.2.2:9000 tren Android = localhost cua may dev), va man Login bao
+  // "Could not reach the server" du server that van song. Hot reload cung
+  // khong cuu duoc vi gia tri da duoc nen vao luc build.
+  //
+  // De san hai cau hinh de khoi phai nho go co moi lan.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Mac dinh: noi toi backend that tren VPS Cloudfly.
+      "name": "PostureX (VPS)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define=API_BASE_URL=http://103.179.172.246:9000"
+      ]
+    },
+    {
+      // Backend chay tren chinh may nay (uvicorn --port 9000). Khong truyen
+      // --dart-define de ApiConfig tu chon host theo nen tang: 10.0.2.2 cho
+      // Android emulator, localhost cho Windows/web.
+      "name": "PostureX (backend local)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart"
+    },
+    {
+      // Ban release cho VPS — dung khi dong goi APK gui cho nguoi khac test.
+      "name": "PostureX (VPS, release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "flutterMode": "release",
+      "args": [
+        "--dart-define=API_BASE_URL=http://103.179.172.246:9000"
+      ]
+    }
+  ]
+}

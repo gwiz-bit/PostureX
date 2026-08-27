@@ -52,14 +52,29 @@ class ApiClient {
     return headers;
   }
 
+  /// Response body decoded as UTF-8, whatever the server says.
+  ///
+  /// `response.body` picks its codec from the `charset` in `Content-Type` and
+  /// falls back to **latin-1** when there isn't one — and FastAPI's
+  /// `JSONResponse` sends a bare `application/json`, no charset. Every
+  /// Vietnamese string from the backend therefore arrived mangled
+  /// ("Email hoặc mật khẩu không đúng." → "Email hoáº·c máº­t kháº©u..."),
+  /// which silently broke every exact-match on a backend message — the login
+  /// screen's `_friendlyMessage` switch fell through to its generic
+  /// "Something went wrong" for a plain wrong password.
+  ///
+  /// Fixing it here rather than server-side covers the whole app in one place
+  /// and keeps working even if some endpoint answers without a charset again.
+  String _bodyAsUtf8(http.Response response) => utf8.decode(response.bodyBytes);
+
   dynamic _decode(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) return null;
-      return jsonDecode(response.body);
+      if (response.bodyBytes.isEmpty) return null;
+      return jsonDecode(_bodyAsUtf8(response));
     }
     String message = 'Something went wrong. Please try again.';
     try {
-      final body = jsonDecode(response.body);
+      final body = jsonDecode(_bodyAsUtf8(response));
       if (body is Map && body['detail'] is String) {
         message = body['detail'] as String;
       } else if (body is Map && body['detail'] is List) {
