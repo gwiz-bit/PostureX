@@ -15,8 +15,14 @@ class ExercisesScreen extends StatefulWidget {
 }
 
 class _ExercisesScreenState extends State<ExercisesScreen> {
-  static const _filters = ['All', 'Strength', 'Cardio', 'Core', 'Mobility'];
-  String _selectedFilter = 'All';
+  /// Filter chips used to be four hardcoded categories
+  /// (`Strength/Cardio/Core/Mobility`). The library now carries 400+
+  /// exercises tagged by muscle group, so the strip is built from whatever
+  /// groups the loaded exercises actually have — adding a muscle group is a
+  /// DB insert, not an app release.
+  static const _allFilter = 'All';
+
+  String _selectedFilter = _allFilter;
   String _query = '';
 
   final _controller = ExercisesModule.controller();
@@ -53,8 +59,27 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
       child: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
+          // Biggest muscle groups first so the ones with the most exercises
+          // are reachable without scrolling the chip strip sideways.
+          final counts = <String, int>{};
+          for (final e in _controller.exercises) {
+            for (final group in e.muscleGroups) {
+              counts[group] = (counts[group] ?? 0) + 1;
+            }
+          }
+          final groupNames = counts.keys.toList()
+            ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+          final filters = [_allFilter, ...groupNames];
+
+          // A previously picked group can vanish after a reload (exercise
+          // deactivated, library re-imported). Fall back to "All" instead of
+          // showing an empty list with no chip selected.
+          final activeFilter = filters.contains(_selectedFilter) ? _selectedFilter : _allFilter;
+
           final filtered = _controller.exercises.where((e) {
-            if (_selectedFilter != 'All' && e.category != _selectedFilter) return false;
+            if (activeFilter != _allFilter && !e.muscleGroups.contains(activeFilter)) {
+              return false;
+            }
             if (_query.trim().isNotEmpty &&
                 !e.name.toLowerCase().contains(_query.trim().toLowerCase())) {
               return false;
@@ -97,11 +122,11 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                   height: 40,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: _filters.length,
+                    itemCount: filters.length,
                     separatorBuilder: (_, _) => const SizedBox(width: 10),
                     itemBuilder: (context, index) {
-                      final filter = _filters[index];
-                      final selected = filter == _selectedFilter;
+                      final filter = filters[index];
+                      final selected = filter == activeFilter;
                       return _FilterChip(
                         label: filter,
                         selected: selected,
@@ -160,14 +185,30 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Row(
+                                // Imported library exercises carry no
+                                // category/difficulty (the source only gave a
+                                // name and a muscle group), so the muscle
+                                // group is the label that always exists.
+                                // Wrap, not Row: three chips plus a long
+                                // muscle-group name overflow a phone width.
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
                                   children: [
-                                    if (exercise.category != null) ...[
-                                      TagChip(label: exercise.category!, color: AppColors.primary),
-                                      const SizedBox(width: 8),
-                                    ],
+                                    if (exercise.muscleGroups.isNotEmpty)
+                                      TagChip(
+                                        label: exercise.muscleGroups.first,
+                                        color: AppColors.primary,
+                                      ),
+                                    if (exercise.category != null)
+                                      TagChip(label: exercise.category!),
                                     if (exercise.difficulty != null)
                                       TagChip(label: exercise.difficulty!),
+                                    // Only ~9 of 400+ exercises can be
+                                    // analysed live; flag them so that
+                                    // feature is findable at all.
+                                    if (exercise.supportsAnalysis)
+                                      const TagChip(label: 'Live analysis'),
                                   ],
                                 ),
                               ],

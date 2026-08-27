@@ -9,14 +9,7 @@ from jose import JWTError
 
 from app.core.security import decode_token
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.bench_press import BenchPressAnalyzer
-from app.ml.analyzers.cat_cow import CatCowAnalyzer
-from app.ml.analyzers.deadlift import DeadliftAnalyzer
-from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
-from app.ml.analyzers.lunge import LungeAnalyzer
-from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
-from app.ml.analyzers.plank import PlankAnalyzer
-from app.ml.analyzers.row import RowAnalyzer
+from app.ml.analyzers.registry import ANALYZER_REGISTRY
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.pose_estimator import PoseEstimator
 from app.ml.session_state import SessionState
@@ -29,22 +22,9 @@ router = APIRouter(tags=["realtime"])
 # Khởi tạo PoseEstimator một lần cho toàn ứng dụng
 _pose_estimator = PoseEstimator(model_complexity=1)
 
-# Registry ánh xạ tên bài tập -> analyzer class. Key phải khớp đúng chuỗi
-# `exercise` client gửi lên khi khởi tạo phiên (không phân biệt hoa/thường —
-# xem `_get_analyzer` bên dưới).
-ANALYZER_REGISTRY: dict[str, type[ExerciseAnalyzer]] = {
-    "squat": SquatAnalyzer,
-    "row": RowAnalyzer,
-    "bench press": BenchPressAnalyzer,
-    "dumbbell bench press": BenchPressAnalyzer,
-    "plank": PlankAnalyzer,
-    "lunge": LungeAnalyzer,
-    "deadlift": DeadliftAnalyzer,
-    "overhead press": OverheadPressAnalyzer,
-    "barbell overhead press": OverheadPressAnalyzer,
-    "hip thrust": HipThrustAnalyzer,
-    "cat-cow": CatCowAnalyzer,
-}
+# `ANALYZER_REGISTRY` nay đã chuyển sang app/ml/analyzers/registry.py —
+# routes/exercises.py cũng cần biết danh sách này để trả cờ `supports_analysis`,
+# mà không nên import cả module realtime (sẽ kéo theo PoseEstimator + mediapipe).
 
 
 def _get_analyzer(exercise: str, session: SessionState) -> ExerciseAnalyzer:

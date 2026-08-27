@@ -20,6 +20,17 @@ class ExerciseOut(BaseModel):
     is_active: bool
     created_at: datetime
 
+    # Hai trường dưới không phải cột trong bảng Exercises — route tự tính rồi
+    # gán vào. Có giá trị mặc định để `model_validate(orm_object)` ở các route
+    # admin (vốn không quan tâm hai thứ này) vẫn chạy như cũ.
+    muscle_groups: list[str] = []
+
+    # Bài tập có analyzer tư thế riêng hay không. Thư viện có hơn 400 bài
+    # nhưng chỉ 9 analyzer; nếu client cho bấm "Phân tích tư thế" ở bài không
+    # hỗ trợ thì backend fallback sang SquatAnalyzer và đọc to feedback squat
+    # cho một bài tập cổ hay bắp chân. Cờ này để client ẩn nút đó đi.
+    supports_analysis: bool = False
+
 
 class ExerciseCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)

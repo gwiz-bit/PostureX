@@ -19,6 +19,7 @@ from app.models import (  # noqa: F401 đăng ký hết model để Base.metadat
     email_otp,
     exercise,
     goal,
+    muscle_group,
     notification,
     password_reset_token,
     plan,

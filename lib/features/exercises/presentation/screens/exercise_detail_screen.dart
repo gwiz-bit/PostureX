@@ -124,23 +124,51 @@ class ExerciseDetailScreen extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _startAnalysis(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            // Live analysis is only offered where the backend actually has an
+            // analyzer for this exercise. For the rest it silently falls back
+            // to squat analysis, so showing the button would mean counting
+            // "reps" and speaking squat corrections during a calf raise —
+            // worse than not offering the feature at all.
+            if (exercise.supportsAnalysis)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _startAnalysis(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text(
+                    'Start Live Analysis',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
                 ),
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text(
-                  'Start Live Analysis',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, color: AppColors.textSecondary, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Live posture analysis is not available for this exercise yet — '
+                        'follow the demo video instead.',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
             const SizedBox(height: 12),
             TextButton.icon(
               onPressed: () => _uploadInstead(context),

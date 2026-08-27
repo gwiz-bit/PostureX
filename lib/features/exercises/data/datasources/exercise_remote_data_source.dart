@@ -23,5 +23,7 @@ class ExerciseRemoteDataSource {
         category: e.category,
         difficulty: e.difficulty,
         demoVideoUrl: e.demoVideoUrl,
+        muscleGroups: e.muscleGroups,
+        supportsAnalysis: e.supportsAnalysis,
       );
 }
