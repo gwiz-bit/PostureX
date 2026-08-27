@@ -22,10 +22,17 @@ const _bones = [
 /// reports a binary correct/incorrect per frame today, not per-joint
 /// severity, so that's the full color vocabulary available here.
 class SkeletonPainter extends CustomPainter {
-  const SkeletonPainter({required this.keypoints, required this.correct});
+  const SkeletonPainter({
+    required this.keypoints,
+    required this.correct,
+    this.mirrorX = false,
+  });
 
   final Map<String, Point>? keypoints;
   final bool correct;
+  // When true, flips x coordinates so the skeleton aligns with the mirrored
+  // CameraPreview that the camera plugin renders for the front camera.
+  final bool mirrorX;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -42,7 +49,8 @@ class SkeletonPainter extends CustomPainter {
     Offset? offsetFor(String name) {
       final p = points[name];
       if (p == null) return null;
-      return Offset(p.x * size.width, p.y * size.height);
+      final x = mirrorX ? (1.0 - p.x) : p.x;
+      return Offset(x * size.width, p.y * size.height);
     }
 
     for (final (a, b) in _bones) {
@@ -61,5 +69,7 @@ class SkeletonPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SkeletonPainter oldDelegate) =>
-      oldDelegate.keypoints != keypoints || oldDelegate.correct != correct;
+      oldDelegate.keypoints != keypoints ||
+      oldDelegate.correct != correct ||
+      oldDelegate.mirrorX != mirrorX;
 }

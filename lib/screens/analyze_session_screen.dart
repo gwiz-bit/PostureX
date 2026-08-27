@@ -202,26 +202,35 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 
   Future<void> _flipCamera() async {
     if (_isFlipping) return;
-    setState(() => _isFlipping = true);
     final newDirection = _lensDirection == CameraLensDirection.front
         ? CameraLensDirection.back
         : CameraLensDirection.front;
-    final wasStreaming =
-        _status == _SessionStatus.running && !_isPaused;
-    try {
-      if (_controller?.value.isStreamingImages ?? false) {
-        await _controller!.stopImageStream();
-      }
-      await _controller?.dispose();
-      _controller = null;
 
-      final cameras = await availableCameras();
-      final camera = cameras.firstWhere(
-        (c) => c.lensDirection == newDirection,
-        orElse: () => cameras.first,
-      );
+    // Check BEFORE touching the controller — emulators often only have one
+    // camera. If the target direction doesn't exist, do nothing so there's
+    // no black flash and no disruption to the running session.
+    final cameras = await availableCameras();
+    final matching = cameras.where((c) => c.lensDirection == newDirection);
+    if (matching.isEmpty) return;
+    final targetCamera = matching.first;
+
+    final oldController = _controller;
+    final wasStreaming = _status == _SessionStatus.running && !_isPaused;
+    // Null out _controller before the async dispose so any rebuild triggered
+    // during the await shows the spinner instead of crashing on CameraPreview
+    // with an already-disposed controller.
+    setState(() {
+      _isFlipping = true;
+      _controller = null;
+    });
+    try {
+      if (oldController?.value.isStreamingImages ?? false) {
+        await oldController!.stopImageStream();
+      }
+      await oldController?.dispose();
+
       final controller = CameraController(
-        camera,
+        targetCamera,
         ResolutionPreset.medium,
         enableAudio: false,
       );
@@ -233,7 +242,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       setState(() {
         _controller = controller;
         _lensDirection = newDirection;
-        _rotationDegrees = camera.sensorOrientation;
+        _rotationDegrees = targetCamera.sensorOrientation;
         _isFlipping = false;
       });
       if (wasStreaming) {
@@ -496,7 +505,15 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   }
 
   Widget _buildAnalyzeView() {
-    final controller = _controller!;
+    final controller = _controller;
+    // Controller is null briefly while _flipCamera() disposes the old one
+    // and before the new one is assigned — show a spinner instead of
+    // crashing on the ! operator.
+    if (controller == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
     // 40/60 vertical split: guide video on top, camera + live analysis
     // below — flex 2:3 gives the exact 40%/60% ratio.
     return Column(
@@ -561,6 +578,8 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                             painter: SkeletonPainter(
                               keypoints: _keypoints,
                               correct: _correct,
+                              mirrorX:
+                                  _lensDirection == CameraLensDirection.front,
                             ),
                           ),
                         ],
