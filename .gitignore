@@ -4,7 +4,19 @@
 
 # Server access guide (SSH key path, DB password, deploy commands) — real
 # credentials, must never reach git even if this repo ever goes public.
+#
+# Both paths are listed on purpose: the real file has been sitting at the repo
+# root, where the `docs/` rule does not match it — `git status` listed it as
+# untracked, so a single `git add .` would have pushed the DB password.
 docs/DEPLOY_SERVER.md
+/DEPLOY_SERVER.md
+
+# SSH private keys (e.g. the sshkey-*.pem downloaded from Cloudfly). A leaked
+# key means losing the whole server, and once committed it must be treated as
+# leaked even if deleted right after — git history keeps it. Matched by
+# extension so it does not depend on anyone remembering a naming convention.
+*.pem
+*.key
 
 # Claude Code
 .claude/
