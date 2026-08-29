@@ -30,7 +30,7 @@ enum _SessionStatus {
 }
 
 const _noPersonMessage = 'Không phát hiện được người trong frame.';
-const _frameInterval = Duration(milliseconds: 110); // ~9 fps cap
+const _frameInterval = Duration(milliseconds: 80); // ~12 fps cap
 
 /// How many consecutive frames the same mistake category must appear in
 /// before it gets read aloud via TTS. At the ~9fps frame cap this is under
@@ -78,6 +78,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   bool _isFlipping = false;
 
   bool _awaitingResponse = false;
+  Timer? _responseTimeoutTimer;
   DateTime? _lastFrameSentAt;
   DateTime? _sessionStart;
   bool _isEnding = false;
@@ -279,6 +280,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 
     if (event.frame != null) {
       final frame = event.frame!;
+      _responseTimeoutTimer?.cancel();
       _awaitingResponse = false;
       // "top" = đang đứng nghỉ/chưa vào tư thế (giữa các rep, hoặc trước khi
       // bắt đầu) — không tính vào độ chính xác, nếu không đứng yên trước
@@ -363,6 +365,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       return;
     _lastFrameSentAt = now;
     _awaitingResponse = true;
+    // Safety net: if the server drops a response, _awaitingResponse would
+    // stay true forever and block all future frames. Reset after 500 ms so
+    // the next frame can be sent even if the current one was never answered.
+    _responseTimeoutTimer?.cancel();
+    _responseTimeoutTimer = Timer(const Duration(milliseconds: 500), () {
+      _awaitingResponse = false;
+    });
     _encodeAndSend(image);
   }
 
@@ -448,6 +457,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _transientErrorTimer?.cancel();
+    _responseTimeoutTimer?.cancel();
     _socketSub?.cancel();
     _socket.close();
     _controller?.dispose();

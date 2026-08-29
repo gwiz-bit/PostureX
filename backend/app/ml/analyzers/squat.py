@@ -19,7 +19,10 @@ class SquatAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật squat và trả feedback tiếng Việt."""
 
     def __init__(self, rep_counter: RepCounter | None = None) -> None:
-        super().__init__(rep_counter or RepCounter(down_threshold=95.0, up_threshold=160.0))
+        # up_threshold 155° thay vì 160° — thực tế nhiều người không duỗi thẳng
+        # hết gối khi đứng, 155° đã đủ để tính là đứng thẳng mà không làm mất
+        # độ chính xác của bài tập.
+        super().__init__(rep_counter or RepCounter(down_threshold=95.0, up_threshold=155.0))
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         """Phân tích một frame squat, cập nhật đếm rep, trả kết quả."""
