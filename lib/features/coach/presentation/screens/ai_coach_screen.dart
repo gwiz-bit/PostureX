@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
-import '../../../../utils/app_locale.dart';
 import '../../coach_module.dart';
 import '../../domain/entities/chat_message.dart';
 
@@ -15,7 +14,7 @@ class AiCoachScreen extends StatefulWidget {
   State<AiCoachScreen> createState() => _AiCoachScreenState();
 }
 
-class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
+class _AiCoachScreenState extends State<AiCoachScreen> {
   final _controller = CoachModule.controller();
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
@@ -67,9 +66,9 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: Text(
-          AppLocale.t('coach_title'),
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+        title: const Text(
+          'AI Coach',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
@@ -116,7 +115,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) => _send(),
                         decoration: InputDecoration(
-                          hintText: AppLocale.t('coach_hint'),
+                          hintText: 'Hỏi về chế độ tập, dinh dưỡng...',
                           hintStyle: const TextStyle(color: AppColors.textSecondary),
                           filled: true,
                           fillColor: AppColors.surface,
@@ -233,10 +232,10 @@ class _EmptyState extends StatelessWidget {
         children: [
           const Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 48),
           const SizedBox(height: 16),
-          Text(
-            AppLocale.t('coach_empty'),
+          const Text(
+            'Hỏi AI Coach bất cứ điều gì về\ntập luyện & dinh dưỡng',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 24),
           for (final s in _suggestions) ...[

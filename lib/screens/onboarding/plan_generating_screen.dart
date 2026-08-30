@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
-import '../../utils/app_locale.dart';
 import '../main_shell.dart';
 
 /// Brief animated "building your plan" pause shown right after onboarding
@@ -16,7 +15,7 @@ class PlanGeneratingScreen extends StatefulWidget {
 }
 
 class _PlanGeneratingScreenState extends State<PlanGeneratingScreen>
-    with SingleTickerProviderStateMixin, AppLocaleMixin {
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1800),
@@ -81,12 +80,12 @@ class _PlanGeneratingScreenState extends State<PlanGeneratingScreen>
                   ),
                 ),
                 const SizedBox(height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 40),
                   child: Text(
-                    AppLocale.t('plan_gen_title'),
+                    'Building your training plan',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -94,12 +93,12 @@ class _PlanGeneratingScreenState extends State<PlanGeneratingScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 40),
                   child: Text(
-                    AppLocale.t('plan_gen_subtitle'),
+                    'Personalizing 4 weeks of workouts based on your goals',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
                   ),
                 ),
               ],

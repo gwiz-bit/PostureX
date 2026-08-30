@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../theme/app_theme.dart';
-import '../../../../utils/app_locale.dart';
 import '../../../../widgets/auth_text_field.dart';
 import '../../../../widgets/info_tip_card.dart';
 import '../../auth_module.dart';
@@ -28,7 +27,7 @@ class ResetPasswordScreen extends StatefulWidget {
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocaleMixin {
+class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _tokenController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -61,7 +60,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocal
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocale.t('reset_success_snack'))),
+        const SnackBar(content: Text('Password reset — you can log in with your new password now.')),
       );
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -70,7 +69,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocal
     } on AppFailure catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {
-      setState(() => _errorMessage = AppLocale.t('error_no_connection'));
+      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -94,9 +93,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocal
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                AppLocale.t('reset_title'),
-                style: const TextStyle(
+              const Text(
+                'Reset password',
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
@@ -105,57 +104,58 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocal
               const SizedBox(height: 8),
               Text(
                 widget.email == null || widget.email!.isEmpty
-                    ? AppLocale.t('reset_subtitle_no_email')
-                    : AppLocale.format('reset_subtitle_with_email', {'email': widget.email!}),
+                    ? 'Paste the code from your email and choose a new password.'
+                    : 'Paste the code we sent to ${widget.email} and choose a new password.',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 32),
               AuthTextField(
-                label: AppLocale.t('reset_code_label'),
-                hint: AppLocale.t('reset_code_hint'),
+                label: 'Reset code',
+                hint: 'Paste the code from your email',
                 icon: Icons.vpn_key_outlined,
                 controller: _tokenController,
                 enabled: !_isSubmitting,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_reset_code');
+                  if (value == null || value.trim().isEmpty) return 'Enter the reset code';
                   return null;
                 },
               ),
               const SizedBox(height: 18),
               AuthTextField(
-                label: AppLocale.t('reset_new_password_label'),
-                hint: AppLocale.t('reset_new_password_hint'),
+                label: 'New password',
+                hint: 'Create a new password',
                 icon: Icons.lock_outline_rounded,
                 controller: _passwordController,
                 enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return AppLocale.t('validation_enter_new_password');
-                  if (value.length < 8) return AppLocale.t('validation_min_8_chars');
+                  if (value == null || value.isEmpty) return 'Enter a new password';
+                  if (value.length < 8) return 'At least 8 characters';
                   return null;
                 },
               ),
               const SizedBox(height: 18),
               AuthTextField(
-                label: AppLocale.t('reset_confirm_password_label'),
-                hint: AppLocale.t('reset_confirm_password_hint'),
+                label: 'Confirm new password',
+                hint: 'Re-enter your new password',
                 icon: Icons.lock_outline_rounded,
                 controller: _confirmPasswordController,
                 enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
                 validator: (value) {
-                  if (value != _passwordController.text) return AppLocale.t('validation_passwords_mismatch');
+                  if (value != _passwordController.text) return 'Passwords do not match';
                   return null;
                 },
               ),
               const SizedBox(height: 20),
-              InfoTipCard(
+              const InfoTipCard(
                 emoji: '🔒',
-                title: AppLocale.t('tip_strong_password_title'),
-                body: AppLocale.t('tip_strong_password_body'),
+                title: 'Choose a strong password',
+                body: 'At least 8 characters, with an uppercase letter, a lowercase letter, '
+                    'a number, and a special character.',
               ),
               const SizedBox(height: 28),
               if (_errorMessage != null) ...[
@@ -186,9 +186,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocal
                             valueColor: AlwaysStoppedAnimation(AppColors.onPrimary),
                           ),
                         )
-                      : Text(
-                          AppLocale.t('reset_submit_button'),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      : const Text(
+                          'Reset password',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                 ),
               ),

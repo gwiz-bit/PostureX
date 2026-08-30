@@ -4,7 +4,6 @@ import '../../../../core/errors/failures.dart';
 import '../../../../screens/main_shell.dart';
 import '../../../../screens/onboarding/onboarding_flow.dart';
 import '../../../../theme/app_theme.dart';
-import '../../../../utils/app_locale.dart';
 import '../../../../widgets/app_logo.dart';
 import '../../../../widgets/auth_text_field.dart';
 import '../../../../widgets/google_sign_in_button.dart';
@@ -22,7 +21,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -47,13 +46,13 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
   String _friendlyMessage(AppFailure e) {
     switch (e.message) {
       case 'Email hoặc mật khẩu không đúng.':
-        return AppLocale.t('login_error_wrong_credentials');
+        return 'Incorrect email or password.';
       case 'Tài khoản không tồn tại.':
-        return AppLocale.t('login_error_account_not_found');
+        return 'This account no longer exists.';
       case _unverifiedEmailDetail:
-        return AppLocale.t('login_error_not_verified');
+        return 'Your email is not verified yet.';
       default:
-        return AppLocale.t('error_generic');
+        return 'Something went wrong. Please try again.';
     }
   }
 
@@ -84,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
         _needsVerification = e.message == _unverifiedEmailDetail;
       });
     } catch (_) {
-      setState(() => _errorMessage = AppLocale.t('error_no_connection'));
+      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -127,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
       setState(() => _errorMessage = e.message);
     } catch (e) {
       debugPrint('Google sign-in failed: $e');
-      setState(() => _errorMessage = AppLocale.t('login_google_error'));
+      setState(() => _errorMessage = 'Could not sign in with Google. Check your connection.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -155,9 +154,9 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
                 ),
               ),
               const SizedBox(height: 28),
-              Text(
-                AppLocale.t('login_title'),
-                style: const TextStyle(
+              const Text(
+                'Welcome back',
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
@@ -165,36 +164,36 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
               ),
               const SizedBox(height: 8),
               Text(
-                AppLocale.t('login_subtitle'),
+                'Log in to continue your posture journey',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 36),
               AuthTextField(
-                label: AppLocale.t('field_email_label'),
-                hint: AppLocale.t('field_email_hint'),
+                label: 'Email',
+                hint: 'you@example.com',
                 icon: Icons.mail_outline_rounded,
                 controller: _emailController,
                 enabled: !_isSubmitting,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_email');
-                  if (!value.contains('@')) return AppLocale.t('validation_invalid_email');
+                  if (value == null || value.trim().isEmpty) return 'Enter your email';
+                  if (!value.contains('@')) return 'Enter a valid email';
                   return null;
                 },
               ),
               const SizedBox(height: 18),
               AuthTextField(
-                label: AppLocale.t('field_password_label'),
-                hint: AppLocale.t('field_password_hint'),
+                label: 'Password',
+                hint: 'Enter your password',
                 icon: Icons.lock_outline_rounded,
                 controller: _passwordController,
                 enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return AppLocale.t('validation_enter_password');
-                  if (value.length < 6) return AppLocale.t('validation_min_6_chars');
+                  if (value == null || value.isEmpty) return 'Enter your password';
+                  if (value.length < 6) return 'At least 6 characters';
                   return null;
                 },
               ),
@@ -206,9 +205,9 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
                     MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
                   ),
                   style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-                  child: Text(
-                    AppLocale.t('login_forgot_password'),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  child: const Text(
+                    'Forgot password?',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -222,9 +221,9 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
                   const SizedBox(height: 6),
                   GestureDetector(
                     onTap: _goToOtpVerification,
-                    child: Text(
-                      AppLocale.t('login_verify_now'),
-                      style: const TextStyle(
+                    child: const Text(
+                      'Verify now',
+                      style: TextStyle(
                         color: AppColors.primary,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -255,9 +254,9 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
                             valueColor: AlwaysStoppedAnimation(AppColors.onPrimary),
                           ),
                         )
-                      : Text(
-                          AppLocale.t('login_button'),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      : const Text(
+                          'Log in',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                 ),
               ),
@@ -270,14 +269,14 @@ class _LoginScreenState extends State<LoginScreen> with AppLocaleMixin {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    AppLocale.t('login_no_account'),
+                    "Don't have an account? ",
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                   ),
                   GestureDetector(
                     onTap: _goToRegister,
-                    child: Text(
-                      AppLocale.t('login_sign_up_link'),
-                      style: const TextStyle(
+                    child: const Text(
+                      'Sign up',
+                      style: TextStyle(
                         color: AppColors.primary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,

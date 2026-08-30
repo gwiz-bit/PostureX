@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import '../utils/app_locale.dart';
 import '../utils/squat_error_tips.dart';
 import '../widgets/section_card.dart';
 
@@ -9,7 +8,7 @@ import '../widgets/section_card.dart';
 /// — adds a most-frequent-errors breakdown (with a matching improvement
 /// tip per category) on top of the reps/duration/accuracy the dialog
 /// already had.
-class WorkoutSummaryScreen extends StatefulWidget {
+class WorkoutSummaryScreen extends StatelessWidget {
   const WorkoutSummaryScreen({
     super.key,
     required this.exercise,
@@ -29,14 +28,8 @@ class WorkoutSummaryScreen extends StatefulWidget {
   final Map<String, int> errorCounts;
 
   @override
-  State<WorkoutSummaryScreen> createState() => _WorkoutSummaryScreenState();
-}
-
-class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
-    with AppLocaleMixin {
-  @override
   Widget build(BuildContext context) {
-    final sortedErrors = widget.errorCounts.entries.toList()
+    final sortedErrors = errorCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return Scaffold(
@@ -44,9 +37,9 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
           children: [
-            Text(
-              AppLocale.t('summary_title'),
-              style: const TextStyle(
+            const Text(
+              'Session complete',
+              style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 30,
                 fontWeight: FontWeight.w800,
@@ -54,30 +47,30 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
             ),
             const SizedBox(height: 4),
             Text(
-              _capitalize(widget.exercise),
+              _capitalize(exercise),
               style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 24),
             Row(
               children: [
-                Expanded(child: _StatTile(value: '${widget.repCount}', label: AppLocale.t('summary_reps'))),
+                Expanded(child: _StatTile(value: '$repCount', label: 'Reps')),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _StatTile(value: '${widget.durationSeconds.round()}s', label: AppLocale.t('summary_duration')),
+                  child: _StatTile(value: '${durationSeconds.round()}s', label: 'Duration'),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _StatTile(
-                    value: widget.accuracyScore == null ? '—' : '${widget.accuracyScore!.round()}%',
-                    label: AppLocale.t('summary_accuracy'),
+                    value: accuracyScore == null ? '—' : '${accuracyScore!.round()}%',
+                    label: 'Accuracy',
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 28),
-            Text(
-              AppLocale.t('summary_mistakes_title'),
-              style: const TextStyle(
+            const Text(
+              'Most common mistakes',
+              style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -92,7 +85,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        AppLocale.t('summary_no_errors'),
+                        'No technique errors this session — great form!',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                       ),
                     ),
@@ -125,7 +118,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
                   foregroundColor: AppColors.onPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                 ),
-                child: Text(AppLocale.t('summary_done'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
           ],

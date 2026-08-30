@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
-import '../../../../utils/app_locale.dart';
 import '../../../../widgets/section_card.dart';
 import '../../domain/entities/notification.dart';
 import '../../notifications_module.dart';
@@ -19,7 +18,7 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> with AppLocaleMixin {
+class _NotificationsScreenState extends State<NotificationsScreen> {
   final _controller = NotificationsModule.controller();
 
   @override
@@ -58,12 +57,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> with AppLocal
             backgroundColor: AppColors.background,
             appBar: AppBar(
               backgroundColor: AppColors.background,
-              title: Text(AppLocale.t('notifications_title')),
+              title: const Text('Notifications'),
               actions: [
                 if (hasUnread)
                   TextButton(
                     onPressed: _controller.markAllRead,
-                    child: Text(AppLocale.t('notifications_mark_all_read')),
+                    child: const Text('Mark all read'),
                   ),
               ],
             ),
@@ -93,9 +92,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> with AppLocal
               children: [
                 Text(_controller.errorMessage!, style: const TextStyle(color: AppColors.textSecondary)),
                 const SizedBox(height: 12),
-                TextButton(
-                    onPressed: _controller.load,
-                    child: Text(AppLocale.t('retry'))),
+                TextButton(onPressed: _controller.load, child: const Text('Retry')),
               ],
             ),
           ),
@@ -110,13 +107,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> with AppLocal
       // khi danh sách rỗng.
       return ListView(
         padding: const EdgeInsets.fromLTRB(20, 80, 20, 24),
-        children: [
-          const Icon(Icons.notifications_none_rounded, size: 48, color: AppColors.textTertiary),
-          const SizedBox(height: 12),
+        children: const [
+          Icon(Icons.notifications_none_rounded, size: 48, color: AppColors.textTertiary),
+          SizedBox(height: 12),
           Text(
-            AppLocale.t('notifications_empty'),
+            'No notifications yet',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 15),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
           ),
         ],
       );
@@ -235,9 +232,9 @@ String _relativeTime(DateTime createdAt) {
       );
   final diff = DateTime.now().toUtc().difference(utc);
 
-  if (diff.inMinutes < 1) return AppLocale.t('time_just_now');
-  if (diff.inMinutes < 60) return AppLocale.format('time_minutes_ago', {'n': diff.inMinutes.toString()});
-  if (diff.inHours < 24) return AppLocale.format('time_hours_ago', {'n': diff.inHours.toString()});
-  if (diff.inDays < 7) return AppLocale.format('time_days_ago', {'n': diff.inDays.toString()});
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
   return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
 }

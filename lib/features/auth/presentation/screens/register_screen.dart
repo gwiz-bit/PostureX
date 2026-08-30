@@ -4,7 +4,6 @@ import '../../../../core/errors/failures.dart';
 import '../../../../screens/main_shell.dart';
 import '../../../../screens/onboarding/onboarding_flow.dart';
 import '../../../../theme/app_theme.dart';
-import '../../../../utils/app_locale.dart';
 import '../../../../widgets/auth_text_field.dart';
 import '../../../../widgets/google_sign_in_button.dart';
 import '../../../../widgets/info_tip_card.dart';
@@ -20,7 +19,7 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -42,9 +41,9 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
   String _friendlyMessage(AppFailure e) {
     switch (e.message) {
       case 'Email đã được sử dụng.':
-        return AppLocale.t('register_error_email_taken');
+        return 'That email is already registered.';
       default:
-        return AppLocale.t('error_generic');
+        return 'Something went wrong. Please try again.';
     }
   }
 
@@ -73,7 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
     } on AppFailure catch (e) {
       setState(() => _errorMessage = _friendlyMessage(e));
     } catch (_) {
-      setState(() => _errorMessage = AppLocale.t('error_no_connection'));
+      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -102,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
       setState(() => _errorMessage = e.message);
     } catch (e) {
       debugPrint('Google sign-in failed: $e');
-      setState(() => _errorMessage = AppLocale.t('login_google_error'));
+      setState(() => _errorMessage = 'Could not sign in with Google. Check your connection.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -122,9 +121,9 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
                 icon: const Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary, size: 32),
               ),
               const SizedBox(height: 12),
-              Text(
-                AppLocale.t('register_title'),
-                style: const TextStyle(
+              const Text(
+                'Create your account',
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
@@ -132,71 +131,72 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
               ),
               const SizedBox(height: 8),
               Text(
-                AppLocale.t('register_subtitle'),
+                'Tell us a bit about you to personalize your training',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 32),
               AuthTextField(
-                label: AppLocale.t('field_name_label'),
-                hint: AppLocale.t('field_name_hint'),
+                label: 'Name',
+                hint: 'Your name',
                 icon: Icons.person_outline_rounded,
                 controller: _nameController,
                 enabled: !_isSubmitting,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_name');
+                  if (value == null || value.trim().isEmpty) return 'Enter your name';
                   return null;
                 },
               ),
               const SizedBox(height: 18),
               AuthTextField(
-                label: AppLocale.t('field_email_label'),
-                hint: AppLocale.t('field_email_hint'),
+                label: 'Email',
+                hint: 'you@example.com',
                 icon: Icons.mail_outline_rounded,
                 controller: _emailController,
                 enabled: !_isSubmitting,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_email');
-                  if (!value.contains('@')) return AppLocale.t('validation_invalid_email');
+                  if (value == null || value.trim().isEmpty) return 'Enter your email';
+                  if (!value.contains('@')) return 'Enter a valid email';
                   return null;
                 },
               ),
               const SizedBox(height: 18),
               AuthTextField(
-                label: AppLocale.t('field_password_label'),
-                hint: AppLocale.t('register_password_hint'),
+                label: 'Password',
+                hint: 'Create a password',
                 icon: Icons.lock_outline_rounded,
                 controller: _passwordController,
                 enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return AppLocale.t('validation_enter_password');
-                  if (value.length < 6) return AppLocale.t('validation_min_6_chars');
+                  if (value == null || value.isEmpty) return 'Enter a password';
+                  if (value.length < 6) return 'At least 6 characters';
                   return null;
                 },
               ),
               const SizedBox(height: 18),
               AuthTextField(
-                label: AppLocale.t('register_confirm_password_label'),
-                hint: AppLocale.t('register_confirm_password_hint'),
+                label: 'Confirm password',
+                hint: 'Re-enter your password',
                 icon: Icons.lock_outline_rounded,
                 controller: _confirmPasswordController,
                 enabled: !_isSubmitting,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
                 validator: (value) {
-                  if (value != _passwordController.text) return AppLocale.t('validation_passwords_mismatch');
+                  if (value != _passwordController.text) return 'Passwords do not match';
                   return null;
                 },
               ),
               const SizedBox(height: 20),
-              InfoTipCard(
+              const InfoTipCard(
                 emoji: '🔒',
-                title: AppLocale.t('register_tip_title'),
-                body: AppLocale.t('register_tip_body'),
+                title: 'Your data stays private',
+                body: 'We only use your info to personalize your posture insights — never '
+                    'shared without your consent.',
               ),
               const SizedBox(height: 28),
               if (_errorMessage != null) ...[
@@ -227,9 +227,9 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
                             valueColor: AlwaysStoppedAnimation(AppColors.onPrimary),
                           ),
                         )
-                      : Text(
-                          AppLocale.t('register_button'),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      : const Text(
+                          'Create account',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                 ),
               ),
@@ -237,7 +237,7 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
               const OrDivider(),
               const SizedBox(height: 24),
               GoogleSignInButton(
-                label: AppLocale.t('register_google_button'),
+                label: 'Sign up with Google',
                 onPressed: _continueWithGoogle,
               ),
               const SizedBox(height: 24),
@@ -245,14 +245,14 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    AppLocale.t('register_have_account'),
+                    'Already have an account? ',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                   ),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
-                    child: Text(
-                      AppLocale.t('register_log_in_link'),
-                      style: const TextStyle(
+                    child: const Text(
+                      'Log in',
+                      style: TextStyle(
                         color: AppColors.primary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,

@@ -6,7 +6,6 @@ import '../models/workout_plan.dart';
 import '../services/api_client.dart';
 import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
-import '../utils/app_locale.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/app_logo.dart';
 import 'analyze_session_screen.dart';
@@ -24,7 +23,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => HomeScreenState();
 }
 
-class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
+class HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<Workout> _workouts = [];
@@ -49,8 +48,8 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
       ]);
       if (!mounted) return;
       setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(AppLocale.t('home_ai_plan_ready')),
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Your personalized plan is ready!'),
       ));
     } on ApiException catch (e) {
       if (mounted) {
@@ -58,8 +57,8 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(AppLocale.t('error_no_connection')),
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not reach the server. Check your connection.'),
         ));
       }
     } finally {
@@ -173,7 +172,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = AppLocale.t('home_load_error');
+        _errorMessage = 'Could not load your workout data.';
         _isLoading = false;
       });
     }
@@ -211,11 +210,11 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
   }
 
   String _postureLabel(int score, bool hasData) {
-    if (!hasData) return AppLocale.t('posture_label_no_data');
-    if (score >= 85) return AppLocale.t('posture_label_excellent');
-    if (score >= 70) return AppLocale.t('posture_label_strong');
-    if (score >= 50) return AppLocale.t('posture_label_fair');
-    return AppLocale.t('posture_label_needs_work');
+    if (!hasData) return 'No data';
+    if (score >= 85) return 'Excellent';
+    if (score >= 70) return 'Strong';
+    if (score >= 50) return 'Fair';
+    return 'Needs work';
   }
 
   @override
@@ -246,7 +245,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
                 children: [
                   Text(_errorMessage!, style: TextStyle(color: AppColors.textSecondary)),
                   const SizedBox(height: 12),
-                  TextButton(onPressed: _load, child: Text(AppLocale.t('retry'))),
+                  TextButton(onPressed: _load, child: const Text('Retry')),
                 ],
               ),
             )
@@ -261,7 +260,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          AppLocale.t('home_posture_score_label'),
+                          'POSTURE SCORE',
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 11,
@@ -281,7 +280,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
                         const SizedBox(height: 4),
                         Text(
                           stats.sessionCount == 0
-                              ? AppLocale.t('home_no_sets_logged')
+                              ? 'No sets logged yet'
                               : 'Across ${stats.sessionCount} sets logged',
                           style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                         ),
@@ -299,9 +298,9 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        AppLocale.t('home_weekly_goal'),
-                        style: const TextStyle(
+                      const Text(
+                        'Weekly Goal',
+                        style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -330,8 +329,8 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
                   const SizedBox(height: 10),
                   Text(
                     remaining <= 0
-                        ? AppLocale.t('home_goal_reached')
-                        : AppLocale.format('home_sessions_to_go', {'n': '$remaining'}),
+                        ? 'Goal reached this week!'
+                        : '$remaining session${remaining == 1 ? '' : 's'} to go this week',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                   ),
                 ],
@@ -342,9 +341,9 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    AppLocale.t('home_this_week'),
-                    style: const TextStyle(
+                  const Text(
+                    'This Week',
+                    style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -352,7 +351,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    AppLocale.t('home_daily_posture_avg'),
+                    'Daily posture average',
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                   ),
                   const SizedBox(height: 20),
@@ -365,11 +364,11 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(
+              const Expanded(
                 child: Text(
-                  AppLocale.t('home_training_plan'),
+                  'Training Plan',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -378,10 +377,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
               ),
               const SizedBox(width: 10),
               Text(
-                AppLocale.format('home_week_of_total', {
-                  'n': '${UserSession.plan.weekIndexFor(DateTime.now()) + 1}',
-                  'total': '${WorkoutPlan.totalWeeks}',
-                }),
+                'Week ${UserSession.plan.weekIndexFor(DateTime.now()) + 1} of ${WorkoutPlan.totalWeeks}',
                 style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 13,
@@ -395,7 +391,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
             children: [
               Expanded(
                 child: Text(
-                  AppLocale.t('home_tap_day_hint'),
+                  'Tap a day to see that session',
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 ),
               ),
@@ -413,7 +409,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
                       )
                     : const Icon(Icons.auto_awesome_rounded, size: 16),
                 label: Text(
-                  _isGeneratingPlan ? AppLocale.t('home_generating') : AppLocale.t('home_personalize_ai'),
+                  _isGeneratingPlan ? 'Generating...' : 'Personalize with AI',
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -424,9 +420,9 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
             child: PlanCalendar(plan: UserSession.plan),
           ),
           const SizedBox(height: 24),
-          Text(
-            AppLocale.t('home_quick_start'),
-            style: const TextStyle(
+          const Text(
+            'Quick Start',
+            style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -434,7 +430,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
           ),
           const SizedBox(height: 2),
           Text(
-            AppLocale.t('home_quick_start_subtitle'),
+            'Jump into a guided session',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 14),
@@ -444,21 +440,21 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
               children: [
                 const IconBadge(customIcon: AppLogo()),
                 const SizedBox(width: 14),
-                Expanded(
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocale.t('home_full_body_check_title'),
-                        style: const TextStyle(
+                        'Full Body Check',
+                        style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
-                        AppLocale.t('home_full_body_exercises'),
+                        'Squat · Row · Plank',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                       ),
                     ],
@@ -479,7 +475,7 @@ class _Header extends StatefulWidget {
   State<_Header> createState() => _HeaderState();
 }
 
-class _HeaderState extends State<_Header> with AppLocaleMixin {
+class _HeaderState extends State<_Header> {
   int _unread = 0;
 
   @override
@@ -517,7 +513,7 @@ class _HeaderState extends State<_Header> with AppLocaleMixin {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                AppLocale.t('home_welcome_back'),
+                'Welcome back',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 2),

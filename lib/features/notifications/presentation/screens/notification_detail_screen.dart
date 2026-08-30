@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
-import '../../../../utils/app_locale.dart';
 import '../../../../widgets/section_card.dart';
 import '../../domain/entities/notification.dart';
 
@@ -27,16 +26,16 @@ class NotificationDetailScreen extends StatelessWidget {
         _ => Icons.notifications_rounded,
       };
 
-  String _typeLabel() => switch (notification.type) {
-        'payment' => AppLocale.t('notif_type_payment'),
-        'workout' => AppLocale.t('notif_type_workout'),
-        'workout_reminder' => AppLocale.t('notif_type_workout_reminder'),
-        'nutrition' => AppLocale.t('notif_type_nutrition'),
-        'break' => AppLocale.t('notif_type_break'),
-        'daily_summary' => AppLocale.t('notif_type_daily_summary'),
-        'subscription' || 'subscription_expiry' => AppLocale.t('notif_type_subscription'),
-        'admin_broadcast' => AppLocale.t('notif_type_announcement'),
-        _ => AppLocale.t('notif_type_notification'),
+  String get _typeLabel => switch (notification.type) {
+        'payment' => 'Payment',
+        'workout' => 'Workout',
+        'workout_reminder' => 'Workout reminder',
+        'nutrition' => 'Nutrition',
+        'break' => 'Break reminder',
+        'daily_summary' => 'Daily summary',
+        'subscription' || 'subscription_expiry' => 'Subscription',
+        'admin_broadcast' => 'Announcement',
+        _ => 'Notification',
       };
 
   String get _fullTimestamp {
@@ -53,7 +52,7 @@ class NotificationDetailScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
-        title: Text(_typeLabel()),
+        title: Text(_typeLabel),
       ),
       body: SafeArea(
         child: ListView(
@@ -107,9 +106,9 @@ class NotificationDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                AppLocale.t('notif_detail_todays_exercises'),
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700),
+              const Text(
+                "Today's exercises",
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
               for (var i = 0; i < exercises.length; i++) ...[

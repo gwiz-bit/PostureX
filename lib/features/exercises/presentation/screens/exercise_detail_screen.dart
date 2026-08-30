@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../config/api_config.dart';
 import '../../../../screens/analyze_session_screen.dart';
 import '../../../../theme/app_theme.dart';
-import '../../../../utils/app_locale.dart';
 import '../../../../utils/exercise_videos.dart';
 import '../../../../widgets/guide_video_player.dart';
 import '../../../../widgets/tag_chip.dart';
@@ -110,9 +109,9 @@ class ExerciseDetailScreen extends StatelessWidget {
             ),
             if (exercise.description != null && exercise.description!.trim().isNotEmpty) ...[
               const SizedBox(height: 20),
-              Text(
-                AppLocale.t('exercise_detail_how_to'),
-                style: const TextStyle(
+              const Text(
+                'How to do it',
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -142,9 +141,9 @@ class ExerciseDetailScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: Text(
-                    AppLocale.t('exercise_detail_start_analysis'),
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  label: const Text(
+                    'Start Live Analysis',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
               )
@@ -162,7 +161,8 @@ class ExerciseDetailScreen extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        AppLocale.t('exercise_detail_no_analysis'),
+                        'Live posture analysis is not available for this exercise yet — '
+                        'follow the demo video instead.',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
                       ),
                     ),
@@ -174,7 +174,7 @@ class ExerciseDetailScreen extends StatelessWidget {
               onPressed: () => _uploadInstead(context),
               style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
               icon: const Icon(Icons.upload_file_rounded, size: 18),
-              label: Text(AppLocale.t('exercise_detail_upload_video')),
+              label: const Text('Upload a video instead'),
             ),
           ],
         ),

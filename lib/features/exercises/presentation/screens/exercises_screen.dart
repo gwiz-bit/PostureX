@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
-import '../../../../utils/app_locale.dart';
 import '../../../../widgets/icon_badge.dart';
 import '../../../../widgets/section_card.dart';
 import '../../../../widgets/tag_chip.dart';
@@ -15,19 +14,15 @@ class ExercisesScreen extends StatefulWidget {
   State<ExercisesScreen> createState() => _ExercisesScreenState();
 }
 
-class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
+class _ExercisesScreenState extends State<ExercisesScreen> {
   /// Filter chips used to be four hardcoded categories
   /// (`Strength/Cardio/Core/Mobility`). The library now carries 400+
   /// exercises tagged by muscle group, so the strip is built from whatever
   /// groups the loaded exercises actually have — adding a muscle group is a
   /// DB insert, not an app release.
-  ///
-  /// `_selectedFilter` stores the raw muscle-group string from the data, or
-  /// the sentinel value `_allSentinel` to mean "no filter". The sentinel is
-  /// never a muscle-group name so it can never accidentally match one.
-  static const _allSentinel = '__all__';
+  static const _allFilter = 'All';
 
-  String _selectedFilter = _allSentinel;
+  String _selectedFilter = _allFilter;
   String _query = '';
 
   final _controller = ExercisesModule.controller();
@@ -59,8 +54,6 @@ class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
 
   @override
   Widget build(BuildContext context) {
-    final allFilterLabel = AppLocale.t('exercises_filter_all');
-
     return SafeArea(
       bottom: false,
       child: ListenableBuilder(
@@ -76,18 +69,15 @@ class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
           }
           final groupNames = counts.keys.toList()
             ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+          final filters = [_allFilter, ...groupNames];
 
           // A previously picked group can vanish after a reload (exercise
-          // deactivated, library re-imported). Fall back to sentinel instead of
+          // deactivated, library re-imported). Fall back to "All" instead of
           // showing an empty list with no chip selected.
-          final isAll = _selectedFilter == _allSentinel || !groupNames.contains(_selectedFilter);
-
-          // Build display list: first entry is the localised "All" label,
-          // rest are the raw muscle-group strings from the data.
-          final filters = [allFilterLabel, ...groupNames];
+          final activeFilter = filters.contains(_selectedFilter) ? _selectedFilter : _allFilter;
 
           final filtered = _controller.exercises.where((e) {
-            if (!isAll && !e.muscleGroups.contains(_selectedFilter)) {
+            if (activeFilter != _allFilter && !e.muscleGroups.contains(activeFilter)) {
               return false;
             }
             if (_query.trim().isNotEmpty &&
@@ -102,9 +92,9 @@ class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
               children: [
-                Text(
-                  AppLocale.t('exercises_title'),
-                  style: const TextStyle(
+                const Text(
+                  'Exercises',
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
@@ -115,7 +105,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
                   style: const TextStyle(color: AppColors.textPrimary),
                   onChanged: (v) => setState(() => _query = v),
                   decoration: InputDecoration(
-                    hintText: AppLocale.t('exercises_search_hint'),
+                    hintText: 'Search exercises',
                     hintStyle: TextStyle(color: AppColors.textSecondary),
                     prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary),
                     filled: true,
@@ -136,15 +126,11 @@ class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
                     separatorBuilder: (_, _) => const SizedBox(width: 10),
                     itemBuilder: (context, index) {
                       final filter = filters[index];
-                      // index 0 is always the "All" chip
-                      final isAllChip = index == 0;
-                      final selected = isAllChip ? isAll : _selectedFilter == filter;
+                      final selected = filter == activeFilter;
                       return _FilterChip(
                         label: filter,
                         selected: selected,
-                        onTap: () => setState(
-                          () => _selectedFilter = isAllChip ? _allSentinel : filter,
-                        ),
+                        onTap: () => setState(() => _selectedFilter = filter),
                       );
                     },
                   ),
@@ -163,17 +149,15 @@ class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: AppColors.textSecondary)),
                       const SizedBox(height: 12),
-                      ElevatedButton(
-                          onPressed: _controller.load,
-                          child: Text(AppLocale.t('retry'))),
+                      ElevatedButton(onPressed: _controller.load, child: const Text('Retry')),
                     ]),
                   )
                 else if (filtered.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
                     child: Center(
-                        child: Text(AppLocale.t('exercises_empty'),
-                            style: const TextStyle(color: AppColors.textSecondary))),
+                        child:
+                            Text('No exercises found', style: TextStyle(color: AppColors.textSecondary))),
                   )
                 else
                   for (final exercise in filtered) ...[
@@ -224,7 +208,7 @@ class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
                                     // analysed live; flag them so that
                                     // feature is findable at all.
                                     if (exercise.supportsAnalysis)
-                                      TagChip(label: AppLocale.t('exercises_tag_live_analysis')),
+                                      const TagChip(label: 'Live analysis'),
                                   ],
                                 ),
                               ],
