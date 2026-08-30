@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -93,40 +94,111 @@ class ApiClient {
     throw ApiException(response.statusCode, message);
   }
 
-  Future<dynamic> _get(String path, {bool auth = false}) async {
-    final response = await _http.get(_uri(path), headers: _headers(auth: auth, json: false));
+  /// Budget for an ordinary REST call.
+  ///
+  /// Without a timeout `package:http` waits indefinitely, so anything that
+  /// stalls — a dead server, a network that accepts the connection then goes
+  /// silent, a captive-portal Wi-Fi — leaves the app spinning with no way out
+  /// but force-quitting it. 20s is well past a normal round trip while still
+  /// short enough that the user gets an error instead of a frozen screen.
+  static const Duration _defaultTimeout = Duration(seconds: 20);
+
+  /// AI Coach needs far longer: the backend calls Gemini, which routinely
+  /// takes 5-20s to answer and has been seen to spend over a minute before
+  /// failing. Applying the default here would abort requests that were about
+  /// to succeed.
+  static const Duration _aiTimeout = Duration(seconds: 90);
+
+  /// Uploading a video (up to 50 MB) over mobile data is legitimately slow.
+  static const Duration _uploadTimeout = Duration(minutes: 5);
+
+  /// 408 Request Timeout — the app has no dedicated failure type for "no
+  /// answer", and reusing [ApiException] keeps every existing `catch` and
+  /// error-message path working unchanged.
+  static const int timeoutStatusCode = 408;
+
+  Future<http.Response> _send(
+    Future<http.Response> Function() request,
+    Duration timeout,
+  ) async {
+    try {
+      return await request().timeout(timeout);
+    } on TimeoutException {
+      throw ApiException(
+        timeoutStatusCode,
+        'The server took too long to respond. Please try again.',
+      );
+    }
+  }
+
+  /// Như [_send] nhưng cho upload nhiều phần (video), để lỗi hết giờ cũng
+  /// thành [ApiException] chứ không phải `TimeoutException` thô — màn hình gọi
+  /// nó chỉ bắt [ApiException].
+  Future<http.StreamedResponse> _sendStreamed(http.MultipartRequest request) async {
+    try {
+      return await _http.send(request).timeout(_uploadTimeout);
+    } on TimeoutException {
+      throw ApiException(
+        timeoutStatusCode,
+        'The upload took too long. Check your connection and try again.',
+      );
+    }
+  }
+
+  Future<dynamic> _get(String path, {bool auth = false, Duration? timeout}) async {
+    final response = await _send(
+      () => _http.get(_uri(path), headers: _headers(auth: auth, json: false)),
+      timeout ?? _defaultTimeout,
+    );
     return _decode(response);
   }
 
-  Future<dynamic> _post(String path, {Map<String, dynamic>? body, bool auth = false}) async {
-    final response = await _http.post(
-      _uri(path),
-      headers: _headers(auth: auth),
-      body: body == null ? null : jsonEncode(body),
+  Future<dynamic> _post(
+    String path, {
+    Map<String, dynamic>? body,
+    bool auth = false,
+    Duration? timeout,
+  }) async {
+    final response = await _send(
+      () => _http.post(
+        _uri(path),
+        headers: _headers(auth: auth),
+        body: body == null ? null : jsonEncode(body),
+      ),
+      timeout ?? _defaultTimeout,
     );
     return _decode(response);
   }
 
   Future<dynamic> _patch(String path, {Map<String, dynamic>? body, bool auth = false}) async {
-    final response = await _http.patch(
-      _uri(path),
-      headers: _headers(auth: auth),
-      body: body == null ? null : jsonEncode(body),
+    final response = await _send(
+      () => _http.patch(
+        _uri(path),
+        headers: _headers(auth: auth),
+        body: body == null ? null : jsonEncode(body),
+      ),
+      _defaultTimeout,
     );
     return _decode(response);
   }
 
   Future<dynamic> _put(String path, {Map<String, dynamic>? body, bool auth = false}) async {
-    final response = await _http.put(
-      _uri(path),
-      headers: _headers(auth: auth),
-      body: body == null ? null : jsonEncode(body),
+    final response = await _send(
+      () => _http.put(
+        _uri(path),
+        headers: _headers(auth: auth),
+        body: body == null ? null : jsonEncode(body),
+      ),
+      _defaultTimeout,
     );
     return _decode(response);
   }
 
   Future<dynamic> _delete(String path, {bool auth = false}) async {
-    final response = await _http.delete(_uri(path), headers: _headers(auth: auth, json: false));
+    final response = await _send(
+      () => _http.delete(_uri(path), headers: _headers(auth: auth, json: false)),
+      _defaultTimeout,
+    );
     return _decode(response);
   }
 
@@ -287,7 +359,7 @@ class ApiClient {
     request.headers.addAll(_headers(auth: true, json: false));
     request.files.add(await http.MultipartFile.fromPath('file', file.path));
 
-    final streamed = await _http.send(request);
+    final streamed = await _sendStreamed(request);
     final response = await http.Response.fromStream(streamed);
     final json = _decode(response);
     return Video.fromJson(json as Map<String, dynamic>);
@@ -486,7 +558,7 @@ class ApiClient {
     request.headers.addAll(_headers(auth: true, json: false));
     request.files.add(await http.MultipartFile.fromPath('file', file.path));
 
-    final streamed = await _http.send(request);
+    final streamed = await _sendStreamed(request);
     final response = await http.Response.fromStream(streamed);
     final json = _decode(response);
     return AdminExercise.fromJson(json as Map<String, dynamic>);
@@ -506,10 +578,15 @@ class ApiClient {
     required String message,
     required List<ChatMessage> history,
   }) async {
-    final json = await _post('/api/v1/coach/chat', auth: true, body: {
-      'message': message,
-      'history': history.map((m) => m.toJson()).toList(),
-    });
+    final json = await _post(
+      '/api/v1/coach/chat',
+      auth: true,
+      timeout: _aiTimeout,
+      body: {
+        'message': message,
+        'history': history.map((m) => m.toJson()).toList(),
+      },
+    );
     return (json as Map<String, dynamic>)['reply'] as String;
   }
 
@@ -517,7 +594,7 @@ class ApiClient {
   /// the user's real profile and workout history — used to replace the
   /// static onboarding-template calendar on Home with an AI-tailored one.
   Future<AiPlan> generateAiPlan() async {
-    final json = await _post('/api/v1/coach/plan', auth: true);
+    final json = await _post('/api/v1/coach/plan', auth: true, timeout: _aiTimeout);
     return AiPlan.fromJson(json as Map<String, dynamic>);
   }
 

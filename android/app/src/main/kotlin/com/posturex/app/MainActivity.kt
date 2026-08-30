@@ -1,4 +1,4 @@
-package com.example.posturex
+package com.posturex.app
 
 import io.flutter.embedding.android.FlutterActivity
 

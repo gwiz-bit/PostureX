@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.posturex"
+    namespace = "com.posturex.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -25,8 +25,15 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.posturex"
+        // Định danh app trên Play Store. Không được để `com.example.*` —
+        // Google chặn thẳng khi nộp bài. Khớp với PRODUCT_BUNDLE_IDENTIFIER
+        // của iOS để hai nền tảng cùng một định danh.
+        //
+        // ĐỔI GIÁ TRỊ NÀY LÀ PHẢI CẬP NHẬT GOOGLE CLOUD CONSOLE: OAuth client
+        // của Android gắn với cặp (package name, SHA-1). Chưa đăng ký client
+        // mới cho `com.posturex.app` thì nút "Continue with Google" sẽ báo lỗi
+        // dù mọi thứ khác vẫn chạy.
+        applicationId = "com.posturex.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
