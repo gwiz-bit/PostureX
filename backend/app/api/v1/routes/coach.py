@@ -1,6 +1,7 @@
 """Endpoint chat với AI Coach — tư vấn tập luyện/dinh dưỡng cá nhân hóa."""
 
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -10,8 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
-from app.crud.exercise import get_active_exercises
+from app.crud.exercise import get_active_exercises, get_muscle_groups_by_exercise
 from app.crud.profile import get_profile
+from app.ml.analyzers.registry import supports_analysis
 from app.models.user import User
 from app.models.workout import Workout
 from app.schemas.coach import AiPlanResponse, CoachChatRequest, CoachChatResponse
@@ -21,6 +23,58 @@ from app.utils.deps import get_current_user
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/coach", tags=["coach"])
+
+# Số bài tập tối đa gửi kèm prompt cho MỖI nhóm cơ.
+#
+# Trước đây gửi thẳng cả thư viện. Hồi đó chỉ có 6 bài nên không sao, nhưng
+# sau khi nhập thư viện thật thì thành 417 tên ≈ 9.400 ký tự ≈ 2.400 token
+# input cho MỖI lần bấm "Personalize with AI" — vừa tốn quota, vừa làm giảm
+# chất lượng vì bắt model chọn giữa 417 cái tên na ná nhau.
+#
+# Cắt theo từng nhóm cơ thay vì cắt thẳng danh sách: cắt thẳng thì các nhóm
+# đứng cuối bảng chữ cái biến mất hoàn toàn và lịch tập ra sẽ lệch. 8 bài/nhóm
+# đủ để model có lựa chọn mà tổng vẫn chỉ khoảng một phần tư số token cũ.
+_MAX_EXERCISES_PER_MUSCLE_GROUP = 8
+
+
+async def _build_exercise_catalogue(db: AsyncSession) -> str:
+    """Danh mục bài tập gửi kèm prompt sinh lịch, gom theo nhóm cơ.
+
+    Gom theo nhóm cơ chứ không phải một danh sách phẳng, vì bản thân prompt
+    yêu cầu "phân bổ nhóm cơ hợp lý trong tuần" — cho sẵn cấu trúc đó thì
+    model không phải tự đoán bài nào thuộc nhóm nào.
+
+    Bài có analyzer tư thế được đánh dấu `*` và xếp lên đầu mỗi nhóm. Đó là
+    giá trị cốt lõi của app: lịch tập gồm toàn bài mà app chấm được kỹ thuật
+    thì hữu ích hơn hẳn lịch gồm bài chỉ xem được video. Nhưng KHÔNG lọc bỏ
+    hẳn bài không có analyzer — 106 bài có analyzer chỉ phủ 9/16 nhóm cơ,
+    riêng Biceps, Calves, Forearms, Lower Back, Adductors, Neck, tibialis
+    không có bài nào, nên lọc cứng sẽ khiến model không dựng nổi tuần cân bằng.
+    """
+    exercises = await get_active_exercises(db)
+    if not exercises:
+        return "(chưa có dữ liệu)"
+
+    groups = await get_muscle_groups_by_exercise(db, [e.id for e in exercises])
+
+    by_group: dict[str, list[tuple[bool, str]]] = defaultdict(list)
+    for e in exercises:
+        analyzable = supports_analysis(e.name)
+        # Bài chưa gán nhóm cơ vẫn phải xuất hiện, nếu không sẽ âm thầm biến
+        # mất khỏi mọi lịch tập AI sinh ra.
+        for group in groups.get(e.id) or ["Khác"]:
+            by_group[group].append((analyzable, e.name))
+
+    lines: list[str] = []
+    for group in sorted(by_group):
+        # `not analyzable` để False (có analyzer) xếp trước, rồi mới theo tên.
+        picked = sorted(by_group[group], key=lambda item: (not item[0], item[1]))
+        names = [
+            f"*{name}" if analyzable else name
+            for analyzable, name in picked[:_MAX_EXERCISES_PER_MUSCLE_GROUP]
+        ]
+        lines.append(f"- {group}: {', '.join(names)}")
+    return "\n".join(lines)
 
 
 async def _build_user_context(db: AsyncSession, user: User) -> str:
@@ -213,11 +267,11 @@ async def generate_plan(
         )
 
     user_context = await _build_user_context(db, current_user)
-    exercises = await get_active_exercises(db)
+    exercise_catalogue = await _build_exercise_catalogue(db)
     try:
         return await ai_coach_service.generate_plan(
             user_context=user_context,
-            exercise_names=[e.name for e in exercises],
+            exercise_catalogue=exercise_catalogue,
         )
     except Exception as e:
         logger.warning("AI plan generation failed: %s", e)

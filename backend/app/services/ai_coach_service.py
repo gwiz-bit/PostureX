@@ -205,9 +205,14 @@ QUY TẮC BẮT BUỘC:
 - Số ngày tập (is_rest=false) phải khớp với "Mục tiêu buổi/tuần" của user \
 nếu có; nếu không có thông tin này, chọn tần suất hợp lý cho mức độ tập của \
 họ (Beginner: 3, Intermediate/Regular: 4, Advanced: 5).
-- CHỈ dùng tên bài tập trong danh sách "Bài tập có sẵn trong app" bên dưới — \
-không bịa bài tập app không có. Nếu danh sách rỗng, dùng tên bài tập thể \
-hình phổ biến, đơn giản (không cần thiết bị đặc biệt).
+- CHỈ dùng tên bài tập trong danh mục "Bài tập có sẵn trong app" bên dưới, \
+chép lại CHÍNH XÁC từng chữ — không bịa bài tập app không có, không rút gọn \
+hay đổi cách viết tên. Nếu danh mục rỗng, dùng tên bài tập thể hình phổ \
+biến, đơn giản (không cần thiết bị đặc biệt).
+- Bài có dấu `*` ở đầu tên là bài app CHẤM ĐƯỢC KỸ THUẬT bằng camera — ưu \
+tiên chọn những bài này khi có lựa chọn tương đương, vì người dùng nhận được \
+phản hồi tư thế theo thời gian thực thay vì chỉ xem video. Dấu `*` chỉ là \
+đánh dấu, KHÔNG được đưa vào tên bài trong kết quả trả về.
 - Mỗi ngày tập có 3-5 bài, sets_reps dạng "4 × 10" hoặc "3 set × 45s" (bài \
 plank/giữ tư thế), số set phù hợp mức độ: Beginner 3, Intermediate/Regular \
 4, Advanced 5.
@@ -224,10 +229,11 @@ carb/protein hơn để phục hồi). Không lặp lại y hệt nhau ở cả 
 Thông tin user:
 {user_context}
 
-Bài tập có sẵn trong app: {exercise_names}"""
+Bài tập có sẵn trong app (gom theo nhóm cơ, `*` = app chấm được kỹ thuật):
+{exercise_catalogue}"""
 
 
-async def generate_plan(*, user_context: str, exercise_names: list[str]) -> AiPlanResponse:
+async def generate_plan(*, user_context: str, exercise_catalogue: str) -> AiPlanResponse:
     """Sinh lịch tập + dinh dưỡng 7 ngày cá nhân hóa bằng Gemini, trả về đã
     parse sẵn thành `AiPlanResponse` (structured output — không cần tự parse
     JSON tay, SDK validate theo đúng schema Pydantic).
@@ -236,7 +242,7 @@ async def generate_plan(*, user_context: str, exercise_names: list[str]) -> AiPl
     lệ — route gọi hàm này chịu trách nhiệm bọc lại thành HTTPException."""
     prompt = _PLAN_SYSTEM_PROMPT.format(
         user_context=user_context,
-        exercise_names=", ".join(exercise_names) if exercise_names else "(chưa có dữ liệu)",
+        exercise_catalogue=exercise_catalogue,
     )
     response = await _generate_with_retry(
         model=settings.GEMINI_MODEL,

@@ -11,7 +11,7 @@ from app.core.security import decode_token
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.registry import ANALYZER_REGISTRY
 from app.ml.analyzers.squat import SquatAnalyzer
-from app.ml.pose_estimator import PoseEstimator
+from app.ml.pose_estimator_pool import PoseEstimatorPool
 from app.ml.session_state import SessionState
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 
@@ -19,8 +19,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["realtime"])
 
-# Khởi tạo PoseEstimator một lần cho toàn ứng dụng
-_pose_estimator = PoseEstimator(model_complexity=1)
+# Pool dùng chung cho toàn ứng dụng. KHÔNG gọi thẳng `PoseEstimator.estimate`
+# ở đây: đó là tác vụ CPU 30-60 ms, chạy trong hàm async là chặn cả event loop
+# nên mọi request khác của server phải chờ theo. Pool đẩy việc sang luồng
+# riêng và giới hạn số phiên chạy song song — xem app/ml/pose_estimator_pool.py.
+_pose_estimator_pool = PoseEstimatorPool(model_complexity=1)
 
 # `ANALYZER_REGISTRY` nay đã chuyển sang app/ml/analyzers/registry.py —
 # routes/exercises.py cũng cần biết danh sách này để trả cờ `supports_analysis`,
@@ -142,7 +145,7 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
                 continue
 
             # Chạy pose estimation
-            keypoints = _pose_estimator.estimate(jpeg_bytes)
+            keypoints = await _pose_estimator_pool.estimate(jpeg_bytes)
             if keypoints is None:
                 await websocket.send_json({
                     "rep_count": session.rep_counter.rep_count,
