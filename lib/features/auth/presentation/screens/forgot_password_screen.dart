@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../utils/app_locale.dart';
 import '../../../../widgets/auth_text_field.dart';
 import '../../../../widgets/info_tip_card.dart';
 import '../../auth_module.dart';
@@ -20,7 +21,7 @@ class ForgotPasswordScreen extends StatefulWidget {
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with AppLocaleMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
 
@@ -51,7 +52,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } on AppFailure catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {
-      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+      setState(() => _errorMessage = AppLocale.t('error_no_connection'));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -83,9 +84,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Forgot password?',
-                style: TextStyle(
+              Text(
+                AppLocale.t('forgot_title'),
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
@@ -93,30 +94,29 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Enter your account email — we\'ll send you a code to reset your password.',
+                AppLocale.t('forgot_subtitle'),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 32),
               AuthTextField(
-                label: 'Email',
-                hint: 'you@example.com',
+                label: AppLocale.t('field_email_label'),
+                hint: AppLocale.t('field_email_hint'),
                 icon: Icons.mail_outline_rounded,
                 controller: _emailController,
                 enabled: !_isSubmitting,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.done,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) return 'Enter your email';
-                  if (!value.contains('@')) return 'Enter a valid email';
+                  if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_email');
+                  if (!value.contains('@')) return AppLocale.t('validation_invalid_email');
                   return null;
                 },
               ),
               const SizedBox(height: 20),
-              const InfoTipCard(
+              InfoTipCard(
                 emoji: '📧',
-                title: 'Check your inbox',
-                body: 'The reset code expires in 30 minutes. Be sure to check your spam '
-                    'folder if it doesn\'t show up in a couple of minutes.',
+                title: AppLocale.t('forgot_tip_title'),
+                body: AppLocale.t('forgot_tip_body'),
               ),
               const SizedBox(height: 28),
               if (_errorMessage != null) ...[
@@ -147,9 +147,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             valueColor: AlwaysStoppedAnimation(AppColors.onPrimary),
                           ),
                         )
-                      : const Text(
-                          'Send reset code',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      : Text(
+                          AppLocale.t('forgot_send_button'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                 ),
               ),
@@ -157,9 +157,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               Center(
                 child: GestureDetector(
                   onTap: _goToResetScreen,
-                  child: const Text(
-                    'I already have a code',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocale.t('forgot_already_have_code'),
+                    style: const TextStyle(
                       color: AppColors.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

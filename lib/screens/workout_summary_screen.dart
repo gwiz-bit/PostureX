@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../utils/app_locale.dart';
 import '../utils/squat_error_tips.dart';
 import '../widgets/section_card.dart';
 
@@ -8,7 +9,7 @@ import '../widgets/section_card.dart';
 /// — adds a most-frequent-errors breakdown (with a matching improvement
 /// tip per category) on top of the reps/duration/accuracy the dialog
 /// already had.
-class WorkoutSummaryScreen extends StatelessWidget {
+class WorkoutSummaryScreen extends StatefulWidget {
   const WorkoutSummaryScreen({
     super.key,
     required this.exercise,
@@ -28,8 +29,14 @@ class WorkoutSummaryScreen extends StatelessWidget {
   final Map<String, int> errorCounts;
 
   @override
+  State<WorkoutSummaryScreen> createState() => _WorkoutSummaryScreenState();
+}
+
+class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
+    with AppLocaleMixin {
+  @override
   Widget build(BuildContext context) {
-    final sortedErrors = errorCounts.entries.toList()
+    final sortedErrors = widget.errorCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return Scaffold(
@@ -37,9 +44,9 @@ class WorkoutSummaryScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
           children: [
-            const Text(
-              'Session complete',
-              style: TextStyle(
+            Text(
+              AppLocale.t('summary_title'),
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 30,
                 fontWeight: FontWeight.w800,
@@ -47,30 +54,30 @@ class WorkoutSummaryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              _capitalize(exercise),
+              _capitalize(widget.exercise),
               style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 24),
             Row(
               children: [
-                Expanded(child: _StatTile(value: '$repCount', label: 'Reps')),
+                Expanded(child: _StatTile(value: '${widget.repCount}', label: AppLocale.t('summary_reps'))),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _StatTile(value: '${durationSeconds.round()}s', label: 'Duration'),
+                  child: _StatTile(value: '${widget.durationSeconds.round()}s', label: AppLocale.t('summary_duration')),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _StatTile(
-                    value: accuracyScore == null ? '—' : '${accuracyScore!.round()}%',
-                    label: 'Accuracy',
+                    value: widget.accuracyScore == null ? '—' : '${widget.accuracyScore!.round()}%',
+                    label: AppLocale.t('summary_accuracy'),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 28),
-            const Text(
-              'Most common mistakes',
-              style: TextStyle(
+            Text(
+              AppLocale.t('summary_mistakes_title'),
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -85,7 +92,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'No technique errors this session — great form!',
+                        AppLocale.t('summary_no_errors'),
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                       ),
                     ),
@@ -118,7 +125,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
                   foregroundColor: AppColors.onPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                 ),
-                child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                child: Text(AppLocale.t('summary_done'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
           ],

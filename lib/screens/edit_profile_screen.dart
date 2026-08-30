@@ -5,6 +5,7 @@ import '../models/user_session.dart';
 import '../services/api_client.dart';
 import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_locale.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/info_tip_card.dart';
 
@@ -23,7 +24,8 @@ class EditProfileScreen extends StatefulWidget {
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileScreenState extends State<EditProfileScreen>
+    with AppLocaleMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController(text: UserSession.name);
   final _heightController = TextEditingController(text: '${UserSession.heightCm}');
@@ -109,7 +111,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } on ApiException catch (e) {
       setState(() => _errorMessage = e.message);
     } catch (_) {
-      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+      setState(() => _errorMessage = AppLocale.t('error_no_connection'));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -145,9 +147,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Edit profile',
-                style: TextStyle(
+              Text(
+                AppLocale.t('edit_profile_title'),
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
@@ -155,14 +157,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 24),
               AuthTextField(
-                label: 'Full name',
-                hint: 'Your name',
+                label: AppLocale.t('edit_profile_full_name_label'),
+                hint: AppLocale.t('edit_profile_full_name_hint'),
                 icon: Icons.person_outline_rounded,
                 controller: _nameController,
                 enabled: !_isSubmitting,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) return 'Enter your name';
+                  if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_name');
                   return null;
                 },
               ),
@@ -171,7 +173,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   Expanded(
                     child: AuthTextField(
-                      label: 'Height (cm)',
+                      label: AppLocale.t('edit_profile_height_label'),
                       hint: '178',
                       icon: Icons.straighten_rounded,
                       controller: _heightController,
@@ -184,7 +186,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: AuthTextField(
-                      label: 'Weight (kg)',
+                      label: AppLocale.t('edit_profile_weight_label'),
                       hint: '75',
                       icon: Icons.monitor_weight_outlined,
                       controller: _weightController,
@@ -198,7 +200,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 18),
               AuthTextField(
-                label: 'Age',
+                label: AppLocale.t('edit_profile_age_label'),
                 hint: '26',
                 icon: Icons.cake_outlined,
                 controller: _ageController,
@@ -207,15 +209,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   final n = int.tryParse((value ?? '').trim());
-                  if (n == null) return 'Enter a valid age';
-                  if (n < 1 || n > 120) return 'Enter a realistic age';
+                  if (n == null) return AppLocale.t('validation_invalid_age');
+                  if (n < 1 || n > 120) return AppLocale.t('validation_unrealistic_age');
                   return null;
                 },
               ),
               const SizedBox(height: 28),
-              const Text(
-                'Change password',
-                style: TextStyle(
+              Text(
+                AppLocale.t('edit_profile_change_password'),
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -223,13 +225,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Leave blank to keep your current password.',
+                AppLocale.t('edit_profile_password_hint_subtitle'),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 14),
               AuthTextField(
-                label: 'New password',
-                hint: 'Leave blank to keep current',
+                label: AppLocale.t('edit_profile_new_password_label'),
+                hint: AppLocale.t('edit_profile_new_password_hint'),
                 icon: Icons.lock_outline_rounded,
                 controller: _newPasswordController,
                 enabled: !_isSubmitting,
@@ -237,14 +239,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.isEmpty) return null;
-                  if (value.length < 8) return 'At least 8 characters';
+                  if (value.length < 8) return AppLocale.t('validation_min_8_chars');
                   return null;
                 },
               ),
               const SizedBox(height: 18),
               AuthTextField(
-                label: 'Confirm new password',
-                hint: 'Re-enter your new password',
+                label: AppLocale.t('edit_profile_confirm_password_label'),
+                hint: AppLocale.t('edit_profile_confirm_password_hint'),
                 icon: Icons.lock_outline_rounded,
                 controller: _confirmPasswordController,
                 enabled: !_isSubmitting,
@@ -252,16 +254,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 textInputAction: TextInputAction.done,
                 validator: (value) {
                   if (_newPasswordController.text.isEmpty) return null;
-                  if (value != _newPasswordController.text) return 'Passwords do not match';
+                  if (value != _newPasswordController.text) return AppLocale.t('validation_passwords_mismatch');
                   return null;
                 },
               ),
               const SizedBox(height: 20),
-              const InfoTipCard(
+              InfoTipCard(
                 emoji: '🔒',
-                title: 'Choose a strong password',
-                body: 'At least 8 characters, with an uppercase letter, a lowercase letter, '
-                    'a number, and a special character.',
+                title: AppLocale.t('tip_strong_password_title'),
+                body: AppLocale.t('tip_strong_password_body'),
               ),
               const SizedBox(height: 28),
               if (_errorMessage != null) ...[
@@ -292,9 +293,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             valueColor: AlwaysStoppedAnimation(AppColors.onPrimary),
                           ),
                         )
-                      : const Text(
-                          'Save changes',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      : Text(
+                          AppLocale.t('edit_profile_save'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                 ),
               ),

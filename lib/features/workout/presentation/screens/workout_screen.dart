@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../screens/analyze_session_screen.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../utils/app_locale.dart';
 import '../../../../widgets/app_logo.dart';
 import '../../../../widgets/icon_badge.dart';
 import '../../../../widgets/section_card.dart';
@@ -34,9 +35,14 @@ class _Routine {
   String get subtitle => exercises.map((e) => e.label).join(' · ');
 }
 
-class WorkoutScreen extends StatelessWidget {
+class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
 
+  @override
+  State<WorkoutScreen> createState() => _WorkoutScreenState();
+}
+
+class _WorkoutScreenState extends State<WorkoutScreen> with AppLocaleMixin {
   static const _routines = [
     _Routine(
       name: 'Full Body Check',
@@ -69,7 +75,7 @@ class WorkoutScreen extends StatelessWidget {
     ),
   ];
 
-  void _startAnalyzeSession(BuildContext context, String exerciseKey) {
+  void _startAnalyzeSession(String exerciseKey) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => AnalyzeSessionScreen(exercise: exerciseKey)),
     );
@@ -80,7 +86,7 @@ class WorkoutScreen extends StatelessWidget {
   /// Every exercise listed here has a real backend analyzer (see
   /// `ANALYZER_REGISTRY`), so whichever one is picked gets genuine
   /// rep-counting + form feedback, not a silent squat fallback.
-  void _pickExercise(BuildContext context, _Routine routine) {
+  void _pickExercise(_Routine routine) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surface,
@@ -112,7 +118,7 @@ class WorkoutScreen extends StatelessWidget {
                 ),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
-                  _startAnalyzeSession(context, exercise.key);
+                  _startAnalyzeSession(exercise.key);
                 },
               ),
             const SizedBox(height: 8),
@@ -129,9 +135,9 @@ class WorkoutScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         children: [
-          const Text(
-            'Workout',
-            style: TextStyle(
+          Text(
+            AppLocale.t('workout_title'),
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 30,
               fontWeight: FontWeight.w800,
@@ -150,9 +156,9 @@ class WorkoutScreen extends StatelessWidget {
                 child: const Icon(Icons.add_rounded, color: AppColors.primary, size: 32),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'No Active Workout',
-                style: TextStyle(
+              Text(
+                AppLocale.t('workout_no_active_title'),
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -160,7 +166,7 @@ class WorkoutScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Start a new session or pick exercises\nto begin recording your sets.',
+                AppLocale.t('workout_no_active_subtitle'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
               ),
@@ -168,7 +174,7 @@ class WorkoutScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => _startAnalyzeSession(context, 'squat'),
+                  onPressed: () => _startAnalyzeSession('squat'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.onPrimary,
@@ -178,9 +184,9 @@ class WorkoutScreen extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text(
-                    'Start Empty Workout',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  label: Text(
+                    AppLocale.t('workout_start_empty'),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -191,14 +197,14 @@ class WorkoutScreen extends StatelessWidget {
                 ),
                 style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                 icon: const Icon(Icons.upload_file_rounded, size: 18),
-                label: const Text('Upload a video instead'),
+                label: Text(AppLocale.t('workout_upload_video')),
               ),
             ],
           ),
           const SizedBox(height: 32),
-          const Text(
-            'Suggested Routines',
-            style: TextStyle(
+          Text(
+            AppLocale.t('workout_suggested_routines'),
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -206,14 +212,14 @@ class WorkoutScreen extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Tap a routine, then pick which exercise to check',
+            AppLocale.t('workout_routines_hint'),
             style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 14),
           for (final routine in _routines) ...[
             SectionCard(
               padding: const EdgeInsets.all(16),
-              onTap: () => _pickExercise(context, routine),
+              onTap: () => _pickExercise(routine),
               child: Row(
                 children: [
                   IconBadge(

@@ -15,6 +15,7 @@ import '../features/workout/workout_module.dart';
 import '../models/frame_analysis_result.dart';
 import '../services/analyze_socket_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_locale.dart';
 import '../utils/exercise_videos.dart';
 import '../utils/squat_error_tips.dart';
 import '../widgets/guide_video_player.dart';
@@ -58,7 +59,7 @@ class AnalyzeSessionScreen extends StatefulWidget {
 }
 
 class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, AppLocaleMixin {
   final _socket = AnalyzeSocketService();
   StreamSubscription<AnalyzeSocketEvent>? _socketSub;
   CameraController? _controller;
@@ -168,7 +169,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       if (mounted) {
         setState(() {
           _status = _SessionStatus.error;
-          _statusMessage = 'Could not start the camera or reach the server.';
+          _statusMessage = AppLocale.t('analyze_init_error');
         });
       }
     }
@@ -488,8 +489,8 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
               const SizedBox(height: 16),
               Text(
                 _status == _SessionStatus.initializing
-                    ? 'Starting camera…'
-                    : 'Connecting to analysis server…',
+                    ? AppLocale.t('analyze_starting_camera')
+                    : AppLocale.t('analyze_connecting'),
                 style: const TextStyle(color: AppColors.textSecondary),
               ),
             ],
@@ -498,15 +499,15 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       case _SessionStatus.permissionDenied:
         return _MessageScreen(
           icon: Icons.videocam_off_rounded,
-          message: 'Camera permission is required to analyze your form.',
-          actionLabel: 'Open Settings',
+          message: AppLocale.t('analyze_permission_denied'),
+          actionLabel: AppLocale.t('analyze_open_settings'),
           onAction: openAppSettings,
         );
       case _SessionStatus.error:
         return _MessageScreen(
           icon: Icons.error_outline_rounded,
-          message: _statusMessage ?? 'Something went wrong.',
-          actionLabel: 'Close',
+          message: _statusMessage ?? AppLocale.t('error_generic_short'),
+          actionLabel: AppLocale.t('analyze_close'),
           onAction: () => Navigator.of(context).pop(),
         );
       case _SessionStatus.running:
@@ -601,9 +602,9 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
               Container(
                 color: Colors.black54,
                 alignment: Alignment.center,
-                child: const Text(
-                  'PAUSED',
-                  style: TextStyle(
+                child: Text(
+                  AppLocale.t('analyze_paused'),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -683,7 +684,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    _phase.replaceAll('_', ' ').toUpperCase(),
+                    AppLocale.phase(_phase),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
@@ -753,9 +754,9 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const Text(
-                                'REPS',
-                                style: TextStyle(
+                              Text(
+                                AppLocale.t('analyze_reps_label'),
+                                style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 12,
                                 ),
@@ -775,9 +776,9 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                                 borderRadius: BorderRadius.circular(28),
                               ),
                             ),
-                            child: const Text(
-                              'End Session',
-                              style: TextStyle(fontWeight: FontWeight.w700),
+                            child: Text(
+                              AppLocale.t('analyze_end_session'),
+                              style: const TextStyle(fontWeight: FontWeight.w700),
                             ),
                           ),
                         ],

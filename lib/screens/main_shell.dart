@@ -4,6 +4,7 @@ import '../features/exercises/presentation/screens/exercises_screen.dart';
 import '../features/workout/presentation/screens/progress_screen.dart';
 import '../features/workout/presentation/screens/workout_screen.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_locale.dart';
 import '../widgets/app_logo.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -15,7 +16,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with AppLocaleMixin {
   int _index = 0;
 
   final _homeKey = GlobalKey<HomeScreenState>();
@@ -30,12 +31,20 @@ class _MainShellState extends State<MainShell> {
     ProfileScreen(key: _profileKey),
   ];
 
-  static const _items = [
-    _NavItemData(icon: Icons.home_rounded, label: 'Home'),
-    _NavItemData(icon: Icons.video_library_rounded, label: 'Exercises'),
-    _NavItemData(icon: Icons.fitness_center_rounded, label: 'Workout', isLogo: true),
-    _NavItemData(icon: Icons.bar_chart_rounded, label: 'Progress'),
-    _NavItemData(icon: Icons.person_rounded, label: 'Profile'),
+  static const _icons = [
+    (icon: Icons.home_rounded, isLogo: false),
+    (icon: Icons.video_library_rounded, isLogo: false),
+    (icon: Icons.fitness_center_rounded, isLogo: true),
+    (icon: Icons.bar_chart_rounded, isLogo: false),
+    (icon: Icons.person_rounded, isLogo: false),
+  ];
+
+  List<_NavItemData> get _items => [
+    _NavItemData(icon: _icons[0].icon, label: AppLocale.t('nav_home')),
+    _NavItemData(icon: _icons[1].icon, label: AppLocale.t('nav_exercises')),
+    _NavItemData(icon: _icons[2].icon, label: AppLocale.t('nav_workout'), isLogo: true),
+    _NavItemData(icon: _icons[3].icon, label: AppLocale.t('nav_progress')),
+    _NavItemData(icon: _icons[4].icon, label: AppLocale.t('nav_profile')),
   ];
 
   /// `IndexedStack` keeps every tab's state alive, so switching to a tab

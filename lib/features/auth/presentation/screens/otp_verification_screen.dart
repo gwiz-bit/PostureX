@@ -4,6 +4,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../screens/main_shell.dart';
 import '../../../../screens/onboarding/onboarding_flow.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../utils/app_locale.dart';
 import '../../../../widgets/app_logo.dart';
 import '../../../../widgets/auth_text_field.dart';
 import '../../../../features/admin_dashboard/presentation/screens/home_screen.dart' as admin;
@@ -27,7 +28,7 @@ class OtpVerificationScreen extends StatefulWidget {
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
-class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+class _OtpVerificationScreenState extends State<OtpVerificationScreen> with AppLocaleMixin {
   final _formKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
 
@@ -45,11 +46,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   String _friendlyMessage(AppFailure e) {
     switch (e.message) {
       case 'Mã OTP không đúng hoặc đã hết hạn.':
-        return 'Incorrect or expired code. Please try again.';
+        return AppLocale.t('otp_error_invalid');
       case 'Không tìm thấy tài khoản.':
-        return 'Account not found.';
+        return AppLocale.t('otp_error_not_found');
       default:
-        return 'Something went wrong. Please try again.';
+        return AppLocale.t('error_generic');
     }
   }
 
@@ -80,7 +81,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     } on AppFailure catch (e) {
       setState(() => _errorMessage = _friendlyMessage(e));
     } catch (_) {
-      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+      setState(() => _errorMessage = AppLocale.t('error_no_connection'));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -94,12 +95,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
     try {
       await AuthModule.resendOtp()(email: widget.email);
-      if (mounted) setState(() => _infoMessage = 'A new code has been sent to your email.');
+      if (mounted) setState(() => _infoMessage = AppLocale.t('otp_resend_success'));
     } on AppFailure catch (e) {
       if (mounted) setState(() => _errorMessage = _friendlyMessage(e));
     } catch (_) {
       if (mounted) {
-        setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+        setState(() => _errorMessage = AppLocale.t('error_no_connection'));
       }
     } finally {
       if (mounted) setState(() => _isResending = false);
@@ -128,9 +129,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              const Text(
-                'Check your email',
-                style: TextStyle(
+              Text(
+                AppLocale.t('otp_title'),
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
@@ -138,21 +139,21 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Enter the 6-digit code we sent to ${widget.email}',
+                AppLocale.format('otp_subtitle', {'email': widget.email}),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 36),
               AuthTextField(
-                label: 'Verification code',
-                hint: '123456',
+                label: AppLocale.t('otp_field_label'),
+                hint: AppLocale.t('otp_field_hint'),
                 icon: Icons.pin_outlined,
                 controller: _otpController,
                 enabled: !_isSubmitting,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) return 'Enter the code';
-                  if (value.trim().length != 6) return 'Code must be 6 digits';
+                  if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_code');
+                  if (value.trim().length != 6) return AppLocale.t('validation_code_6_digits');
                   return null;
                 },
               ),
@@ -192,9 +193,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             valueColor: AlwaysStoppedAnimation(AppColors.onPrimary),
                           ),
                         )
-                      : const Text(
-                          'Verify',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      : Text(
+                          AppLocale.t('otp_verify_button'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                 ),
               ),
@@ -203,13 +204,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Didn't get the code? ",
+                    AppLocale.t('otp_no_code'),
                     style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                   ),
                   GestureDetector(
                     onTap: _isResending ? null : _resend,
                     child: Text(
-                      _isResending ? 'Sending...' : 'Resend',
+                      _isResending ? AppLocale.t('otp_sending') : AppLocale.t('otp_resend'),
                       style: const TextStyle(
                         color: AppColors.primary,
                         fontSize: 14,
