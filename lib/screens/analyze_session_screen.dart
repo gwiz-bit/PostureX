@@ -30,7 +30,7 @@ enum _SessionStatus {
 }
 
 const _noPersonMessage = 'Không phát hiện được người trong frame.';
-const _frameInterval = Duration(milliseconds: 110); // ~9 fps cap
+const _frameInterval = Duration(milliseconds: 80); // ~12 fps cap
 
 /// How many consecutive frames the same mistake category must appear in
 /// before it gets read aloud via TTS. At the ~9fps frame cap this is under
@@ -78,6 +78,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   bool _isFlipping = false;
 
   bool _awaitingResponse = false;
+  Timer? _responseTimeoutTimer;
   DateTime? _lastFrameSentAt;
   DateTime? _sessionStart;
   bool _isEnding = false;
@@ -202,26 +203,35 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 
   Future<void> _flipCamera() async {
     if (_isFlipping) return;
-    setState(() => _isFlipping = true);
     final newDirection = _lensDirection == CameraLensDirection.front
         ? CameraLensDirection.back
         : CameraLensDirection.front;
-    final wasStreaming =
-        _status == _SessionStatus.running && !_isPaused;
-    try {
-      if (_controller?.value.isStreamingImages ?? false) {
-        await _controller!.stopImageStream();
-      }
-      await _controller?.dispose();
-      _controller = null;
 
-      final cameras = await availableCameras();
-      final camera = cameras.firstWhere(
-        (c) => c.lensDirection == newDirection,
-        orElse: () => cameras.first,
-      );
+    // Check BEFORE touching the controller — emulators often only have one
+    // camera. If the target direction doesn't exist, do nothing so there's
+    // no black flash and no disruption to the running session.
+    final cameras = await availableCameras();
+    final matching = cameras.where((c) => c.lensDirection == newDirection);
+    if (matching.isEmpty) return;
+    final targetCamera = matching.first;
+
+    final oldController = _controller;
+    final wasStreaming = _status == _SessionStatus.running && !_isPaused;
+    // Null out _controller before the async dispose so any rebuild triggered
+    // during the await shows the spinner instead of crashing on CameraPreview
+    // with an already-disposed controller.
+    setState(() {
+      _isFlipping = true;
+      _controller = null;
+    });
+    try {
+      if (oldController?.value.isStreamingImages ?? false) {
+        await oldController!.stopImageStream();
+      }
+      await oldController?.dispose();
+
       final controller = CameraController(
-        camera,
+        targetCamera,
         ResolutionPreset.medium,
         enableAudio: false,
       );
@@ -233,7 +243,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       setState(() {
         _controller = controller;
         _lensDirection = newDirection;
-        _rotationDegrees = camera.sensorOrientation;
+        _rotationDegrees = targetCamera.sensorOrientation;
         _isFlipping = false;
       });
       if (wasStreaming) {
@@ -270,6 +280,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 
     if (event.frame != null) {
       final frame = event.frame!;
+      _responseTimeoutTimer?.cancel();
       _awaitingResponse = false;
       // "top" = đang đứng nghỉ/chưa vào tư thế (giữa các rep, hoặc trước khi
       // bắt đầu) — không tính vào độ chính xác, nếu không đứng yên trước
@@ -354,6 +365,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       return;
     _lastFrameSentAt = now;
     _awaitingResponse = true;
+    // Safety net: if the server drops a response, _awaitingResponse would
+    // stay true forever and block all future frames. Reset after 500 ms so
+    // the next frame can be sent even if the current one was never answered.
+    _responseTimeoutTimer?.cancel();
+    _responseTimeoutTimer = Timer(const Duration(milliseconds: 500), () {
+      _awaitingResponse = false;
+    });
     _encodeAndSend(image);
   }
 
@@ -439,6 +457,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _transientErrorTimer?.cancel();
+    _responseTimeoutTimer?.cancel();
     _socketSub?.cancel();
     _socket.close();
     _controller?.dispose();
@@ -496,7 +515,15 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   }
 
   Widget _buildAnalyzeView() {
-    final controller = _controller!;
+    final controller = _controller;
+    // Controller is null briefly while _flipCamera() disposes the old one
+    // and before the new one is assigned — show a spinner instead of
+    // crashing on the ! operator.
+    if (controller == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
     // 40/60 vertical split: guide video on top, camera + live analysis
     // below — flex 2:3 gives the exact 40%/60% ratio.
     return Column(

@@ -22,7 +22,10 @@ const _bones = [
 /// reports a binary correct/incorrect per frame today, not per-joint
 /// severity, so that's the full color vocabulary available here.
 class SkeletonPainter extends CustomPainter {
-  const SkeletonPainter({required this.keypoints, required this.correct});
+  const SkeletonPainter({
+    required this.keypoints,
+    required this.correct,
+  });
 
   final Map<String, Point>? keypoints;
   final bool correct;
