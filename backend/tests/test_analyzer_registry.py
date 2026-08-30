@@ -1,0 +1,104 @@
+"""Test bảng ánh xạ tên bài tập -> analyzer.
+
+Thư viện có 417 bài nhưng chỉ 9 analyzer, nên registry liệt kê thủ công từng
+biến thể đã đối chiếu với thứ analyzer đó thật sự đo. Các test dưới đây khoá
+lại những quyết định LOẠI TRỪ — phần dễ bị phá nhất, vì cách "sửa" hiển nhiên
+khi thấy độ phủ thấp là đổi sang khớp chuỗi con, mà làm vậy thì người tập
+nhận hướng dẫn sai trong khi app vẫn báo là đang phân tích đúng bài.
+"""
+
+import pytest
+
+from app.ml.analyzers.bench_press import BenchPressAnalyzer
+from app.ml.analyzers.deadlift import DeadliftAnalyzer
+from app.ml.analyzers.lunge import LungeAnalyzer
+from app.ml.analyzers.registry import ANALYZER_REGISTRY, supports_analysis
+from app.ml.analyzers.row import RowAnalyzer
+from app.ml.analyzers.squat import SquatAnalyzer
+
+
+@pytest.mark.parametrize(
+    "exercise",
+    [
+        # Chứa "row" nhưng là bài vai kéo dọc thân, không phải kéo ngang.
+        "Barbell Upright Row",
+        "Dumbbell Upright Row",
+        # "Nar-row" — trùng chuỗi thuần tuý, không liên quan động tác row.
+        "Narrow Pulldown",
+        # Cardio máy chèo, không phải bài kéo tạ.
+        "Rowing Machine Steady State",
+        "Rowing Sprint",
+    ],
+)
+def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
+    """Những tên này sẽ lọt nếu ai đó đổi sang khớp chuỗi con."""
+    assert not supports_analysis(exercise)
+
+
+@pytest.mark.parametrize(
+    "exercise",
+    [
+        # RowAnalyzer lấy avg() góc hai khuỷu tay: tay rảnh giữ ~170° kéo
+        # trung bình lên, không bao giờ chạm ngưỡng co 70° -> rep không đếm
+        # được và app báo "kéo tạ chưa hết" suốt buổi.
+        "Dumbbell Single Arm Row",
+        "Dumbbell Row Unilateral",
+        "Meadows Row",
+        # HipThrustAnalyzer báo lỗi khi hai hông lệch > 15°.
+        "Single Leg Hip Thrust",
+        "B Stance Hip Thrust",
+        # OverheadPressAnalyzer báo lỗi khi hai tay lệch > 25°.
+        "Single Arm Dumbbell Overhead Press",
+        # DeadliftAnalyzer đọc góc hông hai chân.
+        "Single Leg Dumbbell Romanian Deadlift",
+    ],
+)
+def test_bai_mot_ben_bi_loai(exercise: str) -> None:
+    """Analyzer gộp hoặc so hai bên nên bài một bên luôn cho kết quả sai."""
+    assert not supports_analysis(exercise)
+
+
+@pytest.mark.parametrize(
+    "exercise",
+    [
+        "Bodyweight Alternating Lateral Lunge",  # bước sang ngang
+        "Dumbbell Goblet Alternating Curtsy Lunge",  # bước chéo ra sau
+        "Cossack Squat",  # squat sang ngang
+        "Elbow Side Plank",  # nằm nghiêng
+        "Sissy Squat",  # cố ý đẩy gối vượt xa mũi chân
+    ],
+)
+def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
+    assert not supports_analysis(exercise)
+
+
+@pytest.mark.parametrize(
+    ("exercise", "expected"),
+    [
+        ("Barbell Squat", SquatAnalyzer),
+        ("Dumbbell Goblet Squat", SquatAnalyzer),
+        ("Barbell Bent Over Row", RowAnalyzer),
+        ("Machine Seated Cable Row", RowAnalyzer),
+        ("Barbell Incline Bench Press", BenchPressAnalyzer),
+        ("Barbell Romanian Deadlift", DeadliftAnalyzer),
+        ("Barbell Reverse Lunge", LungeAnalyzer),
+        # Đứng so le -> Lunge chứ KHÔNG phải Squat: squat lấy trung bình hai
+        # gối, lunge lấy min() nên đọc đúng chân trước.
+        ("Bulgarian Split Squat", LungeAnalyzer),
+        ("Barbell Split Squat", LungeAnalyzer),
+    ],
+)
+def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:
+    assert supports_analysis(exercise)
+    assert ANALYZER_REGISTRY[exercise.lower()] is expected
+
+
+def test_tra_ten_khong_phan_biet_hoa_thuong() -> None:
+    """Tên trong DB viết hoa đầu từ, key trong registry viết thường."""
+    assert supports_analysis("BARBELL SQUAT")
+    assert supports_analysis("barbell squat")
+
+
+def test_key_deu_viet_thuong() -> None:
+    """Key viết hoa sẽ không bao giờ tra tới được vì hàm tra đã hạ chữ."""
+    assert all(k == k.lower() for k in ANALYZER_REGISTRY)
