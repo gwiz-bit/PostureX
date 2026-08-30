@@ -52,3 +52,13 @@ async def update_my_profile(
 ) -> ProfileOut:
     """Lưu hồ sơ thể chất + mục tiêu tập luyện đã chọn khi onboarding."""
     return await upsert_profile(db, current_user.id, data)
+
+
+@router.delete("/me", status_code=204)
+async def delete_me(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Xóa tài khoản và toàn bộ dữ liệu của user đang đăng nhập."""
+    await db.delete(current_user)
+    await db.flush()

@@ -335,6 +335,28 @@ class ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
           SectionCard(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            onTap: () => _confirmDeleteAccount(context),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 20),
+                  SizedBox(width: 12),
+                  Text(
+                    'Delete Account',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             onTap: () => _confirmLogOut(context),
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
@@ -398,6 +420,55 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
     // Forgets the Google account so the next "Continue with Google" shows
     // the account picker again instead of silently reusing this session.
+    await GoogleAuthService.disconnect();
+    UserSession.logOut();
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Delete Account?',
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'This will permanently delete your account and all your workout data. This action cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ApiClient.instance.deleteAccount();
+    } catch (_) {
+      // Even if the server call fails, clear local session so the user
+      // isn't stuck. A retry at login will surface any server-side issue.
+    }
+    try {
+      await TokenStorage.clear();
+    } catch (_) {}
     await GoogleAuthService.disconnect();
     UserSession.logOut();
     if (!context.mounted) return;

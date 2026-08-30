@@ -244,6 +244,10 @@ class ApiClient {
     return ProfileData.fromJson(json as Map<String, dynamic>);
   }
 
+  Future<void> deleteAccount() async {
+    await _delete('/api/v1/users/me', auth: true);
+  }
+
   // --- Workouts -----------------------------------------------------------
 
   Future<Workout> createWorkout({

@@ -588,8 +588,6 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                             painter: SkeletonPainter(
                               keypoints: _keypoints,
                               correct: _correct,
-                              mirrorX:
-                                  _lensDirection == CameraLensDirection.front,
                             ),
                           ),
                         ],
