@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../utils/app_locale.dart';
 import '../../coach_module.dart';
 import '../../domain/entities/chat_message.dart';
 
@@ -14,7 +15,7 @@ class AiCoachScreen extends StatefulWidget {
   State<AiCoachScreen> createState() => _AiCoachScreenState();
 }
 
-class _AiCoachScreenState extends State<AiCoachScreen> {
+class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
   final _controller = CoachModule.controller();
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
@@ -66,9 +67,9 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text(
-          'AI Coach',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+        title: Text(
+          AppLocale.t('coach_title'),
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
@@ -115,7 +116,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) => _send(),
                         decoration: InputDecoration(
-                          hintText: 'Hỏi về chế độ tập, dinh dưỡng...',
+                          hintText: AppLocale.t('coach_hint'),
                           hintStyle: const TextStyle(color: AppColors.textSecondary),
                           filled: true,
                           fillColor: AppColors.surface,
@@ -232,10 +233,10 @@ class _EmptyState extends StatelessWidget {
         children: [
           const Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 48),
           const SizedBox(height: 16),
-          const Text(
-            'Hỏi AI Coach bất cứ điều gì về\ntập luyện & dinh dưỡng',
+          Text(
+            AppLocale.t('coach_empty'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 24),
           for (final s in _suggestions) ...[

@@ -2,17 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../models/user_session.dart';
 import '../services/api_client.dart';
-import '../services/google_auth_service.dart';
-import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_locale.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/section_card.dart';
 import '../widgets/tag_chip.dart';
 import '../features/coach/presentation/screens/ai_coach_screen.dart';
 import 'edit_profile_screen.dart';
-import '../features/auth/presentation/screens/login_screen.dart';
-import 'privacy_policy_screen.dart';
-import '../features/subscription/presentation/screens/subscription_screen.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,7 +18,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => ProfileScreenState();
 }
 
-class ProfileScreenState extends State<ProfileScreen> {
+class ProfileScreenState extends State<ProfileScreen> with AppLocaleMixin {
   WorkoutStats _stats = const WorkoutStats(
     sessionCount: 0,
     totalReps: 0,
@@ -81,9 +78,9 @@ class ProfileScreenState extends State<ProfileScreen> {
         child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         children: [
-          const Text(
-            'Profile',
-            style: TextStyle(
+          Text(
+            AppLocale.t('profile_title'),
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 30,
               fontWeight: FontWeight.w800,
@@ -141,14 +138,14 @@ class ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _StatTile(
                   value: _isLoading ? '—' : '${_stats.sessionCount}',
-                  label: 'Sessions',
+                  label: AppLocale.t('profile_sessions'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _StatTile(
                   value: _isLoading ? '—' : '${_stats.totalReps}',
-                  label: 'Reps',
+                  label: AppLocale.t('profile_reps'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -157,15 +154,15 @@ class ProfileScreenState extends State<ProfileScreen> {
                   value: _isLoading || _stats.averageAccuracy == null
                       ? '—'
                       : '${_stats.averageAccuracy!.round()}',
-                  label: 'Posture',
+                  label: AppLocale.t('profile_posture'),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Personal Info',
-            style: TextStyle(
+          Text(
+            AppLocale.t('profile_personal_info'),
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -178,24 +175,28 @@ class ProfileScreenState extends State<ProfileScreen> {
               children: [
                 _InfoRow(
                   icon: Icons.straighten_rounded,
-                  label: 'Height',
+                  label: AppLocale.t('profile_height'),
                   value: '${UserSession.heightCm} cm',
                 ),
                 const Divider(color: AppColors.border, height: 1),
                 _InfoRow(
                   icon: Icons.monitor_weight_outlined,
-                  label: 'Weight',
+                  label: AppLocale.t('profile_weight'),
                   value: '${UserSession.weightKg} kg',
                 ),
                 const Divider(color: AppColors.border, height: 1),
-                _InfoRow(icon: Icons.cake_outlined, label: 'Age', value: '${UserSession.age} yrs'),
+                _InfoRow(
+                  icon: Icons.cake_outlined,
+                  label: AppLocale.t('profile_age'),
+                  value: '${UserSession.age} yrs',
+                ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Training Preferences',
-            style: TextStyle(
+          Text(
+            AppLocale.t('profile_training_prefs'),
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -208,13 +209,13 @@ class ProfileScreenState extends State<ProfileScreen> {
               children: [
                 _InfoRow(
                   icon: Icons.flag_outlined,
-                  label: 'Weekly Goal',
-                  value: '${UserSession.weeklyGoal} sessions',
+                  label: AppLocale.t('profile_weekly_goal'),
+                  value: '${UserSession.weeklyGoal} ${AppLocale.t('profile_sessions_unit')}',
                 ),
                 const Divider(color: AppColors.border, height: 1),
                 _InfoRow(
                   icon: Icons.bolt_outlined,
-                  label: 'Experience',
+                  label: AppLocale.t('profile_experience'),
                   value: UserSession.fitnessLevel,
                 ),
                 const Divider(color: AppColors.border, height: 1),
@@ -226,7 +227,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                       const Icon(Icons.track_changes_outlined, color: AppColors.textSecondary, size: 20),
                       const SizedBox(width: 12),
                       Text(
-                        'Focus Areas',
+                        AppLocale.t('profile_focus_areas'),
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                       ),
                       const Spacer(),
@@ -251,50 +252,15 @@ class ProfileScreenState extends State<ProfileScreen> {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const AiCoachScreen()),
             ),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              child: Row(
-                children: [
-                  Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 20),
-                  SizedBox(width: 12),
-                  Text(
-                    'AI Coach',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Spacer(),
-                  Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Premium',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
-            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 14),
               child: Row(
                 children: [
-                  const Icon(Icons.workspace_premium_outlined, color: AppColors.primary, size: 20),
+                  const Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 20),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Subscribe',
-                    style: TextStyle(
+                  Text(
+                    AppLocale.t('profile_ai_coach'),
+                    style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -310,68 +276,24 @@ class ProfileScreenState extends State<ProfileScreen> {
           SectionCard(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
             ),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
               child: Row(
                 children: [
-                  Icon(Icons.privacy_tip_outlined, color: AppColors.primary, size: 20),
-                  SizedBox(width: 12),
+                  const Icon(Icons.settings_outlined, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 12),
                   Text(
-                    'Privacy Policy',
-                    style: TextStyle(
+                    AppLocale.t('profile_settings'),
+                    style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  Spacer(),
-                  Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            onTap: () => _confirmDeleteAccount(context),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              child: Row(
-                children: [
-                  Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 20),
-                  SizedBox(width: 12),
-                  Text(
-                    'Delete Account',
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            onTap: () => _confirmLogOut(context),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              child: Row(
-                children: [
-                  Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
-                  SizedBox(width: 12),
-                  Text(
-                    'Log out',
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  const Spacer(),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
                 ],
               ),
             ),
@@ -382,101 +304,6 @@ class ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _confirmLogOut(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Log out?',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          "You'll need to log in again to access your posture data.",
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Log out'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) return;
-
-    try {
-      await TokenStorage.clear();
-    } catch (_) {
-      // Best-effort — still log the user out locally either way.
-    }
-    // Forgets the Google account so the next "Continue with Google" shows
-    // the account picker again instead of silently reusing this session.
-    await GoogleAuthService.disconnect();
-    UserSession.logOut();
-    if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
-  }
-
-  Future<void> _confirmDeleteAccount(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Delete Account?',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'This will permanently delete your account and all your workout data. This action cannot be undone.',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) return;
-
-    try {
-      await ApiClient.instance.deleteAccount();
-    } catch (_) {
-      // Even if the server call fails, clear local session so the user
-      // isn't stuck. A retry at login will surface any server-side issue.
-    }
-    try {
-      await TokenStorage.clear();
-    } catch (_) {}
-    await GoogleAuthService.disconnect();
-    UserSession.logOut();
-    if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
-  }
 }
 
 class _StatTile extends StatelessWidget {

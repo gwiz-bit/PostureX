@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../../../theme/app_theme.dart';
+import '../../../../utils/app_locale.dart';
 import '../../domain/entities/subscription_plan.dart';
 import '../../domain/entities/user_subscription.dart';
 import '../../subscription_module.dart';
@@ -19,7 +20,8 @@ class SubscriptionScreen extends StatefulWidget {
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
 }
 
-class _SubscriptionScreenState extends State<SubscriptionScreen> {
+class _SubscriptionScreenState extends State<SubscriptionScreen>
+    with AppLocaleMixin {
   final _controller = SubscriptionModule.controller();
 
   @override
@@ -132,9 +134,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.chevron_left_rounded, size: 30, color: AppColors.textPrimary),
         ),
-        title: const Text(
-          'Choose your plan',
-          style: TextStyle(
+        title: Text(
+          AppLocale.t('subscription_title'),
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -163,7 +165,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           children: [
             Text(_controller.errorMessage!, style: const TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: 12),
-            TextButton(onPressed: _controller.load, child: const Text('Retry')),
+            TextButton(onPressed: _controller.load, child: Text(AppLocale.t('retry'))),
           ],
         ),
       );
@@ -179,9 +181,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       child: Column(
         children: [
           if (current == null)
-            const Text(
-              'Unlock your full potential',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            Text(
+              AppLocale.t('subscription_no_plan_subtitle'),
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
             )
           else
             _CurrentPlanBanner(
@@ -237,7 +239,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   String _ctaLabel(SubscriptionPlan? plan, bool isCurrentPlan) {
-    if (plan == null) return 'Choose a plan';
+    if (plan == null) return AppLocale.t('subscription_cta_choose');
     if (isCurrentPlan) return 'Gói hiện tại';
     if (plan.isFree) return 'Gói miễn phí';
     return 'Nâng cấp ${plan.name} · ${plan.formattedPrice}/tháng';

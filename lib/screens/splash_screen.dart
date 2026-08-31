@@ -4,6 +4,7 @@ import '../models/user_session.dart';
 import '../services/api_client.dart';
 import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_locale.dart';
 import '../widgets/app_logo.dart';
 import '../features/admin_dashboard/presentation/screens/home_screen.dart' as admin;
 import '../features/auth/presentation/screens/login_screen.dart';
@@ -18,7 +19,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin, AppLocaleMixin {
   // Runs for the full time the splash is on screen; the entrance animation
   // only occupies the first slice of it (see _scale/_fade below), then holds
   // until the controller completes and hands off to LoginScreen.
@@ -142,7 +144,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Move better. Stand taller.',
+                  AppLocale.t('splash_tagline'),
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                 ),
               ],
