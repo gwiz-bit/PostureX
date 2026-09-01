@@ -17,10 +17,19 @@ KNEE_OVERSHOOT_RATIO = 0.05        # Gối không được vượt qua mũi châ
 class DeadliftAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật deadlift và trả feedback tiếng Việt."""
 
-    def __init__(self, rep_counter: RepCounter | None = None) -> None:
+    def __init__(
+        self,
+        rep_counter: RepCounter | None = None,
+        thresholds: dict[str, float] | None = None,
+    ) -> None:
+        t = thresholds or {}
         super().__init__(
             rep_counter
-            or RepCounter(down_threshold=HIP_HINGE_DOWN_THRESHOLD, up_threshold=HIP_HINGE_UP_THRESHOLD)
+            or RepCounter(
+                down_threshold=t.get("hip_down", HIP_HINGE_DOWN_THRESHOLD),
+                up_threshold=t.get("hip_up", HIP_HINGE_UP_THRESHOLD),
+            ),
+            thresholds,
         )
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:

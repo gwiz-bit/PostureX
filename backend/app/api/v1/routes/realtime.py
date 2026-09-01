@@ -7,10 +7,12 @@ import logging
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
+from app.core.database import AsyncSessionLocal
 from app.core.security import decode_token
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.registry import ANALYZER_REGISTRY
 from app.ml.analyzers.squat import SquatAnalyzer
+from app.ml.analyzers.thresholds import load_thresholds
 from app.ml.pose_estimator_pool import PoseEstimatorPool
 from app.ml.session_state import SessionState
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
@@ -30,7 +32,11 @@ _pose_estimator_pool = PoseEstimatorPool(model_complexity=1)
 # mà không nên import cả module realtime (sẽ kéo theo PoseEstimator + mediapipe).
 
 
-def _get_analyzer(exercise: str, session: SessionState) -> ExerciseAnalyzer:
+def _get_analyzer(
+    exercise: str,
+    session: SessionState,
+    thresholds: dict[str, float] | None = None,
+) -> ExerciseAnalyzer:
     """Tạo analyzer tương ứng với tên bài tập.
 
     KHÔNG truyền `session.rep_counter` vào analyzer — mỗi bài có ngưỡng
@@ -45,9 +51,26 @@ def _get_analyzer(exercise: str, session: SessionState) -> ExerciseAnalyzer:
         # Mặc định dùng squat nếu chưa hỗ trợ bài tập đó
         logger.warning("Bài tập '%s' chưa được hỗ trợ, dùng squat mặc định.", exercise)
         cls = SquatAnalyzer
-    analyzer = cls()
+    analyzer = cls(thresholds=thresholds)
     session.rep_counter = analyzer.rep_counter
     return analyzer
+
+
+async def _load_exercise_thresholds(exercise: str) -> dict[str, float]:
+    """Ngưỡng riêng của bài tập, đọc MỘT LẦN lúc mở phiên.
+
+    Đọc ở đây thay vì trong vòng lặp frame: ngưỡng không đổi giữa chừng, mà
+    truy vấn DB cho từng frame ở 12 fps là 12 lượt/giây cho mỗi người đang tập.
+
+    Không mở được DB thì phiên vẫn chạy với ngưỡng mặc định — mất phần tinh
+    chỉnh còn hơn để người dùng không tập được.
+    """
+    try:
+        async with AsyncSessionLocal() as db:
+            return await load_thresholds(db, exercise)
+    except Exception as exc:
+        logger.warning("Không đọc được ngưỡng riêng cho '%s': %s", exercise, exc)
+        return {}
 
 
 def _decode_frame(data: bytes | str) -> bytes:
@@ -108,7 +131,7 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
             exercise = "squat"
 
         session = SessionState(exercise=exercise)
-        analyzer = _get_analyzer(exercise, session)
+        analyzer = _get_analyzer(exercise, session, await _load_exercise_thresholds(exercise))
 
         await websocket.send_json({
             "status": "ready",

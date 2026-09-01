@@ -15,10 +15,19 @@ ELBOW_ASYMMETRY_THRESHOLD = 25.0   # Chênh lệch góc hai tay quá mức này 
 class OverheadPressAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật overhead press (đẩy vai) và trả feedback tiếng Việt."""
 
-    def __init__(self, rep_counter: RepCounter | None = None) -> None:
+    def __init__(
+        self,
+        rep_counter: RepCounter | None = None,
+        thresholds: dict[str, float] | None = None,
+    ) -> None:
+        t = thresholds or {}
         super().__init__(
             rep_counter
-            or RepCounter(down_threshold=ELBOW_DOWN_THRESHOLD, up_threshold=ELBOW_LOCKOUT_THRESHOLD)
+            or RepCounter(
+                down_threshold=t.get("elbow_down", ELBOW_DOWN_THRESHOLD),
+                up_threshold=t.get("elbow_lockout", ELBOW_LOCKOUT_THRESHOLD),
+            ),
+            thresholds,
         )
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
@@ -50,7 +59,8 @@ class OverheadPressAnalyzer(ExerciseAnalyzer):
                 errors.append("Chưa khoá tay hoàn toàn ở đỉnh — đẩy tạ thẳng hết cỡ qua đầu.")
 
         if left_elbow_angle is not None and right_elbow_angle is not None:
-            if abs(left_elbow_angle - right_elbow_angle) > ELBOW_ASYMMETRY_THRESHOLD:
+            limit = self.threshold("elbow_asymmetry", ELBOW_ASYMMETRY_THRESHOLD)
+            if abs(left_elbow_angle - right_elbow_angle) > limit:
                 errors.append("Hai tay đẩy tạ không đều — giữ tốc độ và độ cao hai bên bằng nhau.")
 
         return FrameAnalysisResult(

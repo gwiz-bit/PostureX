@@ -39,10 +39,14 @@ HORIZONTAL_POSTURE_RATIO = 1.2
 class PlankAnalyzer(ExerciseAnalyzer):
     """Phân tích tư thế plank theo từng frame — không đếm rep."""
 
-    def __init__(self, rep_counter: RepCounter | None = None) -> None:
+    def __init__(
+        self,
+        rep_counter: RepCounter | None = None,
+        thresholds: dict[str, float] | None = None,
+    ) -> None:
         # RepCounter không dùng tới (không có chu kỳ lên/xuống) nhưng base
         # class yêu cầu instance — tạo cho đủ interface, không gọi .update().
-        super().__init__(rep_counter or RepCounter())
+        super().__init__(rep_counter or RepCounter(), thresholds)
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -90,12 +94,12 @@ class PlankAnalyzer(ExerciseAnalyzer):
                 }),
             )
 
-        if body_line_angle < HIP_SAG_THRESHOLD:
+        if body_line_angle < self.threshold("hip_sag", HIP_SAG_THRESHOLD):
             errors.append(
                 f"Hông đang võng xuống (góc {body_line_angle:.0f}°) — siết bụng, nâng hông lên "
                 "cho thẳng hàng với vai và chân."
             )
-        elif body_line_angle < STRAIGHT_BODY_MIN:
+        elif body_line_angle < self.threshold("straight_body_min", STRAIGHT_BODY_MIN):
             errors.append("Hông hơi cao hơn mức thẳng hàng — hạ hông xuống một chút.")
 
         return FrameAnalysisResult(

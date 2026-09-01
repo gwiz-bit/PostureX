@@ -18,9 +18,19 @@ HIP_ASYMMETRY_THRESHOLD = 15.0   # Chênh lệch góc hông hai bên quá mức 
 class HipThrustAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật hip thrust và trả feedback tiếng Việt."""
 
-    def __init__(self, rep_counter: RepCounter | None = None) -> None:
+    def __init__(
+        self,
+        rep_counter: RepCounter | None = None,
+        thresholds: dict[str, float] | None = None,
+    ) -> None:
+        t = thresholds or {}
         super().__init__(
-            rep_counter or RepCounter(down_threshold=HIP_DOWN_THRESHOLD, up_threshold=HIP_UP_THRESHOLD)
+            rep_counter
+            or RepCounter(
+                down_threshold=t.get("hip_down", HIP_DOWN_THRESHOLD),
+                up_threshold=t.get("hip_up", HIP_UP_THRESHOLD),
+            ),
+            thresholds,
         )
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
@@ -52,7 +62,8 @@ class HipThrustAnalyzer(ExerciseAnalyzer):
                 errors.append("Chưa đẩy hông lên hết — siết mông, duỗi hông thẳng hàng vai-hông-gối.")
 
         if left_hip_angle is not None and right_hip_angle is not None:
-            if abs(left_hip_angle - right_hip_angle) > HIP_ASYMMETRY_THRESHOLD:
+            limit = self.threshold("hip_asymmetry", HIP_ASYMMETRY_THRESHOLD)
+            if abs(left_hip_angle - right_hip_angle) > limit:
                 errors.append("Hông đang lệch một bên — đẩy đều lực cả hai bên mông.")
 
         return FrameAnalysisResult(

@@ -18,9 +18,19 @@ COW_THRESHOLD = 165.0
 class CatCowAnalyzer(ExerciseAnalyzer):
     """Phân tích động tác Cat-Cow — chỉ đếm chu kỳ, không có cảnh báo lỗi."""
 
-    def __init__(self, rep_counter: RepCounter | None = None) -> None:
+    def __init__(
+        self,
+        rep_counter: RepCounter | None = None,
+        thresholds: dict[str, float] | None = None,
+    ) -> None:
+        t = thresholds or {}
         super().__init__(
-            rep_counter or RepCounter(down_threshold=CAT_THRESHOLD, up_threshold=COW_THRESHOLD)
+            rep_counter
+            or RepCounter(
+                down_threshold=t.get("cat", CAT_THRESHOLD),
+                up_threshold=t.get("cow", COW_THRESHOLD),
+            ),
+            thresholds,
         )
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:

@@ -18,13 +18,19 @@ BACK_STRAIGHT_MIN = 100.0
 class RowAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật row (kéo tạ) và trả feedback tiếng Việt."""
 
-    def __init__(self, rep_counter: RepCounter | None = None) -> None:
+    def __init__(
+        self,
+        rep_counter: RepCounter | None = None,
+        thresholds: dict[str, float] | None = None,
+    ) -> None:
+        t = thresholds or {}
         super().__init__(
             rep_counter
             or RepCounter(
-                down_threshold=ELBOW_CONTRACTED_THRESHOLD,
-                up_threshold=ELBOW_EXTENDED_THRESHOLD,
-            )
+                down_threshold=t.get("elbow_contracted", ELBOW_CONTRACTED_THRESHOLD),
+                up_threshold=t.get("elbow_extended", ELBOW_EXTENDED_THRESHOLD),
+            ),
+            thresholds,
         )
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
@@ -74,7 +80,7 @@ class RowAnalyzer(ExerciseAnalyzer):
         elif right_back_ok:
             back_angle = calculate_angle(right_shoulder, right_hip, right_knee)
 
-        if back_angle is not None and back_angle < BACK_STRAIGHT_MIN:
+        if back_angle is not None and back_angle < self.threshold("back_straight_min", BACK_STRAIGHT_MIN):
             errors.append(f"Lưng bị cong (góc {back_angle:.0f}°) — giữ lưng thẳng, không gù vai.")
 
         return FrameAnalysisResult(

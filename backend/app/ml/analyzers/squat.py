@@ -18,11 +18,21 @@ BACK_STRAIGHT_MIN = 150.0        # Góc hông-vai-cổ phải ≥ ngưỡng này
 class SquatAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật squat và trả feedback tiếng Việt."""
 
-    def __init__(self, rep_counter: RepCounter | None = None) -> None:
+    def __init__(
+        self,
+        rep_counter: RepCounter | None = None,
+        thresholds: dict[str, float] | None = None,
+    ) -> None:
+        t = thresholds or {}
         # up_threshold 155° thay vì 160° — thực tế nhiều người không duỗi thẳng
         # hết gối khi đứng, 155° đã đủ để tính là đứng thẳng mà không làm mất
         # độ chính xác của bài tập.
-        super().__init__(rep_counter or RepCounter(down_threshold=KNEE_DEPTH_THRESHOLD, up_threshold=155.0))
+        super().__init__(rep_counter or RepCounter(
+                down_threshold=t.get("knee_depth", KNEE_DEPTH_THRESHOLD),
+                up_threshold=t.get("stand_up_min", 155.0),
+            ),
+            thresholds,
+        )
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         """Phân tích một frame squat, cập nhật đếm rep, trả kết quả."""
@@ -94,7 +104,7 @@ class SquatAnalyzer(ExerciseAnalyzer):
         elif right_back_ok:
             back_angle = calculate_angle(right_shoulder, right_hip, right_knee)
 
-        if back_angle is not None and back_angle < BACK_STRAIGHT_MIN:
+        if back_angle is not None and back_angle < self.threshold("back_straight_min", BACK_STRAIGHT_MIN):
             errors.append(f"Lưng bị cúi quá (góc {back_angle:.0f}°) — giữ ngực thẳng và nhìn về phía trước.")
 
         # --- Tổng hợp kết quả ---

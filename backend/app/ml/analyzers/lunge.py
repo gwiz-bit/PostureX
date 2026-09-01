@@ -19,9 +19,19 @@ class LungeAnalyzer(ExerciseAnalyzer):
     hơn (góc gối nhỏ hơn) chính là "chân trước" đang chịu lực ở thời điểm
     đó, nên dùng min() của hai góc gối thay vì trung bình như squat."""
 
-    def __init__(self, rep_counter: RepCounter | None = None) -> None:
+    def __init__(
+        self,
+        rep_counter: RepCounter | None = None,
+        thresholds: dict[str, float] | None = None,
+    ) -> None:
+        t = thresholds or {}
         super().__init__(
-            rep_counter or RepCounter(down_threshold=KNEE_DEPTH_THRESHOLD, up_threshold=160.0)
+            rep_counter
+            or RepCounter(
+                down_threshold=t.get("knee_depth", KNEE_DEPTH_THRESHOLD),
+                up_threshold=t.get("stand_up_min", 160.0),
+            ),
+            thresholds,
         )
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
@@ -84,7 +94,7 @@ class LungeAnalyzer(ExerciseAnalyzer):
         elif right_back_ok:
             back_angle = calculate_angle(right_shoulder, right_hip, right_knee)
 
-        if back_angle is not None and back_angle < BACK_STRAIGHT_MIN:
+        if back_angle is not None and back_angle < self.threshold("back_straight_min", BACK_STRAIGHT_MIN):
             errors.append(f"Thân trên cúi quá (góc {back_angle:.0f}°) — giữ lưng thẳng, ngực hướng trước.")
 
         return FrameAnalysisResult(
