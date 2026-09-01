@@ -9,7 +9,9 @@ import 'package:posturex/main.dart';
 import 'package:posturex/screens/main_shell.dart';
 import 'package:posturex/services/api_client.dart';
 import 'package:posturex/services/google_auth_service.dart';
+import 'package:posturex/models/user_session.dart';
 import 'package:posturex/services/token_storage.dart';
+import 'package:posturex/utils/app_locale.dart';
 import 'package:posturex/theme/app_theme.dart';
 import 'package:posturex/widgets/app_logo.dart';
 
@@ -132,8 +134,20 @@ final _mockClient = MockClient((request) async {
 
 void main() {
   ApiClient.instance = ApiClient(httpClient: _mockClient);
-  TokenStorage.backend = _FakeSecureStorageBackend();
   GoogleAuthService.backend = _FakeGoogleAuthBackend();
+
+  // Trạng thái của app nằm ở các class TOÀN TRƯỜNG STATIC (`UserSession`,
+  // `AppLocale.notifier`) và ở kho lưu trữ giả bên dưới `TokenStorage` — không
+  // thứ nào tự reset giữa các test. Thiếu setUp này thì một test hỏng giữa
+  // chừng sẽ để lại phiên đăng nhập, và test kế tiếp dựng app sẽ vào thẳng
+  // Home thay vì Login rồi hỏng theo — che mất lỗi thật. Đã xảy ra đúng như
+  // vậy khi nút Log out chuyển sang màn Settings.
+  setUp(() {
+    UserSession.logOut();
+    AppLocale.setLanguage(AppLocale.en);
+    TokenStorage.backend = _FakeSecureStorageBackend();
+    _lastRegisteredFullName = 'Test User';
+  });
 
   testWidgets('App launches to the Login screen and can navigate to Register', (
     WidgetTester tester,
@@ -221,12 +235,12 @@ void main() {
     expect(find.text('Back Squat'), findsOneWidget);
   });
 
-  testWidgets('Logging out from Profile returns to the Login screen', (
+  testWidgets('Logging out from Settings returns to the Login screen', (
     WidgetTester tester,
   ) async {
-    // Use a tall surface so the Log out row at the bottom of Profile is
+    // Use a tall surface so the Log out row at the bottom of Settings is
     // mounted without needing to scroll a lazy ListView first.
-    tester.view.physicalSize = const Size(500, 1600);
+    tester.view.physicalSize = const Size(500, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -236,6 +250,11 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Profile'));
+    await tester.pumpAndSettle();
+
+    // Log out không còn nằm trên Profile: nó đã chuyển sang màn Settings,
+    // vào từ hàng "Settings" của Profile.
+    await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Log out'));
