@@ -53,7 +53,14 @@ class BenchPressAnalyzer(ExerciseAnalyzer):
             self.rep_counter.update(elbow_angle)
             phase = self.rep_counter.phase.value
 
-            if phase in ("bottom", "going_up") and elbow_angle > ELBOW_DOWN_THRESHOLD:
+            # Chấm độ sâu tại ĐÚNG LÚC đảo chiều đi lên, không phải mọi frame
+            # đang đi lên. Điều kiện cũ `phase in ("bottom","going_up") and góc >
+            # ngưỡng` không bao giờ đúng được: ở BOTTOM góc luôn ≤ ngưỡng (nếu
+            # không đã chuyển phase), còn ở GOING_UP góc đương nhiên lớn hơn —
+            # đó là định nghĩa của việc đi lên. Kết quả là một rep hoàn hảo vẫn
+            # bị báo lỗi suốt lúc đứng lên, TTS đọc oan và điểm chính xác tụt
+            # (đo được: rep squat chuẩn chỉ đạt 64,5%).
+            if self.rep_counter.shallow_reversal:
                 errors.append("Hạ tạ chưa đủ sâu — hạ khuỷu tay gập thêm cho tạ gần chạm ngực.")
 
         if left_elbow_angle is not None and right_elbow_angle is not None:

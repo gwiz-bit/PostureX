@@ -22,7 +22,7 @@ class SquatAnalyzer(ExerciseAnalyzer):
         # up_threshold 155° thay vì 160° — thực tế nhiều người không duỗi thẳng
         # hết gối khi đứng, 155° đã đủ để tính là đứng thẳng mà không làm mất
         # độ chính xác của bài tập.
-        super().__init__(rep_counter or RepCounter(down_threshold=95.0, up_threshold=155.0))
+        super().__init__(rep_counter or RepCounter(down_threshold=KNEE_DEPTH_THRESHOLD, up_threshold=155.0))
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         """Phân tích một frame squat, cập nhật đếm rep, trả kết quả."""
@@ -64,9 +64,15 @@ class SquatAnalyzer(ExerciseAnalyzer):
             self.rep_counter.update(knee_angle)
             phase = self.rep_counter.phase.value
 
-            if self.rep_counter.phase.value in ("bottom", "going_up"):
-                if knee_angle > KNEE_DEPTH_THRESHOLD:
-                    errors.append("Xuống chưa đủ sâu — gối cần gập thêm (mục tiêu < 90°).")
+            # Chấm độ sâu tại ĐÚNG LÚC đảo chiều đi lên, không phải mọi frame
+            # đang đi lên. Điều kiện cũ `phase in ("bottom","going_up") and góc >
+            # ngưỡng` không bao giờ đúng được: ở BOTTOM góc luôn ≤ ngưỡng (nếu
+            # không đã chuyển phase), còn ở GOING_UP góc đương nhiên lớn hơn —
+            # đó là định nghĩa của việc đi lên. Kết quả là một rep hoàn hảo vẫn
+            # bị báo lỗi suốt lúc đứng lên, TTS đọc oan và điểm chính xác tụt
+            # (đo được: rep squat chuẩn chỉ đạt 64,5%).
+            if self.rep_counter.shallow_reversal:
+                errors.append("Xuống chưa đủ sâu — gối cần gập thêm (mục tiêu < 90°).")
 
         # --- Kiểm tra gối vượt mũi chân ---
         if _visible(left_knee, left_foot) and left_knee_angle is not None:

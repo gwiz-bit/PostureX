@@ -46,7 +46,7 @@ class OverheadPressAnalyzer(ExerciseAnalyzer):
             self.rep_counter.update(elbow_angle)
             phase = self.rep_counter.phase.value
 
-            if phase == "top" and elbow_angle < ELBOW_LOCKOUT_THRESHOLD:
+            if self.rep_counter.incomplete_lockout:
                 errors.append("Chưa khoá tay hoàn toàn ở đỉnh — đẩy tạ thẳng hết cỡ qua đầu.")
 
         if left_elbow_angle is not None and right_elbow_angle is not None:

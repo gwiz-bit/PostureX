@@ -59,7 +59,14 @@ class LungeAnalyzer(ExerciseAnalyzer):
             self.rep_counter.update(front_knee_angle)
             phase = self.rep_counter.phase.value
 
-            if phase in ("bottom", "going_up") and front_knee_angle > KNEE_DEPTH_THRESHOLD:
+            # Chấm độ sâu tại ĐÚNG LÚC đảo chiều đi lên, không phải mọi frame
+            # đang đi lên. Điều kiện cũ `phase in ("bottom","going_up") and góc >
+            # ngưỡng` không bao giờ đúng được: ở BOTTOM góc luôn ≤ ngưỡng (nếu
+            # không đã chuyển phase), còn ở GOING_UP góc đương nhiên lớn hơn —
+            # đó là định nghĩa của việc đi lên. Kết quả là một rep hoàn hảo vẫn
+            # bị báo lỗi suốt lúc đứng lên, TTS đọc oan và điểm chính xác tụt
+            # (đo được: rep squat chuẩn chỉ đạt 64,5%).
+            if self.rep_counter.shallow_reversal:
                 errors.append("Chùng chân chưa đủ sâu — hạ thấp hông thêm cho đùi trước song song sàn.")
 
         if is_visible(left_knee, left_foot) and left_knee_angle == front_knee_angle:

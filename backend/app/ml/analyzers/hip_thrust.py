@@ -48,7 +48,7 @@ class HipThrustAnalyzer(ExerciseAnalyzer):
             self.rep_counter.update(hip_angle)
             phase = self.rep_counter.phase.value
 
-            if phase == "top" and hip_angle < HIP_UP_THRESHOLD:
+            if self.rep_counter.incomplete_lockout:
                 errors.append("Chưa đẩy hông lên hết — siết mông, duỗi hông thẳng hàng vai-hông-gối.")
 
         if left_hip_angle is not None and right_hip_angle is not None:

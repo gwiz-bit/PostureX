@@ -54,7 +54,7 @@ class DeadliftAnalyzer(ExerciseAnalyzer):
             self.rep_counter.update(hip_angle)
             phase = self.rep_counter.phase.value
 
-            if phase == "top" and hip_angle < HIP_HINGE_UP_THRESHOLD:
+            if self.rep_counter.incomplete_lockout:
                 errors.append("Chưa đứng thẳng hoàn toàn — duỗi hông hết cỡ ở đỉnh động tác.")
 
         if is_visible(left_knee, left_foot):
