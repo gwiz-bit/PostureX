@@ -47,7 +47,7 @@ python scripts/create_tables.py       # chỉ dùng lần đầu — XOÁ + tạ
 python scripts/ensure_tables.py       # chạy lại an toàn — chỉ tạo bảng còn thiếu so với Base.metadata
 python scripts/create_admin.py        # tạo tài khoản admin
 uvicorn app.main:app --reload --port 9000   # app Flutter mong đợi cổng 9000
-pytest                                # test backend (tests/) — hiện 123, tất cả đều xanh
+pytest                                # test backend (tests/) — hiện 169, tất cả đều xanh
 pytest --cov=app                      # đo coverage (58% ở lần đo gần nhất, trước khi nhập thư viện bài tập)
 ruff check .                          # lint — cấu hình trong pyproject.toml; phải sạch
 ruff format .                         # định dạng code
@@ -58,6 +58,72 @@ Bộ quy tắc của `ruff` đã được chỉnh trong `pyproject.toml` sao cho
 Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, `SECRET_KEY`, thông tin SMTP để gửi OTP, `GOOGLE_CLIENT_ID`, `GEMINI_API_KEY` (AI Coach), khoá MoMo tuỳ chọn (BE-14 — giá trị mặc định trong `config.py` là bộ khoá *sandbox công khai* của MoMo, nên thanh toán chạy được ngay trên bản clone mới), và thông tin FCM tuỳ chọn (BE-13 — không cấu hình thì phần push bị bỏ qua lặng lẽ). `GOOGLE_CLIENT_ID` phải giống từng ký tự với `googleWebClientId` trong `lib/config/api_config.dart`. Tài liệu API tương tác ở `/docs` — nhưng chỉ khi `DEBUG=True`; trên bản triển khai thật thì `docs_url`/`redoc_url`/`openapi_url` đều là `None` để không phơi toàn bộ bề mặt API ra ngoài.
 
 **Bẫy encoding của `.env`.** `slowapi` tự nuốt file `.env` lúc import chỉ vì file đó tồn tại (`Config(".env")` trong `slowapi/extension.py`), mà `starlette.config.Config` mở file *không chỉ định encoding* — nên trên máy Windows dùng locale tiếng Việt, codec cp1252 gặp phần chú thích UTF-8 trong file là server chết ngay lúc import với `UnicodeDecodeError: 'charmap' codec can't decode byte 0x81`, trước cả khi uvicorn kịp bind cổng. `app/core/rate_limit.py` vô hiệu hoá bẫy này bằng cách truyền `config_filename=os.devnull`; đừng trả nó về mặc định. Triệu chứng chỉ xuất hiện trên một số máy, nên "máy tôi chạy ổn" không chứng minh được gì ở đây.
+
+## Nhật ký thay đổi
+
+Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
+mới nhất ở trên cùng.
+
+### 01/09/2026
+
+**Sửa 3 lỗi trong phân tích tư thế** (`bf77b44`). Cả ba đều không nhìn thấy
+được khi chạy app, chỉ lộ ra khi bơm chuỗi góc đã biết trước vào analyzer:
+
+- **Mọi rep bị đếm gấp đôi** (10 rep thật → 20), ở mọi bài tập vì lỗi nằm
+  trong `RepCounter` dùng chung. Chỉ sai ở tốc độ tập thông thường — rất
+  nhanh hoặc rất chậm lại đúng, nên rất khó thấy bằng mắt. Nguyên nhân:
+  `_min_angle_seen` không được xoá khi người tập đứng thẳng lại, nên đáy của
+  rep vừa xong khiến nhánh fallback FPS thấp tưởng vừa chạm đáy lần nữa.
+- **Báo "chưa đủ sâu" suốt lúc đứng lên từ một rep hoàn hảo** (Squat, Lunge,
+  Row, Bench Press). Điều kiện cũ `phase in (bottom, going_up) and góc >
+  ngưỡng` không bao giờ đúng được. Điểm chính xác của một rep squat chuẩn chỉ
+  còn 64,5%, và app đọc to lỗi đó qua TTS.
+- **Cảnh báo "chưa duỗi hết ở đỉnh" là mã chết** (Deadlift, Hip Thrust,
+  Overhead Press) — `phase == "top" and góc < ngưỡng_trên` tự mâu thuẫn vì
+  phase chỉ thành "top" đúng lúc góc vượt ngưỡng đó.
+
+`RepCounter` nay có hai tín hiệu **chỉ đúng trong frame hiện tại**:
+`shallow_reversal` (đảo chiều đi lên khi chưa xuống gần đáy) và
+`incomplete_lockout` (quay đầu đi xuống khi chưa duỗi hết). Analyzer đọc hai
+cờ này thay vì tự suy từ `phase` — nhắc đúng một lần vào đúng lúc. Đừng quay
+lại kiểu suy từ `phase`, đó chính là gốc của hai lỗi trên.
+
+**Ngưỡng theo từng bài tập** (`c187512`). Xem mục "Bố cục backend" ở trên.
+Sáu ngưỡng đã nhập cho 5 bài là **ước lượng theo cơ chế động tác, chưa đo trên
+người thật** — thử được với camera thì sửa số trong `scripts/seed_posture_rules.py`
+rồi chạy lại.
+
+**Test tích hợp WebSocket**. Trước đó `load_thresholds` và analyzer đều có
+test riêng nhưng chuỗi thật thì chưa: mở kết nối → xác thực → đọc ngưỡng →
+chọn analyzer → phân tích từng frame. Nay `tests/test_realtime_ws.py` phủ
+trọn đường đó, thay pose estimation bằng tư thế dựng sẵn nên không cần
+MediaPipe. Ghi chú tìm được: `phase == "top"` chỉ tồn tại đúng một frame —
+vượt ngưỡng đứng thẳng là thành "top", frame kế tiếp góc vẫn tăng nên đã
+chuyển sang "going_down".
+
+**Cách ly test Flutter** (`04d16c3`). Commit i18n dời nút Log out sang màn
+Settings làm đỏ 2 test; thêm `setUp` reset trạng thái `static` để một lỗi
+không kéo theo lỗi thứ hai che mất nguyên nhân.
+
+**Dịch tài liệu này sang tiếng Việt** (`c59ca13`).
+
+#### Còn nợ sau ngày này
+
+- **Chưa thử trên người thật.** Toàn bộ phần trên kiểm bằng tư thế dựng sẵn.
+  106 bài mở phân tích và 6 ngưỡng riêng đều chưa ai đứng trước camera thử.
+- **Chưa deploy** — VPS Cloudfly hết hạn dùng thử và đang tắt. Khi bật lại:
+  `git pull`, rồi chạy `scripts/seed_posture_rules.py` để nhập ngưỡng vào DB
+  thật (dữ liệu rule không đi theo git).
+- **Bốn bảng lịch sử vẫn rỗng** — `WorkoutSessions` / `SessionExercises` /
+  `SessionReps` / `RealtimeFeedback`. Mỗi phiên vẫn chỉ lưu 4 con số tổng kết
+  qua `POST /workouts`, nên không trả lời được "bài này user hay sai lỗi gì"
+  hay "tuần này lỗi gối đổ vào trong có giảm không".
+- **Màn admin "AI Config" lưu ngưỡng trong RAM** nên mất sạch mỗi lần restart,
+  và chỉ chỉnh được squat, lại sửa biến toàn cục của module nên áp cho cả 21
+  biến thể cùng lúc. Nên cho nó dùng chung cơ chế `ExercisePostureRules`.
+- **Android đổi `applicationId` sang `com.posturex.app`** — phải đăng ký OAuth
+  client Android mới trong Google Cloud Console, nếu không nút "Continue with
+  Google" báo lỗi.
 
 ## Kiến trúc
 
@@ -135,7 +201,13 @@ Phần đáng chú ý nhất là `app/ml/`: `pose_estimator.py` chạy pose land
 
 `ANALYZER_REGISTRY` nằm ở `app/ml/analyzers/registry.py` (không phải `routes/realtime.py` — `routes/exercises.py` cũng cần nó, mà import module realtime sẽ kéo cả mediapipe vào chỉ để đọc vài cái tên). Nó ánh xạ **112 khoá tên bài tập vào 9 class analyzer**, phủ 106 trong khoảng 417 bài của thư viện. Danh sách được liệt kê từng tên một cách có chủ đích: khớp theo chuỗi con nhìn thì tiện nhưng sai theo kiểu đánh lừa người dùng — "Barbell Upright Row" là bài vai, "Nar-row Pulldown" chỉ tình cờ chứa mấy chữ cái đó, "Rowing Machine Steady State" là bài cardio. Các biến thể cũng bị loại khi analyzer gộp hoặc so sánh hai bên (row một tay không bao giờ chạm ngưỡng co vì cánh tay rảnh kéo giá trị trung bình lên), và split squat được ánh xạ sang `LungeAnalyzer` chứ không phải `SquatAnalyzer` vì lunge lấy `min()` của hai gối trong khi squat lấy trung bình. `tests/test_analyzer_registry.py` khoá lại các quyết định loại trừ đó. Tên không có trong bảng sẽ rơi về `SquatAnalyzer` kèm một cảnh báo trong log, nhưng client nên dùng cờ `supports_analysis` của `GET /exercises` để người dùng không bao giờ rơi vào nhánh dự phòng đó.
 
-Các analyzer là **ngưỡng góc viết tay, không phải model đã huấn luyện** — `squat.py` ghi cứng `KNEE_DEPTH_THRESHOLD = 95.0` và tương tự. Đáng chú ý là DB *cũng* chứa kiến thức này: `ExercisePostureRules` và `PostureErrorTypes` đã được nạp sẵn bộ ba khớp, góc nhỏ nhất/lớn nhất, và câu nhắc bằng giọng nói tiếng Việt, nhưng **không có code nào đọc chúng**. Hai nguồn này đã lệch nhau (DB ghi lưng thẳng ≥160°, `squat.py` dùng 150°). Sửa ngưỡng trong DB không có tác dụng gì; phải sửa ở analyzer.
+Các analyzer là **ngưỡng góc viết tay, không phải model đã huấn luyện** — `squat.py` ghi cứng `KNEE_DEPTH_THRESHOLD = 95.0` và tương tự. Đó là **giá trị mặc định**; từng bài tập ghi đè được qua bảng `ExercisePostureRules` (xem `app/ml/analyzers/thresholds.py`).
+
+**Ngưỡng theo từng bài.** Chỉ có 9 analyzer cho 106 bài nên mọi biến thể cùng họ vốn dùng chung một bộ ngưỡng — `Seal Row` nằm sấp bị chấm bằng đúng ngưỡng lưng của `Barbell Bent Over Row` cúi 45°. Analyzer giữ nguyên phần logic phức tạp (gối vượt mũi chân, lệch hai bên, nhận biết tư thế nằm) và chỉ đọc CON SỐ ngưỡng từ DB. Bài chưa nhập ngưỡng riêng thì dùng mặc định, nên bật cơ chế này lên không đổi hành vi bài nào đang chạy.
+
+Ba điều cần nhớ khi nhập ngưỡng: `RuleName` là **khoá máy** (`back_straight_min`, `knee_depth`…), không phải mô tả — tên khác sẽ bị bỏ qua trong im lặng, trong đó có 4 dòng seed sẵn của schema đặt tên tiếng Việt. Mỗi khoá lấy giá trị từ **cột cố định** (`MinAngle` cho cận dưới, `MaxAngle` cho cận trên) — nhầm cột thì ngưỡng đảo chiều mà không có lỗi nào báo. Và `RepCounter` có **biên dung sai 10°** quanh đáy cho trường hợp FPS thấp, nên hai ngưỡng cách nhau dưới 10° sẽ cho cùng kết quả. Dùng `scripts/seed_posture_rules.py` (có `--dry-run`, chạy lại an toàn) để nhập.
+
+`PostureErrorTypes` thì vẫn **chưa có code nào đọc** — câu nhắc bằng giọng nói tiếng Việt trong đó chưa được dùng.
 
 Rộng hơn, `sql/postureX123_schema.sql` thiết kế 25 bảng (DB thật có 35 nếu tính cả view và phần thêm về sau) mà phần lớn vẫn chưa nối vào code. `MuscleGroups`/`ExerciseMuscleGroups` thì *đã* nối — `app/models/muscle_group.py` là nền cho bộ lọc 16 nhóm cơ ở tab Exercises. Nhóm chưa dùng gồm `WorkoutSessions` / `SessionExercises` / `SessionReps` / `RealtimeFeedback` — tức toàn bộ lịch sử theo từng rep, từng lỗi mà WebSocket đang tính rồi vứt đi, chỉ giữ lại bản tóm tắt do client gửi ngược lên qua `POST /workouts`. Video người dùng tải lên cũng vậy: có lưu nhưng không bao giờ được phân tích (`analysis_summary`, `total_reps`, `accuracy_score` trên bảng `videos` không bao giờ được ghi). Đừng mặc định rằng bảng tồn tại nghĩa là tính năng chạy.
 
@@ -172,9 +244,19 @@ Asset duy nhất được đóng gói là `assets/video/` (hiện có `squat.mp4
 
 `lib/theme/app_theme.dart` là nguồn sự thật duy nhất cho màu (`AppColors`, nền tối với màu nhấn `primary` cam san hô) và `AppTheme.dark` (`ThemeData` Material 3). Hãy tái dùng `AppColors.*` thay vì ghi cứng mã hex trong widget. Các màn admin có bảng màu riêng ở `lib/theme/admin_theme.dart` (cùng các widget dùng chung trong `lib/widgets/admin/`), nhưng vì chúng vẽ bên trong cùng một `MaterialApp` do `lib/main.dart` dựng nên, `ThemeData` bao quanh vẫn là `AppTheme.dark`.
 
+### Test analyzer bằng tư thế dựng sẵn (backend)
+
+`tests/pose_builders.py` dựng bộ 33 keypoint giả đặt đúng vị trí hình học, nên kiểm được toàn bộ logic phân tích mà không cần camera hay MediaPipe — cách còn lại là nhờ người đứng trước camera tập thử, vừa chậm vừa không tái hiện được. Đã xác minh bộ dựng chính xác: yêu cầu góc 95° thì đo lại đúng 95,0°.
+
+`tests/test_analyzers.py` phủ cả 9 analyzer, `tests/test_posture_thresholds.py` phủ cơ chế ngưỡng theo từng bài. Chạy analyzer qua một dãy góc mô phỏng nhịp tập thật (14 frame mỗi chiều ≈ một rep 2,5 giây ở 12 fps) rồi so với kỳ vọng.
+
+Ba lỗi từng lọt qua vì **không lỗi nào nhìn thấy được khi chạy app** — số rep vẫn nhảy, vẫn có lời nhắc, mọi thứ trông như đang hoạt động. Viết test cho phần này nghĩa là bơm chuỗi góc đã biết trước vào và so kết quả, không phải mở app ra nhìn.
+
 ### Cách viết test và các bẫy (xem `test/widget_test.dart`)
 
-Bộ test gồm 17 bài: phần lớn là widget test chạy trọn luồng (đăng ký → onboarding → sinh lịch → home, đăng nhập → đăng xuất, bấm vào một ngày trên lịch) cộng vài unit test thuần nằm dưới `test/features/`, `test/config/` và `test/services/`. Bất cứ thứ gì chạm tới mạng đều phải tiêm `MockClient` vào `ApiClient` và một `SecureStorageBackend` giả vào `TokenStorage` — plugin thật không có platform channel dưới `flutter_test`. Vài cái bẫy hay gặp, nên biết trước khi viết thêm test:
+Bộ test Flutter gồm 17 bài: phần lớn là widget test chạy trọn luồng (đăng ký → onboarding → sinh lịch → home, đăng nhập → đăng xuất, bấm vào một ngày trên lịch) cộng vài unit test thuần nằm dưới `test/features/`, `test/config/` và `test/services/`.
+
+`test/widget_test.dart` có một `setUp` reset `UserSession`, ngôn ngữ và kho lưu trữ giả trước mỗi test. Đừng bỏ nó: trạng thái app nằm ở các class toàn trường `static` và không tự reset, nên một test hỏng giữa chừng sẽ để lại phiên đăng nhập và test kế tiếp vào thẳng Home thay vì Login rồi hỏng theo — lỗi thứ hai che mất nguyên nhân thật. Thêm trạng thái `static` mới thì nhớ nối vào `setUp` đó. Bất cứ thứ gì chạm tới mạng đều phải tiêm `MockClient` vào `ApiClient` và một `SecureStorageBackend` giả vào `TokenStorage` — plugin thật không có platform channel dưới `flutter_test`. Vài cái bẫy hay gặp, nên biết trước khi viết thêm test:
 
 - **`ListView` dựng lười:** `ListView(children: [...])` chỉ gắn vào cây những phần tử nằm trong khung nhìn cộng vùng đệm — widget nằm dưới màn hình sẽ không tìm thấy bằng `find.text(...)` dù về mặt logic nó có trong cây widget. Test nào cần với tới nội dung ở dưới thì phải đặt bề mặt cao lên trước: `tester.view.physicalSize = const Size(500, 2400); tester.view.devicePixelRatio = 1.0; addTearDown(tester.view.reset);`.
 - **Nội dung "offstage" giữa lúc chuyển màn:** kiểm tra text ngay sau một `pushReplacement` (ví dụ ở frame đầu tiên của `PlanGeneratingScreen`/`SplashScreen`) có thể trượt, vì route đang vào về mặt kỹ thuật nằm ngoài sân khấu trong đúng một frame — trong tình huống đó hãy dùng `find.text(..., skipOffstage: false)`.
