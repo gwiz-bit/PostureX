@@ -127,9 +127,19 @@ venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 9
 flutter pub get
 ```
 
-App đã cấu hình sẵn để gọi backend qua `http://10.0.2.2:9000` (`lib/config/api_config.dart`) — đây là địa chỉ đặc biệt để **Android emulator** trỏ về `localhost` của máy host, không cần đổi gì nếu chạy trên emulator Android.
+App **mặc định gọi thẳng vào VPS** (`lib/config/api_config.dart`), nên chạy thử với server thật thì không cần cấu hình gì.
 
-> Nếu chạy trên **thiết bị thật** (điện thoại) thay vì emulator, phải đổi `baseUrl`/`wsUrl` trong `lib/config/api_config.dart` thành địa chỉ IP LAN thật của máy chạy backend (ví dụ `http://192.168.1.x:9000`), vì `10.0.2.2` chỉ hoạt động trên emulator.
+Muốn app gọi vào backend chạy trên máy mình thì truyền địa chỉ lúc build — **đừng sửa `api_config.dart`**:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:9000       # máy ảo Android
+flutter run --dart-define=API_BASE_URL=http://localhost:9000      # Windows/web
+flutter run --dart-define=API_BASE_URL=http://192.168.x.x:9000    # điện thoại thật cùng Wi-Fi
+```
+
+`10.0.2.2` là bí danh máy ảo Android dùng để gọi về `localhost` của máy host — nó **chỉ có nghĩa trên máy ảo**, điện thoại thật phải dùng IP LAN (`ipconfig` để xem).
+
+> ⚠️ Sửa thẳng hằng số trong `api_config.dart` là cách làm sai, vì địa chỉ máy bạn rất dễ bị commit lên nhánh chung. Tệ hơn: một bản phát hành build từ đó sẽ lên store với địa chỉ chỉ có nghĩa trên máy ảo, hỏng với 100% người dùng. `test/config/api_config_test.dart` sẽ đỏ nếu mặc định bị đổi thành địa chỉ dev.
 
 Chạy app:
 

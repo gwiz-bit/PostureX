@@ -309,3 +309,37 @@ def test_knee_overshoot_khong_nam_trong_cap_thu_tu() -> None:
     trong_cap = {k for pair in ORDERED_PAIRS for k in pair}
 
     assert "knee_overshoot" not in trong_cap
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Đồng bộ với tầng ghi DB
+# ─────────────────────────────────────────────────────────────────────
+#
+# `crud/posture_rule.py` giữ hai bảng tra riêng cho việc TẠO dòng mới. Chúng
+# phải phủ đủ mọi khoá trong TUNABLES, nếu không admin bấm Lưu một ngưỡng chưa
+# khai sẽ nhận HTTP 500 chứ không phải thông báo lỗi tử tế.
+
+def test_moi_khoa_deu_co_bo_ba_khop_de_ghi_dong_moi() -> None:
+    """Thiếu khoá trong `_JOINTS` thì `replace_overrides` ném KeyError.
+
+    Ba cột JointA/B/C là NOT NULL nên bắt buộc phải điền khi tạo dòng mới.
+    Lỗi chỉ nổ ra đúng lúc admin lưu một ngưỡng CHƯA từng được lưu cho bài đó,
+    nên rất dễ lọt qua thử nghiệm tay.
+    """
+    from app.crud.posture_rule import _JOINTS
+
+    khoa = {t.key for group in TUNABLES.values() for t in group}
+
+    assert khoa <= set(_JOINTS), f"Thiếu bộ ba khớp cho: {sorted(khoa - set(_JOINTS))}"
+
+
+def test_co_dem_rep_khai_giong_nhau_o_hai_noi() -> None:
+    """`affects_rep_count` (cho giao diện) và `_REP_TRIGGERS` (ghi cột
+    IsRepTrigger) mô tả cùng một sự thật ở hai chỗ — lệch đi thì DB nói một
+    đằng, màn hình nói một nẻo."""
+    from app.crud.posture_rule import _REP_TRIGGERS
+
+    khoa = {t.key for group in TUNABLES.values() for t in group}
+    theo_ui = {t.key for group in TUNABLES.values() for t in group if t.affects_rep_count}
+
+    assert theo_ui == (_REP_TRIGGERS & khoa)

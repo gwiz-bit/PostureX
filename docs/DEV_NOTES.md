@@ -270,21 +270,38 @@ Ngoài ra Windows phải **bật Developer Mode** (`start ms-settings:developers
 
 ## 📲 Chạy trên điện thoại thật (Wi-Fi)
 
-`lib/config/api_config.dart` lấy host từ biến build, mặc định `10.0.2.2` (emulator):
+Chỉ cần khi bạn muốn app gọi vào **backend chạy trên máy mình**. Mặc định app
+đã trỏ thẳng vào VPS (`lib/config/api_config.dart`), nên muốn test với server
+thật thì không phải truyền cờ gì cả.
+
+Tên biến là **`API_BASE_URL`** và giá trị là **URL đầy đủ**, không phải mỗi IP:
 
 ```powershell
-flutter build apk --debug --dart-define=API_HOST=192.168.1.9   # IP LAN của PC
+# Thay 192.168.x.x bằng IP LAN của PC bạn — xem bằng `ipconfig`
+flutter run --dart-define=API_BASE_URL=http://192.168.x.x:9000
 ```
 
-Ba việc bắt buộc:
+> ⚠️ Tài liệu này trước đây ghi `--dart-define=API_HOST=…`. **Biến đó không tồn
+> tại** — truyền vào thì Flutter bỏ qua trong im lặng, app vẫn gọi VPS, và
+> người ta ngồi gỡ lỗi nhầm ở phía mạng. Xem `String.fromEnvironment` trong
+> `api_config.dart` để biết tên đúng.
+
+Hai việc bắt buộc:
 
 1. **Mở cổng 9000 trên firewall** (PowerShell **Administrator**):
    `New-NetFirewallRule -DisplayName "PostureX backend 9000" -Direction Inbound -Protocol TCP -LocalPort 9000 -Action Allow -Profile Private,Public`
-2. Thêm IP đó vào `android/app/src/main/res/xml/network_security_config.xml` — Android chặn HTTP thường theo mặc định.
+2. Backend phải bind ra ngoài, không chỉ loopback:
+   `uvicorn app.main:app --host 0.0.0.0 --port 9000`
 3. Điện thoại phải **cùng mạng Wi-Fi** với PC.
 
-Kiểm tra trước khi cài app: mở trình duyệt **trên điện thoại** vào `http://192.168.1.9:9000/health`.
-Thấy JSON ⇒ mạng thông, cứ cài. Không thấy ⇒ lỗi ở firewall/mạng, **đừng mất công debug app**.
+Không cần thêm IP vào `network_security_config.xml` nữa: từ 04/09/2026 bản
+**debug** dùng cấu hình riêng ở `android/app/src/debug/res/xml/` cho phép mọi
+địa chỉ. Bản phát hành vẫn chỉ tin đúng IP VPS. (Đúng vì lý do này: mỗi người
+một IP LAN, liệt kê từng cái thì cả nhóm sửa chung một file rồi commit đè nhau.)
+
+Kiểm tra trước khi cài app: mở trình duyệt **trên điện thoại** vào
+`http://192.168.x.x:9000/health`. Thấy JSON ⇒ mạng thông, cứ cài. Không thấy ⇒
+lỗi ở firewall/mạng, **đừng mất công debug app**.
 
 ---
 
