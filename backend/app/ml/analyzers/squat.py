@@ -85,13 +85,16 @@ class SquatAnalyzer(ExerciseAnalyzer):
                 errors.append("Xuống chưa đủ sâu — gối cần gập thêm (mục tiêu < 90°).")
 
         # --- Kiểm tra gối vượt mũi chân ---
+        # Tra ngưỡng một lần rồi dùng lại cho cả hai bên: `analyze` chạy mỗi
+        # frame nên tránh tra dict hai lần cho cùng một giá trị.
+        overshoot = self.threshold("knee_overshoot", KNEE_OVERSHOOT_RATIO)
         if _visible(left_knee, left_foot) and left_knee_angle is not None:
-            if left_knee.x > left_foot.x + KNEE_OVERSHOOT_RATIO:
+            if left_knee.x > left_foot.x + overshoot:
                 errors.append("Gối trái vượt quá mũi chân — hãy đẩy hông về sau.")
 
         if _visible(right_knee, right_foot) and right_knee_angle is not None:
             # Gối phải ở phía ngược lại trong không gian ảnh
-            if right_knee.x < right_foot.x - KNEE_OVERSHOOT_RATIO:
+            if right_knee.x < right_foot.x - overshoot:
                 errors.append("Gối phải vượt quá mũi chân — hãy đẩy hông về sau.")
 
         # --- Kiểm tra lưng thẳng (góc vai-hông-gối) ---

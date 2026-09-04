@@ -9,7 +9,7 @@ import '../features/admin_dashboard/domain/entities/system_stats.dart';
 import '../features/admin_exercises/domain/entities/admin_exercise.dart';
 import '../features/admin_plans/domain/entities/admin_plan.dart';
 import '../features/admin_notifications/domain/entities/broadcast_history_item.dart';
-import '../features/admin_ai_config/domain/entities/ai_config.dart';
+import '../features/admin_ai_config/domain/entities/posture_rules.dart';
 import '../features/admin_users/domain/entities/admin_user.dart';
 import '../features/admin_revenue/domain/entities/revenue_stats.dart';
 import '../features/admin_videos/domain/entities/admin_video.dart';
@@ -425,16 +425,36 @@ class ApiClient {
     await _delete('/api/v1/admin/videos/$videoId', auth: true);
   }
 
-  // --- Admin: AI config -------------------------------------------------
+  // --- Admin: ngưỡng phân tích tư thế theo từng bài ----------------------
+  //
+  // Thay cho cặp `/admin/config` cũ, vốn đọc/ghi một biến nằm trong RAM của
+  // server: mất mỗi lần restart, chỉ có squat, và sửa hằng số toàn cục nên
+  // áp cho cả 21 biến thể squat cùng lúc.
 
-  Future<AIConfig> fetchAIConfig() async {
-    final json = await _get('/api/v1/admin/config', auth: true);
-    return AIConfig.fromJson(json as Map<String, dynamic>);
+  Future<List<TunableExercise>> fetchTunableExercises({String? search}) async {
+    final query = (search == null || search.isEmpty)
+        ? ''
+        : '?search=${Uri.encodeQueryComponent(search)}';
+    final json = await _get('/api/v1/admin/posture-rules$query', auth: true);
+    return (json as List)
+        .map((e) => TunableExercise.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<AIConfig> updateAIConfig(AIConfig config) async {
-    final json = await _patch('/api/v1/admin/config', auth: true, body: config.toJson());
-    return AIConfig.fromJson(json as Map<String, dynamic>);
+  Future<ExerciseRules> fetchExerciseRules(int exerciseId) async {
+    final json = await _get('/api/v1/admin/posture-rules/$exerciseId', auth: true);
+    return ExerciseRules.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// [values] là trạng thái đầy đủ mong muốn — khoá vắng mặt bị xoá phía server
+  /// và bài quay về ngưỡng mặc định của analyzer.
+  Future<ExerciseRules> saveExerciseRules(int exerciseId, Map<String, double> values) async {
+    final json = await _put(
+      '/api/v1/admin/posture-rules/$exerciseId',
+      auth: true,
+      body: {'values': values},
+    );
+    return ExerciseRules.fromJson(json as Map<String, dynamic>);
   }
 
   // --- Admin: plans (SubscriptionPlans) --------------------------------

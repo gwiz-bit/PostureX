@@ -66,11 +66,12 @@ class DeadliftAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.incomplete_lockout:
                 errors.append("Chưa đứng thẳng hoàn toàn — duỗi hông hết cỡ ở đỉnh động tác.")
 
+        overshoot = self.threshold("knee_overshoot", KNEE_OVERSHOOT_RATIO)
         if is_visible(left_knee, left_foot):
-            if left_knee.x > left_foot.x + KNEE_OVERSHOOT_RATIO:
+            if left_knee.x > left_foot.x + overshoot:
                 errors.append("Gối trái vượt quá mũi chân — đẩy hông về sau nhiều hơn thay vì gập gối.")
         if is_visible(right_knee, right_foot):
-            if right_knee.x < right_foot.x - KNEE_OVERSHOOT_RATIO:
+            if right_knee.x < right_foot.x - overshoot:
                 errors.append("Gối phải vượt quá mũi chân — đẩy hông về sau nhiều hơn thay vì gập gối.")
 
         return FrameAnalysisResult(

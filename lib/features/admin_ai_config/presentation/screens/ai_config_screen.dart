@@ -1,28 +1,51 @@
-import 'package:flutter/material.dart';
-import '../../../../theme/admin_theme.dart';
-import '../../../../widgets/admin/common_widgets.dart';
-import '../../../../widgets/admin/dialogs.dart';
-import '../../../../core/errors/failures.dart';
-import '../../../../theme/app_theme.dart';
-import '../../admin_ai_config_module.dart';
-import '../../domain/entities/ai_config.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+
+import '../../../../core/errors/failures.dart';
+import '../../../../theme/admin_theme.dart';
+import '../../../../theme/app_theme.dart';
+import '../../../../widgets/admin/common_widgets.dart';
+import '../../admin_ai_config_module.dart';
+import '../../domain/entities/posture_rules.dart';
+import 'exercise_rules_screen.dart';
+
+/// Chọn bài tập để chỉnh ngưỡng phân tích tư thế.
+///
+/// Màn hình cũ ở đây là 7 thanh trượt ghi cứng cho squat, đọc/ghi một biến nằm
+/// trong RAM của server. Ba vấn đề của nó:
+///
+///   1. Mất sạch mỗi lần restart server, không cảnh báo gì.
+///   2. Nó sửa hằng số toàn cục của module `squat`, tức sửa MẶC ĐỊNH của
+///      SquatAnalyzer — nên chỉnh cho một bài là đổi luôn cả 21 biến thể squat.
+///   3. Chỉ squat chỉnh được; 8 analyzer còn lại không có đường vào.
+///
+/// Bản này liệt kê mọi bài có analyzer (khoảng 106 bài) và ghi thẳng vào bảng
+/// `ExercisePostureRules` — đúng bảng backend đọc khi mở phiên phân tích.
 class AIConfigScreen extends StatefulWidget {
   const AIConfigScreen({super.key});
+
   @override
   State<AIConfigScreen> createState() => _AIConfigScreenState();
 }
 
 class _AIConfigScreenState extends State<AIConfigScreen> {
-  AIConfig? _config;
+  List<TunableExercise>? _exercises;
   bool _isLoading = true;
-  bool _isSaving = false;
   String? _errorMessage;
+  String _search = '';
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -31,163 +54,156 @@ class _AIConfigScreenState extends State<AIConfigScreen> {
       _errorMessage = null;
     });
     try {
-      final config = await AdminAiConfigModule.getAIConfig()();
+      final list = await AdminAiConfigModule.listExercises()(search: _search);
       if (!mounted) return;
-      setState(() => _config = config);
+      setState(() => _exercises = list);
     } on AppFailure catch (e) {
-      setState(() => _errorMessage = e.message);
+      if (mounted) setState(() => _errorMessage = e.message);
     } catch (_) {
-      setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+      if (mounted) {
+        setState(() => _errorMessage = 'Could not reach the server. Check your connection.');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _save() async {
-    if (_config == null) return;
-    setState(() => _isSaving = true);
-    try {
-      final updated = await AdminAiConfigModule.updateAIConfig()(_config!);
-      if (!mounted) return;
-      setState(() => _config = updated);
-      showToast(context, 'AI config updated — applies to new sessions immediately');
-    } on AppFailure catch (e) {
-      if (mounted) showToast(context, e.message);
-    } catch (_) {
-      if (mounted) showToast(context, 'Could not reach the server. Check your connection.');
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
+  /// Gõ tới đâu gọi tới đó sẽ bắn một request mỗi ký tự. Chờ 350 ms sau lần gõ
+  /// cuối mới gọi.
+  void _onSearchChanged(String value) {
+    _search = value;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), _load);
+  }
+
+  Future<void> _openExercise(TunableExercise exercise) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ExerciseRulesScreen(
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+        ),
+      ),
+    );
+    // Quay lại thì nạp lại danh sách: số ngưỡng ghi đè có thể vừa đổi.
+    if (mounted) await _load();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: adminAppBar('AI Analysis Config', 'Squat detection thresholds'),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : _errorMessage != null
-              ? ListView(padding: const EdgeInsets.all(16), children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Column(children: [
-                      Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: kMuted)),
-                      const SizedBox(height: 12),
-                      FilledButton(onPressed: _load, child: const Text('Retry')),
-                    ]),
-                  ),
-                ])
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    const SectionLabel('Squat thresholds'),
-                    WhiteCard(
-                      child: Column(children: [
-                        _slider(
-                          label: 'Knee depth threshold (°)',
-                          value: _config!.squatKneeDepthThreshold,
-                          min: 60,
-                          max: 130,
-                          onChanged: (v) => setState(() => _config = _config!.copyWith(squatKneeDepthThreshold: v)),
-                        ),
-                        _slider(
-                          label: 'Back straight minimum (°)',
-                          value: _config!.squatBackStraightMin,
-                          min: 100,
-                          max: 180,
-                          onChanged: (v) => setState(() => _config = _config!.copyWith(squatBackStraightMin: v)),
-                        ),
-                        _slider(
-                          label: 'Knee overshoot ratio',
-                          value: _config!.squatKneeOvershootRatio,
-                          min: 0,
-                          max: 0.3,
-                          onChanged: (v) =>
-                              setState(() => _config = _config!.copyWith(squatKneeOvershootRatio: v)),
-                        ),
-                        _slider(
-                          label: 'Rep-down threshold (°)',
-                          value: _config!.squatRepDownThreshold,
-                          min: 60,
-                          max: 130,
-                          onChanged: (v) => setState(() => _config = _config!.copyWith(squatRepDownThreshold: v)),
-                        ),
-                        _slider(
-                          label: 'Rep-up threshold (°)',
-                          value: _config!.squatRepUpThreshold,
-                          min: 130,
-                          max: 180,
-                          onChanged: (v) => setState(() => _config = _config!.copyWith(squatRepUpThreshold: v)),
-                        ),
-                      ]),
-                    ),
-                    const SizedBox(height: 16),
-                    const SectionLabel('Pose model'),
-                    WhiteCard(
-                      child: Column(children: [
-                        _slider(
-                          label: 'Min detection confidence',
-                          value: _config!.poseMinDetectionConfidence,
-                          min: 0.1,
-                          max: 1.0,
-                          onChanged: (v) =>
-                              setState(() => _config = _config!.copyWith(poseMinDetectionConfidence: v)),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Model complexity', style: TextStyle(fontSize: 13, color: kInk)),
-                            DropdownButton<int>(
-                              value: _config!.poseModelComplexity,
-                              items: const [
-                                DropdownMenuItem(value: 0, child: Text('0 (fastest)')),
-                                DropdownMenuItem(value: 1, child: Text('1 (balanced)')),
-                                DropdownMenuItem(value: 2, child: Text('2 (accurate)')),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _config = _config!.copyWith(poseModelComplexity: v)),
-                            ),
-                          ],
-                        ),
-                      ]),
-                    ),
-                    const SizedBox(height: 18),
-                    PrimaryButton(
-                      label: _isSaving ? 'Saving...' : 'Save configuration',
-                      onPressed: _isSaving ? () {} : _save,
-                    ),
-                  ],
-                ),
+      appBar: adminAppBar('AI Analysis Config', 'Ngưỡng phân tích theo từng bài tập'),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: TextField(
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Tìm bài tập...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          Expanded(child: _body()),
+        ],
+      ),
     );
   }
 
-  Widget _slider({
-    required String label,
-    required double value,
-    required double min,
-    required double max,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 13, color: kInk)),
-              Text(value.toStringAsFixed(2), style: const TextStyle(fontSize: 12, color: kMuted)),
-            ],
+  Widget _body() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    }
+    if (_errorMessage != null) {
+      return ListView(padding: const EdgeInsets.all(16), children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Column(children: [
+            Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: kMuted)),
+            const SizedBox(height: 12),
+            FilledButton(onPressed: _load, child: const Text('Thử lại')),
+          ]),
+        ),
+      ]);
+    }
+
+    final exercises = _exercises ?? const <TunableExercise>[];
+    if (exercises.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Text(
+            'Không có bài tập nào khớp.\n\nChỉ bài có analyzer mới chỉnh được ngưỡng — '
+            'bài không phân tích được thì không có gì để chỉnh.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: kMuted, height: 1.5),
           ),
-          Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            activeColor: AppColors.primary,
-            onChanged: onChanged,
-          ),
-        ],
+        ),
+      );
+    }
+
+    final daChinh = exercises.where((e) => e.overrideCount > 0).length;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      children: [
+        SectionLabel('${exercises.length} bài phân tích được · $daChinh bài đã chỉnh riêng'),
+        ListCard(
+          rows: [
+            for (final e in exercises) _ExerciseRow(exercise: e, onTap: () => _openExercise(e)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ExerciseRow extends StatelessWidget {
+  const _ExerciseRow({required this.exercise, required this.onTap});
+
+  final TunableExercise exercise;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            // Tên bài có thể rất dài ("Chest Supported Dumbbell Row"), nên phải
+            // co lại được — môi trường test không nạp font thật nên chữ đo ra
+            // rộng hơn máy thật và từng làm tràn Row ở chỗ khác.
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    exercise.name,
+                    style: const TextStyle(fontSize: 13, color: kInk, fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    exercise.analyzer,
+                    style: const TextStyle(fontSize: 11, color: kMuted),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (exercise.overrideCount > 0)
+              StatusBadge('${exercise.overrideCount} ngưỡng riêng', kAmberBg, kAmber)
+            else
+              const StatusBadge('Mặc định', kGrayBg, kGrayFg),
+            const Icon(Icons.chevron_right, size: 18, color: kMuted),
+          ],
+        ),
       ),
     );
   }

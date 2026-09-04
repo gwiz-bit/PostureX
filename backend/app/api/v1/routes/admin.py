@@ -1,16 +1,20 @@
 """Admin endpoints — chỉ user có is_admin=True mới truy cập được."""
 
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.crud import admin as admin_crud
 from app.crud import exercise as exercise_crud
+from app.crud import posture_rule as posture_rule_crud
 from app.crud import subscription as sub_crud
 from app.crud.notification import broadcast_notification, list_broadcast_history
 from app.crud.user import get_user_by_id
+from app.ml.analyzers.tunables import tunables_for
+from app.ml.analyzers.tunables import validate as validate_tunables
+from app.models.exercise import Exercise
 from app.models.user import User
 from app.schemas.admin import (
     AdminPaymentOut,
@@ -19,13 +23,16 @@ from app.schemas.admin import (
     AdminPlanUpdate,
     AdminUserOut,
     AdminUserUpdate,
-    AIConfig,
     BroadcastHistoryItem,
     BroadcastIn,
     BroadcastOut,
+    ExerciseRulesOut,
+    ExerciseRulesUpdate,
     RevenueByPlan,
     RevenueStats,
     SystemStats,
+    TunableExerciseOut,
+    TunableOut,
 )
 from app.schemas.exercise import ExerciseCreate, ExerciseOut, ExerciseUpdate
 from app.services.exercise_video_service import exercise_video_service
@@ -33,11 +40,6 @@ from app.services.video_service import video_service
 from app.utils.deps import get_current_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-# ─────────────────────────────────────────────
-# Cấu hình AI (lưu trong bộ nhớ, reset khi restart)
-# ─────────────────────────────────────────────
-_ai_config = AIConfig()
 
 
 # ─────────────────────────────────────────────
@@ -205,33 +207,127 @@ async def delete_video(
 
 
 # ─────────────────────────────────────────────
-# Quản lý cấu hình AI
+# Ngưỡng phân tích tư thế theo từng bài tập
 # ─────────────────────────────────────────────
+#
+# Thay cho cặp route `/config` cũ. Bản cũ giữ ngưỡng trong một biến module
+# rồi gán đè lên hằng số toàn cục của `app.ml.analyzers.squat`, nên:
+#
+#   - Admin chỉnh xong, restart server là mất sạch — không cảnh báo gì.
+#   - Sửa hằng số module tức là sửa MẶC ĐỊNH của SquatAnalyzer, mà mặc định đó
+#     dùng chung cho cả 21 biến thể squat. Chỉnh cho "Barbell Squat" thì
+#     "Machine Hack Squat" cũng đổi theo.
+#   - Chỉ squat chỉnh được; 8 analyzer còn lại không có đường vào.
+#
+# Bản này ghi thẳng vào `ExercisePostureRules`, đúng bảng mà
+# `_load_exercise_thresholds` đọc lúc mở phiên WebSocket — nên thay đổi sống
+# qua restart và chỉ áp cho đúng bài được chỉnh.
 
-@router.get("/config", response_model=AIConfig)
-async def get_ai_config(
+
+async def _get_exercise_or_404(db: AsyncSession, exercise_id: int) -> Exercise:
+    exercise = (
+        await db.execute(select(Exercise).where(Exercise.id == exercise_id))
+    ).scalar_one_or_none()
+    if exercise is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bài tập."
+        )
+    return exercise
+
+
+def _build_rules_out(exercise: Exercise, analyzer: str, overrides: dict[str, float]) -> ExerciseRulesOut:
+    return ExerciseRulesOut(
+        exercise_id=exercise.id,
+        exercise_name=exercise.name,
+        analyzer=analyzer,
+        tunables=[
+            TunableOut(
+                key=t.key,
+                label=t.label,
+                default=t.default,
+                current=overrides.get(t.key),
+                minimum=t.minimum,
+                maximum=t.maximum,
+                affects_rep_count=t.affects_rep_count,
+                unit=t.unit,
+                step=t.step,
+            )
+            for t in tunables_for(analyzer)
+        ],
+    )
+
+
+@router.get("/posture-rules", response_model=list[TunableExerciseOut])
+async def list_posture_rule_exercises(
+    search: str | None = Query(None, description="Lọc theo tên bài tập."),
+    db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
-) -> AIConfig:
-    """Xem cấu hình hiện tại của model AI và ngưỡng phân tích."""
-    return _ai_config
+) -> list[TunableExerciseOut]:
+    """Các bài tập có analyzer, kèm số ngưỡng đang được ghi đè.
+
+    Chỉ liệt kê bài phân tích được — bài không có analyzer thì không có ngưỡng
+    nào để chỉnh.
+    """
+    rows = await posture_rule_crud.list_tunable_exercises(db, search)
+    return [
+        TunableExerciseOut(
+            id=exercise.id, name=exercise.name, analyzer=analyzer, override_count=count
+        )
+        for exercise, analyzer, count in rows
+    ]
 
 
-@router.patch("/config", response_model=AIConfig)
-async def update_ai_config(
-    data: AIConfig,
+@router.get("/posture-rules/{exercise_id}", response_model=ExerciseRulesOut)
+async def get_posture_rules(
+    exercise_id: int,
+    db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
-) -> AIConfig:
-    """Cập nhật ngưỡng phân tích AI (áp dụng ngay cho các phiên mới)."""
-    global _ai_config
-    _ai_config = data
+) -> ExerciseRulesOut:
+    """Ngưỡng chỉnh được của một bài, kèm mặc định và giá trị đang ghi đè."""
+    exercise = await _get_exercise_or_404(db, exercise_id)
+    analyzer = posture_rule_crud.analyzer_name_for(exercise.name)
+    if analyzer is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Bài '{exercise.name}' chưa có analyzer nên không có ngưỡng để chỉnh.",
+        )
+    overrides = await posture_rule_crud.get_overrides(db, exercise_id)
+    return _build_rules_out(exercise, analyzer, overrides)
 
-    # Cập nhật ngưỡng cho SquatAnalyzer
-    from app.ml.analyzers import squat as squat_module
-    squat_module.KNEE_DEPTH_THRESHOLD = data.squat_knee_depth_threshold
-    squat_module.BACK_STRAIGHT_MIN = data.squat_back_straight_min
-    squat_module.KNEE_OVERSHOOT_RATIO = data.squat_knee_overshoot_ratio
 
-    return _ai_config
+@router.put("/posture-rules/{exercise_id}", response_model=ExerciseRulesOut)
+async def update_posture_rules(
+    exercise_id: int,
+    data: ExerciseRulesUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+) -> ExerciseRulesOut:
+    """Đặt lại ngưỡng ghi đè của một bài tập.
+
+    `values` là trạng thái đầy đủ mong muốn: khoá bị bỏ ra sẽ được xoá và bài
+    quay về mặc định của analyzer.
+
+    Giá trị được kiểm trước khi ghi. Kiểm tra quan trọng nhất là thứ tự cặp
+    ngưỡng đếm rep: nếu ngưỡng "đứng thẳng lại" không cao hơn ngưỡng "chạm
+    đáy" một khoảng đủ rộng thì `RepCounter` đứng im ở 0 rep mà không báo lỗi
+    gì — người dùng chỉ thấy "app không đếm được".
+    """
+    exercise = await _get_exercise_or_404(db, exercise_id)
+    analyzer = posture_rule_crud.analyzer_name_for(exercise.name)
+    if analyzer is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Bài '{exercise.name}' chưa có analyzer nên không có ngưỡng để chỉnh.",
+        )
+
+    errors = validate_tunables(analyzer, data.values)
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=" ".join(errors)
+        )
+
+    overrides = await posture_rule_crud.replace_overrides(db, exercise_id, data.values)
+    return _build_rules_out(exercise, analyzer, overrides)
 
 
 # ─────────────────────────────────────────────

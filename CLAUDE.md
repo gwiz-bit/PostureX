@@ -64,6 +64,103 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 04/09/2026
+
+**VPS mới `103.82.21.150`** (`7a90b28`, của VanGiap). VPS Cloudfly cũ
+`103.179.172.246` hết hạn dùng thử. Thư viện 417 bài và 412 video đã được nhập
+lại lên server mới; `GOOGLE_CLIENT_ID` cũng đổi sang OAuth client mới.
+
+**App Android không gọi được VPS mới** (`db82ce7`). Commit đổi địa chỉ ở trên
+sửa `api_config.dart` nhưng quên `network_security_config.xml`, vốn vẫn chỉ
+liệt kê IP VPS cũ. File đó không khai `<base-config>` nên Android 9+ chặn
+cleartext với mọi host không có tên trong danh sách: mọi request chết ngay ở
+tầng hệ điều hành với `Cleartext HTTP traffic to … not permitted`, trong khi
+server vẫn sống. Triệu chứng trông hệt như "server chết" nên rất dễ đổ lỗi
+nhầm chỗ.
+
+Nay tách làm hai bản theo source set — `src/main/` chỉ tin đúng IP VPS thật,
+`src/debug/` cho phép mọi địa chỉ. Lý do tách: backend local mỗi người một IP
+LAN, liệt kê từng cái nghĩa là cả nhóm sửa chung một file rồi commit đè lên
+nhau. Nới lỏng chỉ áp cho bản debug nên không lọt tới bản lên store.
+
+⚠️ **Đổi VPS phải sửa CẢ HAI chỗ**: `lib/config/api_config.dart` và
+`android/app/src/main/res/xml/network_security_config.xml`. Quên vế thứ hai
+chính là lỗi vừa rồi.
+
+**Viết lại màn admin "AI Config"** — món nợ ghi ở mục 01/09. Trước khi sửa đã
+kiểm từng ô điều khiển, và **4 trong 7 ô không có tác dụng gì**:
+
+- `squat_rep_down_threshold` trùng `knee_depth` (squat dựng RepCounter bằng
+  `down_threshold=t.get("knee_depth", …)`), mà handler chỉ áp ô kia.
+- `squat_rep_up_threshold` handler không bao giờ đọc tới.
+- `pose_min_detection_confidence` và `pose_model_complexity` không có đường
+  nào tới pool — pool được dựng ở cấp module lúc import. Riêng
+  `model_complexity` còn vô nghĩa ở tầng dưới: MediaPipe Tasks chọn độ phức
+  tạp theo file model, tham số chỉ giữ cho tương thích.
+
+Ba ô còn lại có tác dụng nhưng theo cách sai: chúng gán đè hằng số toàn cục
+của module `squat`, tức sửa MẶC ĐỊNH của SquatAnalyzer — chỉnh cho một bài là
+đổi luôn cả 21 biến thể squat, và mất sạch khi restart.
+
+Cặp route `/admin/config` nay đổi thành `/admin/posture-rules`, ghi thẳng vào
+`ExercisePostureRules` — đúng bảng `_load_exercise_thresholds` đọc lúc mở
+phiên WebSocket. Mọi bài có analyzer đều chỉnh được (khoảng 106 bài), riêng
+từng bài, và sống qua restart.
+
+`app/ml/analyzers/tunables.py` là nguồn sự thật duy nhất cho "bài này chỉnh
+được ngưỡng nào": nhãn, mặc định, khoảng hợp lệ. Cả API lẫn giao diện đọc từ
+đây, nên thêm ngưỡng mới chỉ khai một chỗ. Ba điều đáng nhớ:
+
+- **Khoá phải có trong `VALUE_COLUMN`.** Sai khoá thì ngưỡng vẫn ghi xuống DB
+  bình thường rồi bị bỏ qua lúc chạy — không lỗi nào báo. Module tự kiểm lúc
+  import và ném `RuntimeError`.
+- **`ORDERED_PAIRS` + `MIN_REP_RANGE = 15°`.** Đảo ngược cặp ngưỡng đếm rep
+  (vd đặt "đứng thẳng" thấp hơn "chạm đáy") là đặt ra điều kiện không bao giờ
+  thoả: bộ đếm đứng im ở 0 rep, không lỗi nào báo. 15° vì `RepCounter` có biên
+  dung sai 10° quanh đáy. Kiểm trên **giá trị có hiệu lực** — trộn cái admin
+  nhập với mặc định — chứ không chỉ trên phần vừa gửi lên, nếu không thì sửa
+  một vế của cặp sẽ lọt.
+- **Kiểm theo tầng.** Có lỗi khoảng thì dừng, chưa kiểm thứ tự — đem một giá
+  trị đã bị từ chối đi so sẽ ra thông báo sai hướng ("155° phải lớn hơn 999°")
+  khiến admin đi sửa nhầm ô.
+
+`values` khi lưu là **trạng thái đầy đủ** mong muốn: khoá vắng mặt bị xoá và
+bài quay về mặc định. Nhờ vậy "gỡ ghi đè" không cần endpoint riêng. Dòng có
+`RuleName` không phải khoá máy (schema seed sẵn vài dòng tên tiếng Việt) được
+giữ nguyên, không đụng tới.
+
+**`knee_overshoot` là khoá duy nhất không phải góc.** Nó là tỉ lệ theo chiều
+rộng khung hình (0.05 = gối được vượt mũi chân 5% khung hình), nên lấy giá trị
+từ cột `Tolerance` chứ không phải Min/MaxAngle. Trước đây squat/lunge/deadlift
+đọc thẳng hằng số `KNEE_OVERSHOOT_RATIO` nên nó nằm ngoài mọi ghi đè; nay cả
+ba đọc qua `self.threshold("knee_overshoot", …)`.
+
+Vì nó khác đơn vị, `Tunable` có thêm `unit` và `step` — giao diện **không được
+tự gắn "°"** vào mọi giá trị, và bước 1.0 cho một khoảng 0–0.3 sẽ cho thanh
+trượt chỉ nhảy được giữa hai đầu. Cả hai trường đến từ backend.
+
+Rà lại toàn bộ: **25 trong 26 hằng số ngưỡng của 9 analyzer nay chỉnh được**.
+Cái còn lại là `plank.HORIZONTAL_POSTURE_RATIO` — heuristic nhận biết người
+đang nằm plank hay đứng, không phải ngưỡng chấm kỹ thuật, và nó nằm trong một
+hàm helper cấp module không đọc được `self.thresholds`.
+
+#### Còn nợ sau ngày này
+
+- **Chưa thử trên người thật** — vẫn nguyên từ 01/09.
+- **Chưa deploy lên VPS mới.** Sau khi deploy: chạy `scripts/seed_posture_rules.py`
+  để nhập 6 ngưỡng cho 5 bài (dữ liệu rule không đi theo git).
+- **Chưa sửa `.env` trên VPS** — `GOOGLE_CLIENT_ID` phải đổi sang client mới,
+  file `.env` không đi theo `git pull`.
+- **OAuth Android client cho `com.posturex.app`** chưa đăng ký.
+- **Bốn bảng lịch sử vẫn rỗng** — như 01/09.
+- **Hai tham số pose không chỉnh được.** `min_detection_confidence` và
+  `model_complexity` bị bỏ khỏi màn admin vì chúng là cấu hình toàn cục của
+  một pool dựng sẵn lúc khởi động, không phải ngưỡng theo bài. Muốn chỉnh thật
+  thì phải dựng lại pool giữa chừng.
+- **Chưa ai mở màn admin mới trên máy thật.** Đã phủ 10 widget test (danh sách,
+  mở chi tiết, gỡ ghi đè, đơn vị tỉ lệ, lỗi mạng) và đã gọi thử API trên server
+  thật bằng curl, nhưng chưa ai đăng nhập admin rồi bấm qua giao diện.
+
 ### 01/09/2026
 
 **Sửa 3 lỗi trong phân tích tư thế** (`bf77b44`). Cả ba đều không nhìn thấy
@@ -121,6 +218,8 @@ không kéo theo lỗi thứ hai che mất nguyên nhân.
 - **Màn admin "AI Config" lưu ngưỡng trong RAM** nên mất sạch mỗi lần restart,
   và chỉ chỉnh được squat, lại sửa biến toàn cục của module nên áp cho cả 21
   biến thể cùng lúc. Nên cho nó dùng chung cơ chế `ExercisePostureRules`.
+  *(Đã sửa 04/09 — xem mục ngày đó. Hoá ra còn tệ hơn: 4 trong 7 ô điều khiển
+  của màn hình đó không có tác dụng gì cả.)*
 - **Android đổi `applicationId` sang `com.posturex.app`** — phải đăng ký OAuth
   client Android mới trong Google Cloud Console, nếu không nút "Continue with
   Google" báo lỗi.

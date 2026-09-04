@@ -79,11 +79,12 @@ class LungeAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.shallow_reversal:
                 errors.append("Chùng chân chưa đủ sâu — hạ thấp hông thêm cho đùi trước song song sàn.")
 
+        overshoot = self.threshold("knee_overshoot", KNEE_OVERSHOOT_RATIO)
         if is_visible(left_knee, left_foot) and left_knee_angle == front_knee_angle:
-            if left_knee.x > left_foot.x + KNEE_OVERSHOOT_RATIO:
+            if left_knee.x > left_foot.x + overshoot:
                 errors.append("Gối trước vượt quá mũi chân — lùi chân sau ra xa hơn.")
         if is_visible(right_knee, right_foot) and right_knee_angle == front_knee_angle:
-            if right_knee.x < right_foot.x - KNEE_OVERSHOOT_RATIO:
+            if right_knee.x < right_foot.x - overshoot:
                 errors.append("Gối trước vượt quá mũi chân — lùi chân sau ra xa hơn.")
 
         back_angle: float | None = None
