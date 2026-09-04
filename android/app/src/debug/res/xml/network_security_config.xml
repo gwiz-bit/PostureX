@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cấu hình mạng cho BẢN DEBUG. Ghi đè hoàn toàn file cùng tên trong src/main/
+  (source set của build variant thắng khi trùng tên tài nguyên), nên bản debug
+  KHÔNG đọc danh sách IP bên đó nữa.
+
+  VÌ SAO CHO PHÉP TẤT CẢ Ở ĐÂY
+  Backend chạy local mỗi người một địa chỉ: 10.0.2.2 cho máy ảo Android,
+  còn điện thoại thật thì phải trỏ vào IP LAN của máy dev — mà IP đó khác nhau
+  theo từng người, đổi khi sang Wi-Fi khác, và router cấp lại lúc nào cũng được.
+  Liệt kê từng IP nghĩa là mỗi thành viên phải sửa file này rồi commit đè lên
+  nhau — vừa phiền vừa tạo xung đột vô nghĩa trong git.
+
+  Nới lỏng ở đây an toàn vì nó CHỈ áp cho bản debug. Bản phát hành lên store
+  vẫn bị ràng đúng một host trong src/main/, nên không có đường nào để sự nới
+  lỏng này lọt tới người dùng thật.
+
+  Đổi VPS thì không cần đụng file này — chỉ sửa src/main/.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

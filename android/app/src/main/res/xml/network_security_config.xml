@@ -1,16 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Danh sách host được phép gọi qua HTTP trần, dùng cho BẢN PHÁT HÀNH.
+
+  Android 9 trở lên chặn cleartext theo mặc định. File này không khai
+  <base-config>, nên mọi host KHÔNG có tên dưới đây đều bị chặn thẳng ở tầng
+  hệ điều hành — request chết trước khi ra tới mạng, với lỗi:
+
+      java.io.IOException: Cleartext HTTP traffic to <host> not permitted
+
+  Triệu chứng đó trông hệt như "server chết", nên rất dễ đổ lỗi nhầm chỗ. Đã
+  xảy ra thật: commit 7a90b28 đổi địa chỉ server trong api_config.dart nhưng
+  quên file này, khiến app không gọi được VPS mới trong khi VPS vẫn sống.
+
+  ⚠️ ĐỔI VPS THÌ PHẢI ĐỔI CẢ HAI CHỖ:
+       lib/config/api_config.dart  →  _defaultBaseUrl
+       file này                    →  <domain> bên dưới
+
+  Bản DEBUG không dùng file này: nó bị thay bởi
+  android/app/src/debug/res/xml/network_security_config.xml, nơi cho phép mọi
+  địa chỉ để ai chạy backend local ở IP LAN nào cũng được. Vì vậy đừng thêm
+  IP máy dev vào đây — không cần, và mỗi người một IP thì chỉ tổ xung đột.
+-->
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
-        <!-- Android emulator's alias for the dev machine's localhost -->
-        <domain includeSubdomains="false">10.0.2.2</domain>
-        <!-- Dev machine's LAN IP, for testing on a physical phone over Wi-Fi.
-             Must match the API_BASE_URL host passed at build time — update
-             this whenever `ipconfig` reports a different IP (Wi-Fi change,
-             router re-lease, etc). -->
-        <domain includeSubdomains="false">172.20.10.2</domain>
-        <!-- Cloudfly trial VPS backend — plain HTTP (no domain/SSL set up yet),
-             so cleartext must stay allowed for this exact IP until it's
-             fronted by HTTPS. -->
-        <domain includeSubdomains="false">103.179.172.246</domain>
+        <!-- VPS thật, đang phục vụ HTTP trần vì chưa dựng domain + TLS.
+             Khi có HTTPS thì xoá hẳn khối này đi, đừng để lại "cho chắc":
+             còn ngoại lệ nào là còn chỗ để hạ cấp về HTTP. -->
+        <domain includeSubdomains="false">103.82.21.150</domain>
     </domain-config>
 </network-security-config>
