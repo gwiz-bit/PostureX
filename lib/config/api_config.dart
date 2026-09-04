@@ -35,7 +35,7 @@ class ApiConfig {
 
   /// Server thật. Xem chú thích đầu file về việc phải đổi sang domain HTTPS
   /// trước khi phát hành.
-  static const String _defaultBaseUrl = 'http://103.179.172.246:9000';
+  static const String _defaultBaseUrl = 'http://103.82.21.150:9000';
 
   /// Ghi đè lúc build, vd `--dart-define=API_BASE_URL=http://10.0.2.2:9000`.
   static const String _baseUrlOverride = String.fromEnvironment('API_BASE_URL');
@@ -56,5 +56,5 @@ class ApiConfig {
   /// `GoogleSignIn(serverClientId: ...)` so the ID token it returns has an
   /// `aud` claim the backend's `GOOGLE_CLIENT_ID` (same value) can verify.
   static const String googleWebClientId =
-      '879931217481-eeqak275h11nji6v93j8a9s65rc7pjt3.apps.googleusercontent.com';
+      '526667437213-3njik3mv75t4oo7e6s0dijlfdip06d2v.apps.googleusercontent.com';
 }

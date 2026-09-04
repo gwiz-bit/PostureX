@@ -66,7 +66,7 @@ SMTP_USER=              # Gmail dùng để gửi OTP/reset password
 SMTP_PASSWORD=          # App Password của Gmail đó (không phải mật khẩu đăng nhập thường)
 SMTP_FROM_NAME=Posture X
 
-GOOGLE_CLIENT_ID=879931217481-eeqak275h11nji6v93j8a9s65rc7pjt3.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=526667437213-3njik3mv75t4oo7e6s0dijlfdip06d2v.apps.googleusercontent.com
 ```
 
 > `SMTP_USER`/`SMTP_PASSWORD` chỉ cần đúng nếu bạn muốn test chức năng gửi OTP/quên mật khẩu qua email thật — nếu chỉ test các chức năng khác thì có thể để tạm, backend vẫn chạy được, chỉ có 2 chức năng đó sẽ lỗi khi gọi tới.

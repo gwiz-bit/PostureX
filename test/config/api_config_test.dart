@@ -15,7 +15,7 @@ void main() {
     test('defaults to the real server when no --dart-define is passed', () {
       // Run without --dart-define (the normal case for `flutter test`), so
       // this asserts the compiled-in fallback, not an override.
-      expect(ApiConfig.baseUrl, 'http://103.179.172.246:9000');
+      expect(ApiConfig.baseUrl, 'http://103.82.21.150:9000');
       expect(
         ApiConfig.baseUrl,
         isNot(contains('10.0.2.2')),
