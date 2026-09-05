@@ -525,21 +525,26 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         child: CircularProgressIndicator(color: AppColors.primary),
       );
     }
+    final guide = GuideVideoPlayer(
+      // Re-keyed on the URL so the player rebuilds (and picks up the
+      // network video) once _loadGuideVideo resolves after the
+      // asset fallback has already started playing.
+      key: ValueKey(_guideVideoUrl ?? 'asset'),
+      assetPath: guideVideoAssetFor(widget.exercise),
+      networkUrl: _guideVideoUrl,
+    );
+
+    // Bài chưa có video hướng dẫn thì nhường trọn màn hình cho camera. Giữ
+    // nguyên khung 40% để hiện dòng "chưa có video" là lấy mất gần nửa màn
+    // hình của đúng thứ người dùng cần nhìn khi đang tập — nhất là trên điện
+    // thoại, nơi khung xương và tư thế cần càng to càng tốt.
+    if (!guide.hasVideo) return _buildCameraPanel(controller);
+
     // 40/60 vertical split: guide video on top, camera + live analysis
     // below — flex 2:3 gives the exact 40%/60% ratio.
     return Column(
       children: [
-        Expanded(
-          flex: 2,
-          child: GuideVideoPlayer(
-            // Re-keyed on the URL so the player rebuilds (and picks up the
-            // network video) once _loadGuideVideo resolves after the
-            // asset fallback has already started playing.
-            key: ValueKey(_guideVideoUrl ?? 'asset'),
-            assetPath: guideVideoAssetFor(widget.exercise),
-            networkUrl: _guideVideoUrl,
-          ),
-        ),
+        Expanded(flex: 2, child: guide),
         Expanded(flex: 3, child: _buildCameraPanel(controller)),
       ],
     );

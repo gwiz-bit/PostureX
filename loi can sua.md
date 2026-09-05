@@ -9,7 +9,32 @@ chứng lại. Mục mới nhất ở trên cùng.
 
 Xếp theo thứ tự nên làm. Việc 1 và 2 **không cần VPS**, làm được ngay.
 
-### 1. Sửa fallback video — làm được ngay, ~30 phút
+### 1. ~~Sửa fallback video~~ — ĐÃ SỬA 05/09/2026
+
+`guideVideoAssetFor` nay trả `String?`; hằng số `_defaultGuideVideo` đã xoá.
+`GuideVideoPlayer` nhận `assetPath` nullable, không có nguồn nào thì hiện
+"Bài này chưa có video hướng dẫn." và **không dựng `VideoPlayer`**. Trong phiên
+phân tích trực tiếp, bài không có video thì camera chiếm trọn màn hình thay vì
+để 40% cho một dòng chữ. Thêm 10 test ở
+`test/features/exercises/guide_video_test.dart`.
+
+**Còn phải kiểm bằng mắt trên máy thật** — trỏ app vào VPS (không cần deploy,
+thư viện đã sẵn ở đó):
+
+```powershell
+flutter run --dart-define=API_BASE_URL=http://103.82.21.150:9000
+```
+
+Đúng 5 bài trong 417 bài trên VPS chưa có video — dùng chính chúng để thử:
+
+| Bài | Kỳ vọng |
+|---|---|
+| **Lunge, Plank, Bicep Curl, Push-up** | hiện "chưa có video hướng dẫn" ← trước đây phát nhầm squat |
+| **Squat** | phát video squat đóng gói (đúng bài, không phải fallback) |
+| Bài bất kỳ khác (412 bài) | phát đúng video của bài đó |
+
+<details>
+<summary>Nội dung việc này trước khi sửa (giữ lại để đối chiếu)</summary>
 
 Chi tiết nguyên nhân ở mục 05/09 bên dưới. Tóm tắt việc phải làm:
 
@@ -44,6 +69,8 @@ video squat. Sau khi sửa: hiện dòng chữ báo chưa có video.
 
 ⚠️ Sửa xong app **vẫn chưa hiện đủ video** — 412 video nằm trên VPS, cần việc
 số 3. Bản sửa này chỉ khiến app thôi hiện video SAI.
+
+</details>
 
 ### 2. Xác nhận tab Workout cùng gốc lỗi
 
