@@ -164,25 +164,22 @@ sát được.
 **Chưa kết luận được** vì máy ảo không đáng tin cho ca này — cần thử trên
 điện thoại thật, hoặc chờ VanGiap đăng ký xong OAuth client rồi thử lại.
 
-### 5. Xác nhận bản sửa video trên máy thật với VPS — chưa làm
+### 5. ~~Xác nhận bản sửa video trên máy thật với VPS~~ — ĐÃ XÁC NHẬN 05/09/2026
 
-Bản sửa lỗi "mọi bài tập phát video Squat" đã lên `main` (commit `a7e6a97`),
-đã có 10 test tự động xanh. Chưa kịp bấm qua Exercises/Workout trong lượt thử
-05/09 vì tập trung xác nhận đăng ký/Google trước. Thử theo bảng này:
+Đăng nhập bằng tài khoản thật (`hieptest`, xác thực thẳng qua DB để bỏ qua
+bước chờ OTP), bấm qua tab Exercises trên app trỏ VPS thật:
 
-```powershell
-flutter emulators --launch Pixel_4
-flutter run --dart-define=API_BASE_URL=http://103.82.21.150:9000
-```
+| Bài | Kỳ vọng | Kết quả |
+|---|---|---|
+| **Bicep Curl** (không có video) | "Bài này chưa có video hướng dẫn." | ✅ đúng, kèm icon máy quay gạch chéo |
+| **Squat** (dùng asset đóng gói) | video khung xương squat | ✅ đúng — phát `assets/video/squat.mp4` |
 
-| Bài | Kỳ vọng |
-|---|---|
-| **Bicep Curl, Lunge, Plank, Push-up** | "Bài này chưa có video hướng dẫn." — **không phải** video squat |
-| **Squat** | video squat đóng gói (đúng bài) |
-| Bài bất kỳ khác (412 bài) | video riêng của bài đó |
+Không còn hiện tượng phát nhầm video squat cho bài khác. Chưa thử tab
+**Workout** riêng (hai nơi dùng chung `GuideVideoPlayer` nên khả năng cao đi
+cùng một đường, nhưng chưa xác nhận trực tiếp).
 
-Thử luôn ở tab **Workout**, không chỉ tab **Exercises** — hai nơi dùng chung
-`GuideVideoPlayer` nhưng chưa ai xác nhận tab Workout đi đúng đường code này.
+Tài khoản `hieptest` (`hiepdvfb@gmail.com`) đã xoá khỏi DB thật sau khi xác
+nhận xong — không để lại dữ liệu test trên production.
 
 ### 4. ~~Thử màn admin AI Config trên máy thật~~ — ĐÃ THỬ 05/09/2026
 
