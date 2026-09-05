@@ -117,13 +117,58 @@ thẳng DB qua SSH, khớp đúng giá trị mong đợi cho cả 5 bài
 VanGiap cũng đã ghi lại nguyên nhân + cách fix vào `docs/DEPLOY_SERVER.md`
 (mục 1a) để tra cứu nếu lặp lại.
 
-### 3. Xác nhận bản sửa video trên máy thật với VPS — chưa làm, giờ không còn gì chặn
+### 3. Đăng ký qua giao diện — ĐÃ THỬ 05/09/2026, thành công
+
+Bấm thật bằng `adb` trên app trỏ VPS (`API_BASE_URL=http://103.82.21.150:9000`):
+điền form đăng ký với email thật (`hiepdvfb@gmail.com`) → bấm "Create
+account" → vào thẳng màn "Check your email", không còn báo lỗi "Something
+went wrong". Xác nhận SMTP hoạt động qua đúng đường người dùng thật đi, không
+chỉ qua curl. Tài khoản này còn ở trạng thái **chưa xác thực OTP** — để
+hiephann tự kiểm tra hộp thư và xác thực, hoặc bỏ ngỏ.
+
+**Bẫy khi tự động hoá bằng `adb`:** `input tap` tại tâm hình học của một
+`Row` chứa nhiều `Text` (ví dụ "Don't have an account? Sign up") có thể trật
+— Flutter gộp nhiều đoạn văn bản gần nhau thành một node ngữ nghĩa duy nhất
+cho accessibility, nhưng toạ độ hiển thị không phải lúc nào cũng đoán đúng
+bằng mắt. Cách chắc ăn: `adb shell uiautomator dump` rồi lấy `bounds` chính
+xác từ XML, không đoán theo ảnh chụp màn hình.
+
+### 4. Google Sign-In — ĐÃ THỬ, kết quả không rõ ràng trên máy ảo
+
+Bấm "Continue with Google" trên máy ảo: có phản ứng thật (hệ thống gọi tới
+Google Play Services, xác nhận qua `logcat`), nhưng **không hiện màn chọn tài
+khoản, không có thông báo lỗi nào cả** — quay thẳng lại màn Login trong im
+lặng. Máy ảo **có** sẵn một tài khoản Google (`hphanquang40@gmail.com`, xác
+nhận qua `dumpsys account`), nên không phải do thiếu tài khoản.
+
+Đọc code (`login_screen.dart:116`) thấy lý do có thể xảy ra:
+
+```dart
+final result = await AuthModule.loginWithGoogle()();
+if (result == null) return; // user dismissed the account picker
+```
+
+`result == null` được code coi là "người dùng tự huỷ chọn tài khoản" — không
+set lỗi gì cả, im lặng return. Nếu native Google Sign-In trả `null` vì một lý
+do khác (không phải người dùng chủ động huỷ), người dùng sẽ thấy y hệt những
+gì tôi vừa thấy: bấm nút, không có gì xảy ra, không rõ vì sao.
+
+**Nghi phạm nhiều khả năng nhất:** OAuth Android client cho package
+`com.posturex.app` **chưa được đăng ký** trong Google Cloud Console (mục
+"Việc còn treo" bên dưới) — đây là việc VanGiap chưa làm, không sửa được qua
+SSH. Thiếu client đăng ký đúng package + SHA-1 khiến native sign-in thất bại
+kiểu `DEVELOPER_ERROR`, và tuỳ phiên bản plugin `google_sign_in`, lỗi đó có
+thể bị nuốt thành `null` thay vì ném exception — khớp với triệu chứng quan
+sát được.
+
+**Chưa kết luận được** vì máy ảo không đáng tin cho ca này — cần thử trên
+điện thoại thật, hoặc chờ VanGiap đăng ký xong OAuth client rồi thử lại.
+
+### 5. Xác nhận bản sửa video trên máy thật với VPS — chưa làm
 
 Bản sửa lỗi "mọi bài tập phát video Squat" đã lên `main` (commit `a7e6a97`),
-đã có 10 test tự động xanh. Mục 1 và 2 vốn chặn việc đăng nhập vào app trỏ
-VPS đều đã sửa xong — giờ chỉ còn mỗi việc ngồi bấm.
-
-Thử theo bảng này:
+đã có 10 test tự động xanh. Chưa kịp bấm qua Exercises/Workout trong lượt thử
+05/09 vì tập trung xác nhận đăng ký/Google trước. Thử theo bảng này:
 
 ```powershell
 flutter emulators --launch Pixel_4
