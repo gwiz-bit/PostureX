@@ -195,6 +195,32 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('hàng huy hiệu không tràn màn hình trên bề rộng hẹp', (tester) async {
+      // Phát hiện trên máy thật (Pixel 4, không phải trong `flutter test`):
+      // font thật rộng hơn font thay thế của môi trường test, nên hàng gồm
+      // badge "Đã chỉnh · mặc định 95°" + "Ảnh hưởng đếm rep" + nút "Về mặc
+      // định" tràn ra ngoài 18px — đúng cái bẫy CLAUDE.md đã cảnh báo (font
+      // dự phòng trong test làm chữ hẹp hơn thật, che mất lỗi tràn thật).
+      //
+      // Test mặc định không bắt được vì dùng font thay thế hẹp hơn. Ép chiều
+      // rộng xuống rất hẹp (320, tương đương màn hình nhỏ) để buộc badge dài
+      // nhất phải tràn nếu code quay lại dùng `Row` cứng thay vì `Wrap`.
+      tester.view.physicalSize = const Size(320, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      ApiClient.instance = ApiClient(
+        httpClient: _fakeBackend(tunables: [
+          // Badge dài nhất có thể + cờ đếm rep — tổ hợp đã gây tràn thật.
+          _tunable('knee_depth', 'Độ sâu gối', 95, current: 88, repCount: true),
+        ]),
+      );
+
+      await moManChinh(tester);
+
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('lỗi mạng', () {

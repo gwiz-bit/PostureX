@@ -339,8 +339,13 @@ async def update_posture_rules(
 # gộp nhánh hiepga vì không còn tương thích với hệ subscription mới (models/
 # subscription.py: SubscriptionPlans/UserSubscriptions/Payments + MoMo). Các
 # route dưới đây build lại đúng 3 chức năng đó nhưng trỏ thẳng vào bảng THẬT mà
-# người dùng đang dùng để mua gói — không đụng tới app.models.plan/promo_code/
-# transaction (đã orphan, giữ nguyên không xóa theo quyết định trước).
+# người dùng đang dùng để mua gói.
+#
+# app.models.plan/promo_code/transaction đã bị xoá hẳn (05/09/2026) — 0 dòng
+# code nào đọc chúng, kể cả sau khi rà lại. Bảng `plans`/`promo_codes`/
+# `transactions` vẫn còn trên DB (không tự xoá bảng, chỉ bỏ model quản lý
+# chúng) vì `plans` còn 3 dòng seed cũ và `transactions` còn 1 dòng — coi như
+# rác lịch sử, không phải dữ liệu đang dùng.
 
 @router.get("/plans", response_model=list[AdminPlanOut])
 async def admin_list_plans(

@@ -235,32 +235,40 @@ class _TunableRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          Row(
+          // `Wrap` chứ không phải `Row`: hai huy hiệu cộng lại (badge "Đã
+          // chỉnh · mặc định 95°" + "Ảnh hưởng đếm rep") tràn ra ngoài trên
+          // máy thật — font thật rộng hơn font thay thế trong môi trường
+          // test, nên `flutter test` không bắt được, phải bấm tay mới lộ ra.
+          // `Wrap` tự xuống dòng thay vì tràn, nên không có ngưỡng bề rộng
+          // nào làm hỏng lại được.
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (t.isOverridden)
                 StatusBadge('Đã chỉnh · mặc định ${t.format(t.defaultValue)}', kAmberBg, kAmber)
               else
                 const StatusBadge('Mặc định', kGrayBg, kGrayFg),
-              if (t.affectsRepCount) ...[
-                const SizedBox(width: 6),
-                const StatusBadge('Ảnh hưởng đếm rep', kBlueBg, kBlue),
-              ],
-              const Spacer(),
-              // TextButton chứ không phải GhostButton dùng chung: cái kia đặt
-              // `width: double.infinity` nên nhét vào Row là tràn ngay.
-              if (t.isOverridden)
-                TextButton(
-                  onPressed: () => onChanged(t, reset: true),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    foregroundColor: kBlue,
-                  ),
-                  child: const Text('Về mặc định', style: TextStyle(fontSize: 12)),
-                ),
+              if (t.affectsRepCount) const StatusBadge('Ảnh hưởng đếm rep', kBlueBg, kBlue),
             ],
           ),
+          if (t.isOverridden)
+            Align(
+              alignment: Alignment.centerRight,
+              // TextButton chứ không phải GhostButton dùng chung: cái kia đặt
+              // `width: double.infinity` nên nhét vào hàng ngang là tràn ngay.
+              child: TextButton(
+                onPressed: () => onChanged(t, reset: true),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: kBlue,
+                ),
+                child: const Text('Về mặc định', style: TextStyle(fontSize: 12)),
+              ),
+            ),
           Slider(
             value: t.effective.clamp(t.minimum, t.maximum),
             min: t.minimum,
