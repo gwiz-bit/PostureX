@@ -8,9 +8,30 @@ lịch sử đầy đủ luôn có trong `git log`. Mục mới nhất ở trên
 
 ## ▶ BẮT ĐẦU TỪ ĐÂY (phiên sau)
 
-### 1. SMTP trên VPS bị Gmail từ chối — chặn đăng ký + quên mật khẩu
+### 1. ~~SMTP trên VPS bị Gmail từ chối~~ — ĐÃ SỬA 05/09/2026
 
-**Phát hiện 05/09/2026**, thử app trỏ vào VPS thật (không phải giả định).
+VanGiap sửa lại khoá ứng dụng Gmail trong `.env` trên VPS. Đã xác nhận bằng
+cách gọi thẳng API (không qua app):
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d "{\"username\":\"x\",\"email\":\"x@example.com\",\"password\":\"Xyz123456@\"}" \
+  http://103.82.21.150:9000/api/v1/auth/register
+```
+
+Trước: `535, 5.7.8 Username and Password not accepted`. Sau: tạo tài khoản
+thành công, không còn lỗi SMTP. Tài khoản test đã xoá khỏi DB thật ngay sau
+khi xác nhận.
+
+`GOOGLE_CLIENT_ID` hoá ra **đã đúng từ trước** — đọc `.env` qua SSH thấy đã là
+`526667437213-...`, khớp với app. Nghĩa là lỗi "Could not sign in with
+Google" ban đầu **không phải do config này**; rất có thể chỉ là hệ quả phụ
+của việc backend liên tục trả lỗi 500 lúc SMTP còn hỏng, hoặc một nguyên nhân
+khác chưa xác định — cần thử lại Google Sign-In trên máy thật để biết chắc còn
+lỗi hay không (xem mục 3 bên dưới, gộp chung vào lượt thử đó).
+
+<details>
+<summary>Triệu chứng gốc lúc phát hiện (05/09/2026, trước khi sửa)</summary>
 
 **Ba triệu chứng, cùng một gốc:**
 
@@ -54,69 +75,55 @@ VPS còn giữ `GOOGLE_CLIENT_ID` cũ, app đã đổi sang client mới
 (`526667437213-...`). Backend đối chiếu claim `aud` của token với giá trị
 trong `.env` — lệch là từ chối thẳng.
 
-**Sửa ở đâu:** cả hai đều nằm trong `backend/.env` trên VPS, **cần sudo** —
-xem mục 2 bên dưới về việc quyền chưa xong.
+**Sửa ở đâu:** cả hai đều nằm trong `backend/.env` trên VPS, cần sudo.
 
 ```bash
 sudo nano /opt/posturex/backend/.env
-# sửa GOOGLE_CLIENT_ID = 526667437213-3njik3mv75t4oo7e6s0dijlfdip06d2v.apps.googleusercontent.com
-# kiểm tra lại SMTP_USERNAME / SMTP_PASSWORD — cần khoá ứng dụng Gmail còn hiệu lực
 sudo systemctl restart posturex
 ```
 
-**Kiểm chứng lại sau khi sửa** (không cần app, gọi thẳng API):
+</details>
+
+### 2. ~~Có SSH nhưng chưa deploy được — sudo sai mật khẩu~~ — ĐÃ SỬA 05/09/2026
+
+Nguyên nhân thật (theo VanGiap xác nhận): SSH của `hiephann` vào được **ngay
+từ đầu**, chỉ có bước đặt mật khẩu sudo (`chpasswd`) chưa được chạy nên tài
+khoản còn khoá — mọi lần gõ `sudo` bị từ chối trông giống lỗi đăng nhập nhưng
+thực chất là lỗi xác thực sudo. VanGiap đã `passwd -S` xác nhận trạng thái
+chuyển từ khoá sang `P` (đã đặt mật khẩu), gửi lại `G3BDuyRDORSyr3S7h02G` —
+**chỉ dùng để `sudo`, không dùng để SSH**.
+
+Đã dùng để deploy thành công ngay trong phiên này:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" \
-  -d "{\"username\":\"test\",\"email\":\"<email thật của bạn>\",\"password\":\"Xyz123@\"}" \
-  http://103.82.21.150:9000/api/v1/auth/register
-```
-
-Phải KHÔNG còn dòng "Không gửi được email OTP" — và mã OTP phải tới hộp thư.
-
-### 2. Có SSH nhưng chưa deploy được — sudo sai mật khẩu
-
-**Cập nhật 05/09/2026:** VanGiap đã tạo tài khoản riêng `hiephann` trên VPS
-(không dùng chung root). SSH **đăng nhập được**:
-
-```bash
-ssh hiephann@103.82.21.150   # bí danh cấu hình sẵn: ssh posturex
-```
-
-Nhưng **không deploy được** — mọi lệnh cần thiết đều đòi `sudo`
-(`/opt/posturex` thuộc `root:root`, `hiephann` không ghi được), mà mật khẩu
-sudo `G3BDuyRDORSyr3S7h02G` VanGiap gửi bị từ chối:
-
-```
-$ sudo -S true
-[sudo] password for hiephann: Sorry, try again.
-```
-
-Đã báo lại VanGiap, đang chờ một trong hai:
-
-- Mật khẩu sudo đúng (có thể copy hụt ký tự lúc gửi)
-- Hoặc cấu hình `NOPASSWD` giới hạn đúng 4 lệnh deploy trong
-  `/etc/sudoers.d/hiephann-deploy` (an toàn hơn cho VanGiap vì không cấp toàn
-  quyền root)
-
-**Có sudo rồi thì chạy:**
-
-```bash
-sudo git -C /opt/posturex pull origin main      # 7a90b28 → nhánh main hiện tại
+sudo git -C /opt/posturex pull origin main
 sudo systemctl restart posturex
 cd /opt/posturex/backend && sudo venv/bin/python scripts/seed_posture_rules.py
 ```
 
-Kiểm đã lên chưa: `/api/v1/admin/posture-rules` phải chuyển từ **404 → 403**.
+Xác nhận qua API thật (không phải đọc log):
 
-### 3. Xác nhận bản sửa video trên máy thật — đang bị lỗi 1 chặn đường
+```
+/api/v1/admin/posture-rules   404 → 403   (route mới đã chạy)
+/api/v1/admin/config          403 → 404   (route cũ đã gỡ)
+```
+
+`seed_posture_rules.py` ghi 6/6 dòng thành công (đã có sẵn từ lần chạy trước
+nên hiện "cập nhật" chứ không phải "thêm mới") — xác nhận lại bằng cách đọc
+thẳng DB qua SSH, khớp đúng giá trị mong đợi cho cả 5 bài
+(`Seal Row`, `Machine Hack Squat` ×2 khoá, `Reverse Hack Squat`,
+`Inverted Row`, `Chest Supported Dumbbell Row`).
+
+VanGiap cũng đã ghi lại nguyên nhân + cách fix vào `docs/DEPLOY_SERVER.md`
+(mục 1a) để tra cứu nếu lặp lại.
+
+### 3. Xác nhận bản sửa video trên máy thật với VPS — chưa làm, giờ không còn gì chặn
 
 Bản sửa lỗi "mọi bài tập phát video Squat" đã lên `main` (commit `a7e6a97`),
-đã có 10 test tự động xanh. Nhưng **kiểm bằng mắt trên VPS thật chưa làm
-được** — thử app trỏ vào VPS thì mắc ngay ở màn đăng nhập vì lỗi mục 1
-(không tạo được tài khoản mới, Google Sign-In cũng hỏng).
+đã có 10 test tự động xanh. Mục 1 và 2 vốn chặn việc đăng nhập vào app trỏ
+VPS đều đã sửa xong — giờ chỉ còn mỗi việc ngồi bấm.
 
-Khi mục 1 sửa xong, đăng nhập được rồi thì thử theo bảng này:
+Thử theo bảng này:
 
 ```powershell
 flutter emulators --launch Pixel_4
@@ -167,15 +174,19 @@ vẫn còn trên DB (không tự xoá bảng, chỉ bỏ model quản lý chúng
 
 ## Việc còn treo (không phải lỗi)
 
-- **Chưa chạy `scripts/seed_posture_rules.py`** trên VPS mới — chờ mục 2.
 - **Chưa đăng ký OAuth Android client** cho `com.posturex.app` trong Google
-  Cloud Console — việc riêng của VanGiap, không sửa được qua SSH.
+  Cloud Console — việc riêng của VanGiap, không sửa được qua SSH. Lưu ý:
+  `GOOGLE_CLIENT_ID` trong `.env` đã đúng, nhưng nếu Google Sign-In vẫn lỗi
+  sau khi thử lại (mục 3) thì đây là nghi phạm tiếp theo.
 - **`FrameInitMessage`** (`app/schemas/analysis.py`) là mã chết — khai một lần,
   không ai import; `realtime.py` tự `json.loads` thô.
 
 ---
 
-## Checklist thử màn admin AI Config (cho mục 4)
+## Checklist thử màn admin AI Config
+
+Đã tự thử bằng `adb` ngày 05/09 (xem mục 4 lịch sử) — giữ checklist này để
+người khác thử lại hoặc thử tay:
 
 | Chỗ | Phải thấy |
 |---|---|
@@ -193,21 +204,21 @@ Phải hiện hộp thoại giải thích bộ đếm rep sẽ không hoạt đ�
 gì xuống DB.
 
 ⚠️ DB local chỉ có 6 bài seed nên danh sách ngắn. VPS có 417 bài (106 phân tích
-được) — muốn thấy đủ phải chờ mục 2.
+được) — dùng VPS để thấy đủ (`API_BASE_URL=http://103.82.21.150:9000`).
 
 ---
 
-## Trạng thái lúc ghi (05/09/2026, cập nhật lần 3)
+## Trạng thái lúc ghi (05/09/2026, cập nhật lần 4 — sau khi deploy)
 
 ```
 Flutter   55 test xanh · 0 lỗi analyze
 backend  250 test xanh · ruff sạch
 ```
 
-Đã xong trong lần cập nhật này: sửa lỗi tràn layout màn AI Config (mục 4),
-xoá 3 model mồ côi (mục 5). Còn lại đúng ba việc thật sự vướng, xem mục 1–3
-ở đầu file — cả ba đều cần sudo trên VPS, đang chờ VanGiap.
+**VPS đã deploy code mới nhất** (`bc37619`), service đang chạy, đã seed 6
+ngưỡng cho 5 bài, SMTP đã sửa (đăng ký test thành công, đã dọn tài khoản
+test khỏi DB thật). Xác nhận bằng API thật ở mỗi bước, không chỉ đọc log.
 
-**VPS vẫn chạy code cũ** — `/api/v1/admin/posture-rules` trả 404, route cũ
-`/admin/config` vẫn 403. SSH đã thông (`hiephann@103.82.21.150`) nhưng deploy
-bị chặn ở bước sudo — xem mục 2.
+Việc thật sự còn lại chỉ còn **mục 3** — chưa ai bấm tay xác nhận bản sửa
+video trên app trỏ VPS, và **OAuth Android client** cho VanGiap (mục "Việc
+còn treo"). Không còn gì cần sudo hay quyền đặc biệt nữa.
