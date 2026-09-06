@@ -22,6 +22,7 @@ cổ là sai hoàn toàn.
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
+from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
@@ -238,6 +239,50 @@ _CAT_COW_VARIANTS = [
     "cat-cow",
 ]
 
+_CURL_VARIANTS = [
+    # Gập khuỷu tay hai bên đồng thời (bar/rope/hai tạ cùng lúc) — CurlAnalyzer
+    # lấy avg() hai khuỷu tay giống RowAnalyzer, nên áp dụng đúng quy tắc 1.
+    "curl",
+    "bicep curl",
+    "band curl",
+    "barbell curl",
+    "barbell drag curl",
+    "close grip barbell curl",
+    "reverse grip barbell curl",
+    "wide grip barbell curl",
+    "cable bar curl",
+    "cable rope hammer curl",
+    "dumbbell curl",
+    "dumbbell hammer curl",
+    "dumbbell incline curl",
+    "dumbbell incline hammer curl",
+    "seated dumbbell curl",
+    "ez bar preacher curl",
+    "ez bar reverse preacher curl",
+    "kettlebell curl",
+    "kettlebell goblet curl",  # một tạ, hai tay cùng nắm — đối xứng như goblet squat
+    "spider curl",
+    "zottman curl",
+    # KHÔNG có (khớp SAI hoàn toàn dù tên có chữ "curl"):
+    #   - *Leg Curl* (Band/Dumbbell/Cable Single Leg Laying/Lying/Seated/
+    #     Stability Ball/Towel Slide) + Hamstring Curl + Nordic Hamstring
+    #     Curl — gập GỐI (hamstring), không phải khuỷu tay. Cần analyzer
+    #     khác hẳn (gối), không phải CurlAnalyzer.
+    #   - *Wrist Curl* (Barbell/Cable/Dumbbell) — gập CỔ TAY, khớp khác.
+    #   - *Spinal Jefferson Curl* (Barbell/Bodyweight/Dumbbell/Kettlebell) —
+    #     cúi gập CỘT SỐNG có tải, không liên quan khuỷu tay dù tên trùng.
+    #   - Neck Curl — gập CỔ, khớp khác.
+    # KHÔNG có (một tay / lệch bên — quy tắc 1):
+    #   - Dumbbell Standing Single Arm (Hammer) Curl — tên đã ghi rõ một tay.
+    #   - Dumbbell Concentration Curl — luôn tập một tay theo định nghĩa
+    #     (khuỷu tựa đùi trong).
+    #   - Cross Body Hammer Curl — luân phiên chéo thân, không đồng thời.
+    #   - Bayesian Curl — cable sau lưng, gần như luôn tập một tay.
+    #   - Dumbbell Preacher Curl, Machine Preacher Curl — ghế preacher dạng
+    #     tạ đơn/máy thường tập một tay một lượt, khác Ez Bar Preacher Curl
+    #     (thanh đòn nên bắt buộc hai tay đồng thời).
+]
+
 _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (SquatAnalyzer, _SQUAT_VARIANTS),
     (LungeAnalyzer, _LUNGE_VARIANTS),
@@ -248,6 +293,7 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (HipThrustAnalyzer, _HIP_THRUST_VARIANTS),
     (PlankAnalyzer, _PLANK_VARIANTS),
     (CatCowAnalyzer, _CAT_COW_VARIANTS),
+    (CurlAnalyzer, _CURL_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ

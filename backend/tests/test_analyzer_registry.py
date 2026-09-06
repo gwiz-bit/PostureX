@@ -10,6 +10,7 @@ nhận hướng dẫn sai trong khi app vẫn báo là đang phân tích đúng 
 import pytest
 
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
+from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.registry import ANALYZER_REGISTRY, supports_analysis
@@ -28,6 +29,12 @@ from app.ml.analyzers.squat import SquatAnalyzer
         # Cardio máy chèo, không phải bài kéo tạ.
         "Rowing Machine Steady State",
         "Rowing Sprint",
+        # Chứa "curl" nhưng gập một khớp khác hẳn khuỷu tay.
+        "Lying Leg Curl",  # gối (hamstring)
+        "Nordic Hamstring Curl",  # gối (hamstring)
+        "Barbell Wrist Curl",  # cổ tay
+        "Barbell Spinal Jefferson Curl",  # cột sống, không phải khuỷu tay
+        "Neck Curl",  # cổ
     ],
 )
 def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
@@ -51,6 +58,10 @@ def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
         "Single Arm Dumbbell Overhead Press",
         # DeadliftAnalyzer đọc góc hông hai chân.
         "Single Leg Dumbbell Romanian Deadlift",
+        # CurlAnalyzer lấy avg() hai khuỷu tay giống RowAnalyzer.
+        "Dumbbell Standing Single Arm Curl",
+        "Dumbbell Concentration Curl",  # luôn một tay theo định nghĩa
+        "Bayesian Curl",  # cable sau lưng, gần như luôn một tay
     ],
 )
 def test_bai_mot_ben_bi_loai(exercise: str) -> None:
@@ -86,6 +97,9 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         # gối, lunge lấy min() nên đọc đúng chân trước.
         ("Bulgarian Split Squat", LungeAnalyzer),
         ("Barbell Split Squat", LungeAnalyzer),
+        ("Barbell Curl", CurlAnalyzer),
+        ("Dumbbell Hammer Curl", CurlAnalyzer),
+        ("Ez Bar Preacher Curl", CurlAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

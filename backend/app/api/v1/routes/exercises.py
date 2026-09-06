@@ -24,7 +24,7 @@ async def list_exercises(db: AsyncSession = Depends(get_db)) -> list[ExerciseOut
 
     - `muscle_groups` — để client dựng thanh lọc 16 nhóm cơ và hiện nhãn.
     - `supports_analysis` — bài có analyzer tư thế riêng hay không. Thư viện
-      hơn 400 bài nhưng chỉ 9 analyzer; thiếu cờ này thì client cho người dùng
+      hơn 400 bài nhưng chỉ 10 analyzer; thiếu cờ này thì client cho người dùng
       bấm "Phân tích tư thế" ở bài tập cổ rồi nghe app đọc feedback squat.
     """
     exercises = await exercise_crud.get_active_exercises(db)

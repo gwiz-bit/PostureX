@@ -14,6 +14,7 @@ import pytest
 
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
+from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
@@ -109,6 +110,7 @@ PERFECT_REPS = [
     ("overhead_press", OverheadPressAnalyzer, lambda a: arm_pose(a), 168, 85),
     ("deadlift", DeadliftAnalyzer, lambda a: hinge_pose(a), 175, 100),
     ("hip_thrust", HipThrustAnalyzer, lambda a: hinge_pose(a), 170, 100),
+    ("curl", CurlAnalyzer, lambda a: arm_pose(a), 170, 35),
 ]
 
 
@@ -165,6 +167,22 @@ def test_bench_press_bao_hai_tay_khong_deu() -> None:
 def test_overhead_press_bao_hai_tay_khong_deu() -> None:
     result = OverheadPressAnalyzer().analyze(arm_pose(150.0, right_elbow_angle=100.0))
     assert any("không đều" in e for e in result.errors)
+
+
+def test_curl_bao_hai_tay_khong_deu() -> None:
+    result = CurlAnalyzer().analyze(arm_pose(150.0, right_elbow_angle=100.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_curl_nhac_chua_du_cao_dung_MOT_lan() -> None:
+    """Cùng cơ chế shallow_reversal của Row — nhắc đúng lúc đảo chiều đi
+    xuống, không lặp lại suốt lúc hạ tạ."""
+    analyzer = CurlAnalyzer()
+    warnings = 0
+    for angle in [170, 120, 90, 100, 165, 170]:
+        if any("Chưa curl đủ cao" in e for e in analyzer.analyze(arm_pose(angle)).errors):
+            warnings += 1
+    assert warnings == 1
 
 
 def test_hip_thrust_bao_lech_ben() -> None:

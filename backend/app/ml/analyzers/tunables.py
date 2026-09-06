@@ -146,6 +146,14 @@ TUNABLES: dict[str, list[Tunable]] = {
         Tunable("cow", "Tư thế bò — võng lưng vượt góc này mới tính đạt",
                 165.0, 120.0, 180.0, affects_rep_count=True),
     ],
+    "CurlAnalyzer": [
+        Tunable("elbow_contracted", "Curl hết — khuỷu gập dưới góc này mới tính một rep",
+                50.0, 20.0, 100.0, affects_rep_count=True),
+        Tunable("elbow_extended", "Hạ tạ hết — vượt góc này là đã duỗi tay về vị trí bắt đầu",
+                160.0, 110.0, 180.0, affects_rep_count=True),
+        Tunable("elbow_asymmetry", "Lệch hai tay — chênh quá góc này là curl lệch bên",
+                25.0, 5.0, 60.0),
+    ],
 }
 
 # Cặp ngưỡng buộc phải giữ đúng thứ tự (cận dưới, cận trên).

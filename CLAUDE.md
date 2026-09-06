@@ -64,6 +64,61 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 06/09/2026
+
+**VPS thiếu `libGLESv2.so.2` khiến live-analysis không tracking bài nào cả,
+mọi thiết bị.** Không phải bug code — MediaPipe `PoseLandmarker.create_from_options()`
+cần OpenGL ES nội bộ dù chỉ chạy CPU, VPS mới `103.82.21.150` dựng lại từ đầu
+hôm 04/09 thiếu 2 gói hệ điều hành `libgles2`/`libegl1`. Lỗi xảy ra ngay lúc
+khởi tạo model nên 100% frame WebSocket đều rơi vào nhánh `except Exception`
+chung của `routes/realtime.py`, trả `{"error": "Lỗi hệ thống phía server."}` —
+không khung xương, rep không tăng, mọi bài. REST API (đăng nhập, danh sách bài
+tập...) không đụng pose estimator nên vẫn chạy bình thường, đó là lý do lỗi
+này không lộ ra qua các lượt test trước đó (toàn qua REST). Đã cài 2 gói qua
+`apt-get` và restart service, xác nhận khung xương hiện đúng trên máy thật.
+Xem chi tiết + traceback trong `loi can sua.md`.
+
+**`CurlAnalyzer` — analyzer thứ 10, +20 bài tập** (đợt đầu của kế hoạch 4 giai
+đoạn mở rộng độ phủ analyzer — xem "Còn nợ" bên dưới cho 3 giai đoạn còn lại).
+Cùng cấu trúc góc khuỷu tay với `RowAnalyzer` (rep đếm bằng
+`avg()` hai khuỷu tay: co hết = ngưỡng dưới, duỗi hết = ngưỡng trên), chỉ khác
+không kiểm lưng thẳng vì curl không cúi người.
+
+Rà tay 44 bài có chữ "curl" trong tên, chỉ nhận 20 bài thật sự là gập khuỷu
+tay hai bên đồng thời — loại hẳn:
+- **Sai khớp hoàn toàn dù tên trùng chữ "curl":** Leg Curl (gối/hamstring),
+  Wrist Curl (cổ tay), Spinal Jefferson Curl (cột sống), Neck Curl (cổ) — copy
+  y hệt bẫy `Rowing Machine Steady State` đã ghi trước đó, tên không nói lên
+  cơ chế động tác.
+- **Một tay — vỡ ngưỡng trung bình hai bên** (quy tắc 1 đã áp cho Row/Bench/
+  Overhead Press/Hip Thrust): Dumbbell Standing Single Arm (Hammer) Curl,
+  Dumbbell Concentration Curl (định nghĩa luôn một tay), Bayesian Curl (cable
+  sau lưng, gần như luôn một tay), Cross Body Hammer Curl (luân phiên chéo
+  thân), Dumbbell/Machine Preacher Curl (ghế preacher tạ đơn/máy thường tập
+  một tay, khác Ez Bar Preacher Curl dùng thanh đòn nên bắt buộc hai tay).
+
+Độ phủ registry: 133 khoá tên / 10 analyzer, 126/417 bài (từ 106/417). Cập
+nhật số liệu ở mọi nơi khác nhắc "9 analyzer"/"106 bài" trong docstring code
+và CLAUDE.md — để sót một chỗ thì lần sau đọc lại sẽ tưởng nhầm con số cũ vẫn
+đúng.
+
+⚠️ **Cần deploy lên VPS**: code mới chỉ có ở nhánh `hiep05`/local, VPS còn
+chạy bản cũ (không có `CurlAnalyzer`). `git pull` + `systemctl restart
+posturex` trên server thì 20 bài curl mới hoạt động.
+
+#### Còn nợ sau ngày này
+
+- **Chưa deploy `CurlAnalyzer` lên VPS.**
+- **Chưa xác nhận rep-count tăng đúng số** qua nhiều rep liên tiếp trên điện
+  thoại thật (khung xương đã xác nhận đúng vị trí sau khi sửa `libGLESv2`,
+  nhưng chưa ai squat liên tục 3-5 lần để xem số REPS có nhảy đúng không).
+- **291/417 bài vẫn chưa có analyzer** (giảm từ 311 nhờ 20 bài curl). Kế
+  hoạch còn 3 giai đoạn nữa: Raise+Fly (26 bài, phân tích góc vai — analyzer
+  mới), Calf Raise (8 bài, góc mắt cá — analyzer mới, đơn giản nhất), rồi rà
+  tay tiếp phần Push-up/Pulldown/Extension và 150 bài "hỗn tạp" còn lại. Cố
+  tình KHÔNG làm: Cardio (~22+ bài, không có "góc đúng/sai") và
+  Stretch/Mobility (giữ tư thế tĩnh, khác cơ chế đếm rep theo góc).
+
 ### 04/09/2026
 
 **VPS mới `103.82.21.150`** (`7a90b28`, của VanGiap). VPS Cloudfly cũ
@@ -298,11 +353,11 @@ Phần đáng chú ý nhất là `app/ml/`: `pose_estimator.py` chạy pose land
 
 **Đừng bao giờ gọi thẳng `PoseEstimator.estimate()` từ code async.** `detect()` của MediaPipe là lời gọi CPU 30–60 ms và không nhả điều khiển, nên chạy nó bên trong handler WebSocket sẽ đóng băng *toàn bộ* event loop — đăng nhập và mọi request khác đều xếp hàng sau người đang tập dở. `app/ml/pose_estimator_pool.py` đẩy việc đó sang luồng riêng và giới hạn số lượng chạy cùng lúc. Phải là pool chứ không phải chỉ `asyncio.to_thread`, vì `PoseLandmarker` **không thread-safe**: hai luồng dùng chung một instance là hành vi không xác định. Instance được tạo lười, số lượng lấy theo số CPU và chặn trên ở 4.
 
-`ANALYZER_REGISTRY` nằm ở `app/ml/analyzers/registry.py` (không phải `routes/realtime.py` — `routes/exercises.py` cũng cần nó, mà import module realtime sẽ kéo cả mediapipe vào chỉ để đọc vài cái tên). Nó ánh xạ **112 khoá tên bài tập vào 9 class analyzer**, phủ 106 trong khoảng 417 bài của thư viện. Danh sách được liệt kê từng tên một cách có chủ đích: khớp theo chuỗi con nhìn thì tiện nhưng sai theo kiểu đánh lừa người dùng — "Barbell Upright Row" là bài vai, "Nar-row Pulldown" chỉ tình cờ chứa mấy chữ cái đó, "Rowing Machine Steady State" là bài cardio. Các biến thể cũng bị loại khi analyzer gộp hoặc so sánh hai bên (row một tay không bao giờ chạm ngưỡng co vì cánh tay rảnh kéo giá trị trung bình lên), và split squat được ánh xạ sang `LungeAnalyzer` chứ không phải `SquatAnalyzer` vì lunge lấy `min()` của hai gối trong khi squat lấy trung bình. `tests/test_analyzer_registry.py` khoá lại các quyết định loại trừ đó. Tên không có trong bảng sẽ rơi về `SquatAnalyzer` kèm một cảnh báo trong log, nhưng client nên dùng cờ `supports_analysis` của `GET /exercises` để người dùng không bao giờ rơi vào nhánh dự phòng đó.
+`ANALYZER_REGISTRY` nằm ở `app/ml/analyzers/registry.py` (không phải `routes/realtime.py` — `routes/exercises.py` cũng cần nó, mà import module realtime sẽ kéo cả mediapipe vào chỉ để đọc vài cái tên). Nó ánh xạ **133 khoá tên bài tập vào 10 class analyzer**, phủ 126 trong khoảng 417 bài của thư viện (thêm `CurlAnalyzer` + 20 biến thể curl ngày 06/09/2026 — xem Nhật ký thay đổi). Danh sách được liệt kê từng tên một cách có chủ đích: khớp theo chuỗi con nhìn thì tiện nhưng sai theo kiểu đánh lừa người dùng — "Barbell Upright Row" là bài vai, "Nar-row Pulldown" chỉ tình cờ chứa mấy chữ cái đó, "Rowing Machine Steady State" là bài cardio. Các biến thể cũng bị loại khi analyzer gộp hoặc so sánh hai bên (row một tay không bao giờ chạm ngưỡng co vì cánh tay rảnh kéo giá trị trung bình lên), và split squat được ánh xạ sang `LungeAnalyzer` chứ không phải `SquatAnalyzer` vì lunge lấy `min()` của hai gối trong khi squat lấy trung bình. `tests/test_analyzer_registry.py` khoá lại các quyết định loại trừ đó. Tên không có trong bảng sẽ rơi về `SquatAnalyzer` kèm một cảnh báo trong log, nhưng client nên dùng cờ `supports_analysis` của `GET /exercises` để người dùng không bao giờ rơi vào nhánh dự phòng đó.
 
 Các analyzer là **ngưỡng góc viết tay, không phải model đã huấn luyện** — `squat.py` ghi cứng `KNEE_DEPTH_THRESHOLD = 95.0` và tương tự. Đó là **giá trị mặc định**; từng bài tập ghi đè được qua bảng `ExercisePostureRules` (xem `app/ml/analyzers/thresholds.py`).
 
-**Ngưỡng theo từng bài.** Chỉ có 9 analyzer cho 106 bài nên mọi biến thể cùng họ vốn dùng chung một bộ ngưỡng — `Seal Row` nằm sấp bị chấm bằng đúng ngưỡng lưng của `Barbell Bent Over Row` cúi 45°. Analyzer giữ nguyên phần logic phức tạp (gối vượt mũi chân, lệch hai bên, nhận biết tư thế nằm) và chỉ đọc CON SỐ ngưỡng từ DB. Bài chưa nhập ngưỡng riêng thì dùng mặc định, nên bật cơ chế này lên không đổi hành vi bài nào đang chạy.
+**Ngưỡng theo từng bài.** Chỉ có 10 analyzer cho 126 bài nên mọi biến thể cùng họ vốn dùng chung một bộ ngưỡng — `Seal Row` nằm sấp bị chấm bằng đúng ngưỡng lưng của `Barbell Bent Over Row` cúi 45°. Analyzer giữ nguyên phần logic phức tạp (gối vượt mũi chân, lệch hai bên, nhận biết tư thế nằm) và chỉ đọc CON SỐ ngưỡng từ DB. Bài chưa nhập ngưỡng riêng thì dùng mặc định, nên bật cơ chế này lên không đổi hành vi bài nào đang chạy.
 
 Ba điều cần nhớ khi nhập ngưỡng: `RuleName` là **khoá máy** (`back_straight_min`, `knee_depth`…), không phải mô tả — tên khác sẽ bị bỏ qua trong im lặng, trong đó có 4 dòng seed sẵn của schema đặt tên tiếng Việt. Mỗi khoá lấy giá trị từ **cột cố định** (`MinAngle` cho cận dưới, `MaxAngle` cho cận trên) — nhầm cột thì ngưỡng đảo chiều mà không có lỗi nào báo. Và `RepCounter` có **biên dung sai 10°** quanh đáy cho trường hợp FPS thấp, nên hai ngưỡng cách nhau dưới 10° sẽ cho cùng kết quả. Dùng `scripts/seed_posture_rules.py` (có `--dry-run`, chạy lại an toàn) để nhập.
 
@@ -349,7 +404,7 @@ Asset duy nhất được đóng gói là `assets/video/` (hiện có `squat.mp4
 
 `tests/pose_builders.py` dựng bộ 33 keypoint giả đặt đúng vị trí hình học, nên kiểm được toàn bộ logic phân tích mà không cần camera hay MediaPipe — cách còn lại là nhờ người đứng trước camera tập thử, vừa chậm vừa không tái hiện được. Đã xác minh bộ dựng chính xác: yêu cầu góc 95° thì đo lại đúng 95,0°.
 
-`tests/test_analyzers.py` phủ cả 9 analyzer, `tests/test_posture_thresholds.py` phủ cơ chế ngưỡng theo từng bài. Chạy analyzer qua một dãy góc mô phỏng nhịp tập thật (14 frame mỗi chiều ≈ một rep 2,5 giây ở 12 fps) rồi so với kỳ vọng.
+`tests/test_analyzers.py` phủ cả 10 analyzer, `tests/test_posture_thresholds.py` phủ cơ chế ngưỡng theo từng bài. Chạy analyzer qua một dãy góc mô phỏng nhịp tập thật (14 frame mỗi chiều ≈ một rep 2,5 giây ở 12 fps) rồi so với kỳ vọng.
 
 Ba lỗi từng lọt qua vì **không lỗi nào nhìn thấy được khi chạy app** — số rep vẫn nhảy, vẫn có lời nhắc, mọi thứ trông như đang hoạt động. Viết test cho phần này nghĩa là bơm chuỗi góc đã biết trước vào và so kết quả, không phải mở app ra nhìn.
 

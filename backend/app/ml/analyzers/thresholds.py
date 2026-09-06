@@ -2,7 +2,7 @@
 
 BÀI TOÁN
 --------
-Chỉ có 9 analyzer cho 106 bài tập, nên mọi biến thể cùng họ đang bị chấm bằng
+Chỉ có 10 analyzer cho 126 bài tập, nên mọi biến thể cùng họ đang bị chấm bằng
 đúng một bộ ngưỡng. Có những chỗ sai rõ ràng: `Seal Row` nằm sấp trên ghế
 nhưng dùng chung ngưỡng "lưng thẳng ≥100°" với `Barbell Bent Over Row` cúi
 45°; `Machine Hack Squat` tựa thân vào đệm nhưng dùng chung ngưỡng lưng ≥150°
