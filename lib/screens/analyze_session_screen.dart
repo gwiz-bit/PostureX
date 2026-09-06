@@ -41,9 +41,16 @@ const _ttsRepeatThreshold = 3;
 
 /// Full-screen camera capture that streams frames to the backend's
 /// `/api/v1/ws/analyze` WebSocket and renders live rep-count/phase/error
-/// feedback. Only "squat" is registered on the backend today — every entry
-/// point in [WorkoutScreen] launches this with exercise: 'squat', labelled
-/// honestly on screen rather than pretending other exercises are analyzed.
+/// feedback for [exercise].
+///
+/// The backend maps ~106 exercise names to 9 analyzer classes
+/// (`ANALYZER_REGISTRY` in `app/ml/analyzers/registry.py`) — every entry
+/// point here (`WorkoutScreen`, `ExerciseDetailScreen`, `HomeScreen`) passes
+/// through the specific exercise's own identifier, not a hardcoded value.
+/// Exercises sharing an analyzer family (e.g. 21 different squat variants
+/// all use `SquatAnalyzer`) do get genuinely identical feedback unless that
+/// exercise has its own row in `ExercisePostureRules` — that's a threshold
+/// coverage gap (see `CLAUDE.md`), not a routing bug.
 class AnalyzeSessionScreen extends StatefulWidget {
   const AnalyzeSessionScreen({
     super.key,
