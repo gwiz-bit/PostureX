@@ -13,7 +13,7 @@ from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.registry import ANALYZER_REGISTRY
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.thresholds import load_thresholds
-from app.ml.pose_estimator_pool import PoseEstimatorPool
+from app.ml.pose_estimator_pool import get_pose_estimator_pool
 from app.ml.session_state import SessionState
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 
@@ -21,11 +21,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["realtime"])
 
-# Pool dùng chung cho toàn ứng dụng. KHÔNG gọi thẳng `PoseEstimator.estimate`
-# ở đây: đó là tác vụ CPU 30-60 ms, chạy trong hàm async là chặn cả event loop
-# nên mọi request khác của server phải chờ theo. Pool đẩy việc sang luồng
-# riêng và giới hạn số phiên chạy song song — xem app/ml/pose_estimator_pool.py.
-_pose_estimator_pool = PoseEstimatorPool(model_complexity=1)
+# Pool dùng chung cho toàn ứng dụng — cả với job phân tích video chạy nền
+# (xem `get_pose_estimator_pool` trong pose_estimator_pool.py). KHÔNG gọi
+# thẳng `PoseEstimator.estimate` ở đây: đó là tác vụ CPU 30-60 ms, chạy trong
+# hàm async là chặn cả event loop nên mọi request khác của server phải chờ
+# theo. Pool đẩy việc sang luồng riêng và giới hạn số phiên chạy song song.
+_pose_estimator_pool = get_pose_estimator_pool()
 
 # `ANALYZER_REGISTRY` nay đã chuyển sang app/ml/analyzers/registry.py —
 # routes/exercises.py cũng cần biết danh sách này để trả cờ `supports_analysis`,

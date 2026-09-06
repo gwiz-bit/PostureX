@@ -132,3 +132,20 @@ class PoseEstimatorPool:
                 break
             await asyncio.to_thread(estimator.close)
             self._created -= 1
+
+
+# Singleton dùng chung toàn app — cả `routes/realtime.py` (WebSocket) lẫn
+# `services/video_analysis_service.py` (phân tích video đã upload) đều gọi
+# `get_pose_estimator_pool()` thay vì tự dựng pool riêng. Hai pool riêng biệt
+# sẽ tranh CPU độc lập nhau, phá vỡ đúng mục đích giới hạn N instance ở trên —
+# một pool chung mới xếp hàng công bằng giữa live session và job phân tích
+# video chạy nền.
+_singleton: PoseEstimatorPool | None = None
+
+
+def get_pose_estimator_pool() -> PoseEstimatorPool:
+    """Trả về pool dùng chung, dựng lười ở lần gọi đầu tiên."""
+    global _singleton
+    if _singleton is None:
+        _singleton = PoseEstimatorPool(model_complexity=1)
+    return _singleton

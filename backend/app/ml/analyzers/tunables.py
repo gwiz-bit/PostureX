@@ -22,8 +22,9 @@ thay đổi hành vi phân tích:
 - `squat_rep_up_threshold` — handler không bao giờ đọc tới. Giá trị thật là
   `stand_up_min`, ghi cứng 155.0 trong `squat.py`.
 - `pose_min_detection_confidence` và `pose_model_complexity` — pool ước lượng
-  tư thế được dựng ở cấp module (`realtime.py`: `PoseEstimatorPool(...)`) ngay
-  lúc import, nên giá trị admin nhập không có đường nào tới nó. Riêng
+  tư thế là một singleton dùng chung (`get_pose_estimator_pool()`), dựng lười
+  ở lần gọi đầu (từ lúc import `routes/realtime.py`), nên giá trị admin nhập
+  không có đường nào tới nó. Riêng
   `model_complexity` còn vô nghĩa ở tầng thấp hơn: MediaPipe Tasks API chọn độ
   phức tạp theo FILE model, tham số chỉ còn giữ cho tương thích.
 

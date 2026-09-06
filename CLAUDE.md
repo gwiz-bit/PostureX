@@ -66,6 +66,41 @@ mới nhất ở trên cùng.
 
 ### 06/09/2026
 
+**Video upload nay được phân tích thật** — lấp một trong hai lỗ hổng lớn nhất
+đã ghi từ 01/09 (lỗ hổng còn lại — `WorkoutSessions`/`SessionExercises`/
+`SessionReps`/`RealtimeFeedback` chưa nối — vẫn còn nguyên). `app/services/video_analysis_service.py`
+mới, chạy sau `POST /videos/upload` qua `BackgroundTasks` (không chặn
+response). Tái dùng nguyên hạ tầng phân tích real-time (`ANALYZER_REGISTRY`,
+`load_thresholds`, `SessionState`) thay vì viết lại — khác đúng một chỗ: đọc
+frame từ file (`cv2.VideoCapture`, lấy mẫu ~10fps, trần 400 frame/video bất
+kể video dài bao lâu) thay vì luồng JPEG real-time, và chạy tuần tự hết video
+một lần thay vì theo từng frame.
+
+**Cố tình KHÁC `routes/realtime.py` ở một điểm quan trọng:** bài không có
+trong `ANALYZER_REGISTRY` thì KHÔNG rơi về `SquatAnalyzer`. Nhánh WebSocket
+fallback squat vì client đã lọc trước bằng `supports_analysis` (không bao
+giờ thực sự rơi vào nhánh đó) — nhưng nút "Upload a video instead" hiện cho
+**MỌI bài**, kể cả bài không hỗ trợ phân tích (đây chính là ảnh chụp màn
+hình dẫn tới việc này: "Abdominals Stretch Variation Three", một bài giãn
+cơ). Rơi về squat mặc định ở đây sẽ đọc feedback squat cho một bài duỗi cơ —
+sai hoàn toàn, không phải trường hợp hiếm như ở WebSocket.
+
+Tách riêng `get_pose_estimator_pool()` singleton trong `pose_estimator_pool.py`
+(trước đó pool là biến module riêng trong `realtime.py`) — để job phân tích
+video dùng CHUNG pool với WebSocket thay vì tự dựng pool thứ hai tranh CPU
+độc lập trên máy 2 vCPU.
+
+Thêm `tests/test_video_analysis.py` (12 test): hàm thuần lấy mẫu frame +
+dựng câu tóm tắt test trực tiếp; phần phân tích chuỗi keypoint dùng tư thế
+dựng sẵn (không cần MediaPipe); phần tích hợp ghi/đọc DB monkeypatch
+`AsyncSessionLocal` trỏ về SQLite của test — cùng cách `test_realtime_ws.py`
+giả pose estimation. 323 test xanh, ruff sạch.
+
+⚠️ **Chưa test bằng video thật, một video quay bằng điện thoại thật.** Toàn
+bộ xác nhận trên đều bằng test tự động (monkeypatch), giống tình trạng "chưa
+thử trên người thật" của các analyzer mới ngày hôm nay. Cũng chưa deploy lên
+VPS.
+
 **`PulldownAnalyzer` — rà nốt Pulldown/Pull-up, +13 bài** (analyzer thứ 16).
 Suýt dùng chung `RowAnalyzer` cho gọn, nhưng rà kỹ thì lộ rủi ro thật: ngồi
 kéo xà (pulldown) gập chân ra trước chứ không đứng cúi người như row, nên góc
@@ -242,6 +277,10 @@ chưa đo trên người thật.
 
 #### Còn nợ sau ngày này
 
+- **Chưa deploy phân tích video upload lên VPS**, và chưa ai thử upload một
+  video quay bằng điện thoại thật để xem `analysis_summary` trả về có hợp lý
+  không — toàn bộ mới xác nhận bằng test tự động (monkeypatch DB + giả
+  `_read_sampled_frames`/`_estimate_all`, không chạm cv2/MediaPipe thật).
 - **Chưa xác nhận rep-count tăng đúng số** qua nhiều rep liên tiếp trên điện
   thoại thật (khung xương đã xác nhận đúng vị trí sau khi sửa `libGLESv2`,
   nhưng chưa ai squat liên tục 3-5 lần để xem số REPS có nhảy đúng không).
@@ -502,7 +541,9 @@ Ba điều cần nhớ khi nhập ngưỡng: `RuleName` là **khoá máy** (`bac
 
 `PostureErrorTypes` thì vẫn **chưa có code nào đọc** — câu nhắc bằng giọng nói tiếng Việt trong đó chưa được dùng.
 
-Rộng hơn, `sql/postureX123_schema.sql` thiết kế 25 bảng (DB thật có 35 nếu tính cả view và phần thêm về sau) mà phần lớn vẫn chưa nối vào code. `MuscleGroups`/`ExerciseMuscleGroups` thì *đã* nối — `app/models/muscle_group.py` là nền cho bộ lọc 16 nhóm cơ ở tab Exercises. Nhóm chưa dùng gồm `WorkoutSessions` / `SessionExercises` / `SessionReps` / `RealtimeFeedback` — tức toàn bộ lịch sử theo từng rep, từng lỗi mà WebSocket đang tính rồi vứt đi, chỉ giữ lại bản tóm tắt do client gửi ngược lên qua `POST /workouts`. Video người dùng tải lên cũng vậy: có lưu nhưng không bao giờ được phân tích (`analysis_summary`, `total_reps`, `accuracy_score` trên bảng `videos` không bao giờ được ghi). Đừng mặc định rằng bảng tồn tại nghĩa là tính năng chạy.
+Rộng hơn, `sql/postureX123_schema.sql` thiết kế 25 bảng (DB thật có 35 nếu tính cả view và phần thêm về sau) mà phần lớn vẫn chưa nối vào code. `MuscleGroups`/`ExerciseMuscleGroups` thì *đã* nối — `app/models/muscle_group.py` là nền cho bộ lọc 16 nhóm cơ ở tab Exercises. Nhóm chưa dùng gồm `WorkoutSessions` / `SessionExercises` / `SessionReps` / `RealtimeFeedback` — tức toàn bộ lịch sử theo từng rep, từng lỗi mà WebSocket đang tính rồi vứt đi, chỉ giữ lại bản tóm tắt do client gửi ngược lên qua `POST /workouts`. Đừng mặc định rằng bảng tồn tại nghĩa là tính năng chạy.
+
+**Video người dùng tải lên có được phân tích** (từ 06/09/2026, xem CHANGELOG) — trước đó chỉ lưu file, `analysis_summary`/`total_reps`/`accuracy_score` trên bảng `videos` không bao giờ được ghi. `app/services/video_analysis_service.py` chạy NGẦM qua `BackgroundTasks` ngay sau `POST /videos/upload` (response trả về trước, không bắt client chờ), tái dùng nguyên `ANALYZER_REGISTRY`/`load_thresholds`/`SessionState` mà `routes/realtime.py` dùng cho WebSocket — chỉ khác nguồn frame là `cv2.VideoCapture` đọc file thay vì luồng JPEG theo thời gian thực, và chạy tuần tự hết video một lần thay vì theo từng frame trực tiếp. Bài không có trong `ANALYZER_REGISTRY` thì KHÔNG rơi về `SquatAnalyzer` như nhánh WebSocket — client offer nút upload cho MỌI bài kể cả bài không hỗ trợ phân tích (khác nút "Phân tích tư thế" trực tiếp, chỉ hiện khi `supports_analysis`), rơi vào squat mặc định sẽ đọc feedback sai hoàn toàn cho một bài duỗi cơ hay bài cổ. `get_pose_estimator_pool()` (`app/ml/pose_estimator_pool.py`) là pool DÙNG CHUNG giữa WebSocket và job phân tích video — video không tự dựng pool riêng, tránh tranh CPU độc lập với người đang tập live trên cùng server.
 
 ### Rate limit và CORS
 
