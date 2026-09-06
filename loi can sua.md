@@ -8,6 +8,50 @@ lịch sử đầy đủ luôn có trong `git log`. Mục mới nhất ở trên
 
 ## ▶ BẮT ĐẦU TỪ ĐÂY (phiên sau)
 
+### 0. ~~Live-analysis không tracking bài nào cả, mọi thiết bị~~ — ĐÃ SỬA 06/09/2026
+
+Đúng như báo cáo ban đầu của thread ("real time không có tracking theo bài"),
+nhưng lần đầu tiên xác nhận được **lỗi thật, không phải hiểu nhầm**: cả
+hiephann (emulator) lẫn thành viên nhóm (điện thoại Android thật) đều mở
+Squat/Row live-analysis và thấy **hoàn toàn không có khung xương**, rep đứng
+yên ở 0, kèm dòng chữ cam "Lỗi hệ thống phía server." — xảy ra ở MỌI bài, MỌI
+thiết bị, không riêng camera trước như hai lỗi mirror/rotation đã sửa trước
+đó (`b3fcf77`, `02c8dfe` — hai lỗi đó vẫn đúng và cần thiết, chỉ là không phải
+nguyên nhân chính của lần báo lỗi này).
+
+Đọc thẳng log server (`/var/log/posturex-backend.log`, tìm dòng `logger.exception`
+trong `routes/realtime.py:198-201`) ra traceback thật:
+
+```
+Lỗi WebSocket không mong đợi: libGLESv2.so.2: cannot open shared object file: No such file or directory
+  ... pose_estimator.py:65, in __init__
+  ... mp_vision.PoseLandmarker.create_from_options(options)
+```
+
+MediaPipe không khởi tạo được `PoseLandmarker` vì VPS thiếu thư viện hệ thống
+OpenGL ES (`libGL.so.1` có sẵn nhưng `libGLESv2`/`libEGL` thì không) — VPS
+mới `103.82.21.150` dựng lại từ đầu hôm 04/09 không có 2 gói này, khác VPS
+Cloudfly cũ. Lỗi xảy ra ngay lúc tạo model (constructor), nên **100% frame**
+gửi lên đều rơi vào nhánh `except Exception` chung, không riêng frame nào.
+Route REST khác (đăng nhập, danh sách bài tập...) không đụng tới pose
+estimator nên vẫn chạy bình thường — đó là lý do cả buổi debug trước không
+phát hiện ra, vì mọi test qua REST API đều pass.
+
+**Đã sửa:**
+
+```bash
+sudo apt-get install -y libgles2 libegl1
+sudo systemctl restart posturex
+```
+
+Xác nhận trực tiếp trên máy thật (ảnh chụp Squat, camera trước): khung xương
+(đường xanh nối vai/tay) hiện đúng, badge "TOP" đổi theo pha động tác. Chưa
+xác nhận rep-counting tăng đúng số qua nhiều rep liên tiếp (mới thử vài giây,
+0 REPS lúc chụp) — cần thử thêm.
+
+Đã ghi lại vào `CLAUDE.md` (mục Triển khai) để lần dựng VPS sau không thiếu
+lại 2 gói này.
+
 ### 0. ~~hiephann không đăng nhập được, quên mật khẩu không nhận mã~~ — KHÔNG PHẢI LỖI, 06/09/2026
 
 Không đăng nhập được (`hiepdvfb@gmail.com`) và forgot-password không gửi mã —
