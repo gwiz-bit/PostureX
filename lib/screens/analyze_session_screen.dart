@@ -65,6 +65,26 @@ class AnalyzeSessionScreen extends StatefulWidget {
   State<AnalyzeSessionScreen> createState() => _AnalyzeSessionScreenState();
 }
 
+/// How many degrees to rotate a raw sensor frame so it comes out upright,
+/// for a device held in natural (locked) portrait orientation.
+///
+/// The naive answer is "just use `sensorOrientation`" — true for the BACK
+/// camera, but wrong for the FRONT one. A phone's front sensor is mounted
+/// mirrored relative to the back sensor (so the two produce consistent
+/// handedness once each is corrected for its own mounting), which means the
+/// correction angle for the front camera is the complement of its
+/// `sensorOrientation`, not the value itself. Typical real numbers:
+/// `sensorOrientation` is 90° on the back camera and 270° on the front of
+/// most Android phones — using 270° directly (as this code did before) spins
+/// the image the wrong way, on top of the separate left/right mirroring
+/// `SkeletonPainter.mirror` handles. Two bugs living in the same symptom:
+/// "no skeleton visible on the front camera" was actually rotation AND
+/// mirroring both wrong at once.
+int rotationDegreesFor(CameraDescription camera) =>
+    camera.lensDirection == CameraLensDirection.front
+        ? (360 - camera.sensorOrientation) % 360
+        : camera.sensorOrientation;
+
 class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     with WidgetsBindingObserver, AppLocaleMixin {
   final _socket = AnalyzeSocketService();
@@ -155,7 +175,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         (c) => c.lensDirection == _lensDirection,
         orElse: () => cameras.first,
       );
-      _rotationDegrees = camera.sensorOrientation;
+      _rotationDegrees = rotationDegreesFor(camera);
 
       final controller = CameraController(
         camera,
@@ -251,7 +271,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       setState(() {
         _controller = controller;
         _lensDirection = newDirection;
-        _rotationDegrees = targetCamera.sensorOrientation;
+        _rotationDegrees = rotationDegreesFor(targetCamera);
         _isFlipping = false;
       });
       if (wasStreaming) {
