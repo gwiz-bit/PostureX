@@ -32,6 +32,7 @@ from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.plank import PlankAnalyzer
+from app.ml.analyzers.pulldown import PulldownAnalyzer
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
@@ -384,6 +385,32 @@ _CALF_RAISE_VARIANTS = [
     # giai đoạn sau): Horizontal Leg Press Calf Press.
 ]
 
+_PULLDOWN_VARIANTS = [
+    # Kéo dọc hai tay đồng thời (tạ xuống hoặc thân người lên) —
+    # PulldownAnalyzer lấy avg() hai khuỷu tay, cùng rủi ro một tay.
+    "band kneeling pulldown",
+    "band seated pulldown",
+    "lat pulldown",
+    "machine pulldown",
+    "neutral grip lat pulldown",
+    "wide grip lat pulldown",
+    "chin ups",
+    "pull ups",
+    "neutral grip pull up",
+    "wide grip pull up",
+    "weighted pull ups",
+    "band assisted pull up",
+    "machine assisted pull up",
+    # KHÔNG có (một tay — quy tắc 1): Single Arm Lat Pulldown.
+    # KHÔNG có (khác khớp chính dù tên gần giống): Straight Arm Lat Pulldown
+    # — khuỷu tay gần như khoá thẳng suốt động tác (chuyển động ở VAI, không
+    # phải khuỷu tay), góc khuỷu tay gần như không đổi nên không đếm được
+    # rep nào; Narrow Pulldown — "Nar-row" chỉ trùng chuỗi ký tự, không phải
+    # bài row (đã loại từ registry gốc).
+    # KHÔNG có (giữ tĩnh, không phải rep lặp lại): Dead Hang.
+    # KHÔNG có (kết hợp thêm gập bụng/nâng chân, hai pha khác hẳn): Toes To Bar.
+]
+
 _LEG_EXTENSION_VARIANTS = [
     # Duỗi gối ngồi máy, hai chân đồng thời — LegExtensionAnalyzer lấy avg()
     # hai gối, cùng rủi ro một chân như mọi analyzer khác (quy tắc 1). Chưa
@@ -424,6 +451,7 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (CalfRaiseAnalyzer, _CALF_RAISE_VARIANTS),
     (LegExtensionAnalyzer, _LEG_EXTENSION_VARIANTS),
     (TricepExtensionAnalyzer, _TRICEP_EXTENSION_VARIANTS),
+    (PulldownAnalyzer, _PULLDOWN_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ

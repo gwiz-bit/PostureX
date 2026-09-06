@@ -18,6 +18,7 @@ from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
+from app.ml.analyzers.pulldown import PulldownAnalyzer
 from app.ml.analyzers.registry import ANALYZER_REGISTRY, supports_analysis
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
@@ -44,6 +45,9 @@ from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
         # Chứa "raise" nhưng gập mu bàn chân (dorsiflexion) — ngược hẳn calf
         # raise (gập lòng bàn chân).
         "Tibialis Raise",
+        # Chứa "pulldown" nhưng khuỷu tay gần như khoá thẳng suốt động tác —
+        # chuyển động ở vai, không phải khuỷu tay.
+        "Straight Arm Lat Pulldown",
     ],
 )
 def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
@@ -84,6 +88,8 @@ def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
         # TricepExtensionAnalyzer cũng vậy.
         "Single Arm Overhead Cable Extension",
         "Single Arm Tricep Extension",
+        # PulldownAnalyzer cũng vậy.
+        "Single Arm Lat Pulldown",
     ],
 )
 def test_bai_mot_ben_bi_loai(exercise: str) -> None:
@@ -133,6 +139,8 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Reverse Pec Deck", LateralRaiseAnalyzer),
         ("Machine Leg Extension", LegExtensionAnalyzer),
         ("Cable Bar Pushdown", TricepExtensionAnalyzer),
+        ("Lat Pulldown", PulldownAnalyzer),
+        ("Pull Ups", PulldownAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

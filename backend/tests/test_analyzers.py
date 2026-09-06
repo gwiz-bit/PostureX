@@ -24,6 +24,7 @@ from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.plank import PlankAnalyzer
+from app.ml.analyzers.pulldown import PulldownAnalyzer
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
@@ -129,6 +130,7 @@ PERFECT_REPS = [
     ("calf_raise", CalfRaiseAnalyzer, lambda a: calf_raise_pose(a), 138, 80),
     ("leg_extension", LegExtensionAnalyzer, lambda a: squat_pose(a), 173, 75),
     ("tricep_extension", TricepExtensionAnalyzer, lambda a: arm_pose(a), 168, 85),
+    ("pulldown", PulldownAnalyzer, lambda a: arm_pose(a), 165, 55),
 ]
 
 
@@ -311,6 +313,27 @@ def test_leg_extension_bao_lech_ben() -> None:
 def test_tricep_extension_bao_lech_ben() -> None:
     result = TricepExtensionAnalyzer().analyze(arm_pose(150.0, right_elbow_angle=100.0))
     assert any("không đều" in e for e in result.errors)
+
+
+def test_pulldown_bao_hai_tay_khong_deu() -> None:
+    result = PulldownAnalyzer().analyze(arm_pose(150.0, right_elbow_angle=100.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_pulldown_khong_bao_lung_cong() -> None:
+    """Cố tình không kiểm lưng — khác RowAnalyzer, xem docstring pulldown.py.
+    Tư thế "lưng cong" theo tiêu chuẩn Row (80°) vẫn không được báo ở đây."""
+    result = PulldownAnalyzer().analyze(arm_pose(120.0, back_angle=80.0))
+    assert not any("lưng" in e.lower() for e in result.errors)
+
+
+def test_pulldown_nhac_chua_keo_het_dung_MOT_lan() -> None:
+    analyzer = PulldownAnalyzer()
+    warnings = 0
+    for angle in [165, 120, 90, 100, 165, 165]:
+        if any("Chưa kéo hết" in e for e in analyzer.analyze(arm_pose(angle)).errors):
+            warnings += 1
+    assert warnings == 1
 
 
 def test_deadlift_bao_goi_vuot_mui_chan() -> None:

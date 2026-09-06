@@ -6,7 +6,7 @@ hai nguồn đã lệch nhau (DB ghi lưng thẳng ≥160°, `squat.py` dùng 15
 
 VÌ SAO CẦN NGƯỠNG THEO TỪNG BÀI
 --------------------------------
-Chỉ có 15 analyzer cho 184 bài tập, nên mọi bài cùng họ đang dùng chung một bộ
+Chỉ có 16 analyzer cho 197 bài tập, nên mọi bài cùng họ đang dùng chung một bộ
 ngưỡng. Với nhiều biến thể thì ngưỡng chung sai rõ ràng:
 
 - `Seal Row` nằm sấp trên ghế, nhưng bị chấm bằng cùng ngưỡng "lưng thẳng
