@@ -14,11 +14,14 @@ from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
+from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
+from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.registry import ANALYZER_REGISTRY, supports_analysis
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
+from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
 
 
 @pytest.mark.parametrize(
@@ -75,6 +78,12 @@ def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
         # CalfRaiseAnalyzer cũng lấy avg() hai mắt cá.
         "Dumbbell Single Leg Calf Raise",
         "Single Leg Standing Calf Raise",
+        # BenchPressAnalyzer cũng vậy (push-up/dip/chest press một tay).
+        "Dumbbell Single Arm Chest Press",
+        "Cable Standing Single Arm Chest Press",
+        # TricepExtensionAnalyzer cũng vậy.
+        "Single Arm Overhead Cable Extension",
+        "Single Arm Tricep Extension",
     ],
 )
 def test_bai_mot_ben_bi_loai(exercise: str) -> None:
@@ -117,6 +126,13 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Dumbbell Rear Delt Fly", LateralRaiseAnalyzer),
         ("Dumbbell Chest Fly", ChestFlyAnalyzer),
         ("Kettlebell Calf Raise", CalfRaiseAnalyzer),
+        ("Push Up", BenchPressAnalyzer),
+        ("Bench Dips", BenchPressAnalyzer),
+        ("Glute Bridge", HipThrustAnalyzer),
+        ("Good Mornings", DeadliftAnalyzer),
+        ("Reverse Pec Deck", LateralRaiseAnalyzer),
+        ("Machine Leg Extension", LegExtensionAnalyzer),
+        ("Cable Bar Pushdown", TricepExtensionAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

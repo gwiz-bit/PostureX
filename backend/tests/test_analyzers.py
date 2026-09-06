@@ -20,11 +20,13 @@ from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
+from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.plank import PlankAnalyzer
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
+from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
 from app.ml.rep_counter import RepCounter
 from app.ml.session_state import SessionState
 from tests.pose_builders import (
@@ -125,6 +127,8 @@ PERFECT_REPS = [
     ("lateral_raise", LateralRaiseAnalyzer, lambda a: shoulder_raise_pose(a), 15, 85),
     ("chest_fly", ChestFlyAnalyzer, lambda a: shoulder_raise_pose(a), 90, 25),
     ("calf_raise", CalfRaiseAnalyzer, lambda a: calf_raise_pose(a), 138, 80),
+    ("leg_extension", LegExtensionAnalyzer, lambda a: squat_pose(a), 173, 75),
+    ("tricep_extension", TricepExtensionAnalyzer, lambda a: arm_pose(a), 168, 85),
 ]
 
 
@@ -245,6 +249,8 @@ def test_hip_thrust_bao_lech_ben() -> None:
         (HipThrustAnalyzer, hinge_pose, "Chưa đẩy hông lên hết", 100.0, 150.0),
         (OverheadPressAnalyzer, arm_pose, "Chưa khoá tay", 85.0, 140.0),
         (CalfRaiseAnalyzer, calf_raise_pose, "Chưa nhón gót đủ cao", 80.0, 115.0),
+        (LegExtensionAnalyzer, squat_pose, "Chưa duỗi thẳng chân hết cỡ", 75.0, 150.0),
+        (TricepExtensionAnalyzer, arm_pose, "Chưa duỗi thẳng tay hoàn toàn", 85.0, 140.0),
     ],
 )
 def test_bao_chua_duoi_het_o_dinh(cls, build, message, bottom, half_top) -> None:
@@ -280,6 +286,8 @@ def test_bao_chua_duoi_het_o_dinh(cls, build, message, bottom, half_top) -> None
         (HipThrustAnalyzer, hinge_pose, 170, 100),
         (OverheadPressAnalyzer, arm_pose, 168, 85),
         (CalfRaiseAnalyzer, calf_raise_pose, 138, 80),
+        (LegExtensionAnalyzer, squat_pose, 173, 75),
+        (TricepExtensionAnalyzer, arm_pose, 168, 85),
     ],
 )
 def test_duoi_het_o_dinh_thi_khong_nhac(cls, build, top, bottom) -> None:
@@ -292,6 +300,16 @@ def test_duoi_het_o_dinh_thi_khong_nhac(cls, build, top, bottom) -> None:
 
 def test_calf_raise_bao_lech_ben() -> None:
     result = CalfRaiseAnalyzer().analyze(calf_raise_pose(140.0, right_ankle_angle=100.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_leg_extension_bao_lech_ben() -> None:
+    result = LegExtensionAnalyzer().analyze(squat_pose(170.0, right_knee_angle=120.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_tricep_extension_bao_lech_ben() -> None:
+    result = TricepExtensionAnalyzer().analyze(arm_pose(150.0, right_elbow_angle=100.0))
     assert any("không đều" in e for e in result.errors)
 
 

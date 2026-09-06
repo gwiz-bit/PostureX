@@ -28,11 +28,13 @@ from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
+from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.plank import PlankAnalyzer
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
+from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
 
 # ─────────────────────────────────────────────────────────────────────────
 # Vì sao phải liệt kê từng biến thể thay vì khớp theo chuỗi con
@@ -143,9 +145,16 @@ _DEADLIFT_VARIANTS = [
     "barbell stiff leg deadlifts",
     "smith machine sumo romanian deadlift",
     "hip hinge speed romanian deadlift",
+    "good mornings",  # gập-duỗi hông có tải trên vai, cùng trục góc với RDL.
     # KHÔNG có: mọi biến thể một chân (Single Leg / Single Legged / Kickstand)
     # — thân và chân sau tạo thành đường thẳng, góc hông đọc ra khác hẳn; và
     # Dumbbell Cross Body RDL (có xoay thân).
+    # KHÔNG có (chưa đủ tự tin, để rà lại sau): Barbell Rack Pull (ROM một
+    # phần — bắt đầu đã nửa đứng thẳng, không bao giờ chạm đủ sâu theo ngưỡng
+    # mặc định của deadlift toàn biên độ), Reverse Hyperextension (nằm sấp
+    # trên máy, chân đưa lên — hình học khác hẳn kiểu đứng cúi người),
+    # Romanian Deadlift Hamstring Sweeps (nghi là bài giãn cơ/nhịp độ, không
+    # rõ có phải bài đếm rep chuẩn không).
 ]
 
 _ROW_VARIANTS = [
@@ -202,6 +211,32 @@ _BENCH_PRESS_VARIANTS = [
     "smith machine bench press",
     "smith machine close grip bench press",
     "smith machine incline bench press",
+    "barbell floor press",
+    "floor press",
+    "cable chest press",
+    "decline machine chest press",
+    "incline machine chest press",
+    "machine chest press",
+    "jm press",  # biến thể lai giữa close-grip bench press và skullcrusher,
+                 # nhưng vẫn là gập-duỗi khuỷu tay hai bên trên ghế.
+    # Push-up: cùng cơ chế góc khuỷu tay (vai-khuỷu-cổ tay) với bench press —
+    # xem docstring bench_press.py "không phụ thuộc tư thế nằm hay đứng", nên
+    # nằm sấp chống đẩy dưới sàn đọc đúng y hệt nằm ngửa đẩy tạ trên ghế.
+    "push up",
+    "push-up",
+    "incline push up",
+    "decline push up",
+    "diamond push ups",
+    "bodyweight elevated push up",
+    "bodyweight knee push ups",
+    # Dip: cùng lý do — khuỷu tay gập ở đáy, duỗi thẳng ở đỉnh, chỉ khác
+    # hướng thân (tay ra sau thay vì ra trước) mà công thức góc không quan
+    # tâm hướng.
+    "bench dips",
+    "machine dips",
+    "parralel bar dips",
+    # KHÔNG có (một tay): Dumbbell Single Arm Chest Press, Cable Standing
+    # Single Arm Chest Press.
 ]
 
 _OVERHEAD_PRESS_VARIANTS = [
@@ -223,8 +258,15 @@ _HIP_THRUST_VARIANTS = [
     "kettlebell hip thrust",
     "machine hip thrust",
     "dumbbell heels elevated hip thrust",
-    # KHÔNG có: Single Leg / B Stance / Figure Four — ngưỡng lệch hai hông 15°
-    # sẽ báo lỗi ở mọi rep (quy tắc 1).
+    # Glute bridge: cùng cơ chế góc hông với hip thrust — về bản chất là hip
+    # thrust không kê vai lên ghế, chỉ khác biên độ.
+    "glute bridge",
+    "band glute bridge",
+    "dumbbell feet elevated glute bridge",
+    "frog pump",  # glute bridge hai bàn chân chụm, gối mở rộng — vẫn cùng
+                  # trục góc hông.
+    # KHÔNG có: Single Leg / B Stance / Figure Four / Single Leg Glute
+    # Bridge — ngưỡng lệch hai hông 15° sẽ báo lỗi ở mọi rep (quy tắc 1).
 ]
 
 _PLANK_VARIANTS = [
@@ -300,6 +342,8 @@ _LATERAL_RAISE_VARIANTS = [
     "kettlebell front raise",
     "machine lateral raise",
     "plate front raise",
+    "reverse pec deck",  # máy ép ngực dùng ngược — thực chất là rear delt
+                          # fly trên máy, không phải bài ngực dù tên có "pec".
     # KHÔNG có (một tay — quy tắc 1): Band Single Arm Lateral Raise, Cable
     # Low Single Arm Lateral Raise, Leaning Cable Lateral Raise (đứng
     # nghiêng người, luôn tập một tay để đủ biên độ), Single Arm Cable Fly.
@@ -340,6 +384,30 @@ _CALF_RAISE_VARIANTS = [
     # giai đoạn sau): Horizontal Leg Press Calf Press.
 ]
 
+_LEG_EXTENSION_VARIANTS = [
+    # Duỗi gối ngồi máy, hai chân đồng thời — LegExtensionAnalyzer lấy avg()
+    # hai gối, cùng rủi ro một chân như mọi analyzer khác (quy tắc 1). Chưa
+    # thấy biến thể "Single Leg Extension" nào trong thư viện hiện tại.
+    "machine leg extension",
+    "machine plate loaded leg extension",
+]
+
+_TRICEP_EXTENSION_VARIANTS = [
+    # Duỗi khuỷu tay hai bên đồng thời (đẩy xuống/ra sau đầu) —
+    # TricepExtensionAnalyzer lấy avg() hai khuỷu tay, cùng rủi ro một tay.
+    "cable rope overhead tricep extension",
+    "dumbbell seated overhead tricep extension",
+    "machine tricep extension",
+    "cable bar pushdown",
+    "machine cable v bar push downs",
+    "reverse grip tricep pushdown",
+    "dumbbell skullcrusher",
+    "dumbbell decline skullcrusher",
+    "tate press",
+    # KHÔNG có (một tay — quy tắc 1): Single Arm Overhead Cable Extension,
+    # Single Arm Tricep Extension.
+]
+
 _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (SquatAnalyzer, _SQUAT_VARIANTS),
     (LungeAnalyzer, _LUNGE_VARIANTS),
@@ -354,6 +422,8 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (LateralRaiseAnalyzer, _LATERAL_RAISE_VARIANTS),
     (ChestFlyAnalyzer, _CHEST_FLY_VARIANTS),
     (CalfRaiseAnalyzer, _CALF_RAISE_VARIANTS),
+    (LegExtensionAnalyzer, _LEG_EXTENSION_VARIANTS),
+    (TricepExtensionAnalyzer, _TRICEP_EXTENSION_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ

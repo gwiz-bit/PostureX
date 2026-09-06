@@ -67,27 +67,31 @@ def squat_pose(
     knee_angle: float,
     back_angle: float = 175.0,
     *,
+    right_knee_angle: float | None = None,
     knee_past_toe: bool = False,
     visibility: float = 1.0,
 ) -> list[Keypoint]:
     """Tư thế squat/lunge nhìn nghiêng, hai chân đặt đối xứng.
 
     `knee_angle` là góc hông-gối-cổ chân (180° = đứng thẳng, càng nhỏ càng
-    sâu). `back_angle` là góc vai-hông-gối (180° = lưng thẳng đứng).
+    sâu). `back_angle` là góc vai-hông-gối (180° = lưng thẳng đứng). Truyền
+    `right_knee_angle` khác đi để kiểm cảnh báo lệch hai bên (vd
+    `LegExtensionAnalyzer`) — mặc định `None` nghĩa là hai gối bằng nhau.
 
     Mũi chân đặt ở hai phía ngược nhau cho trái và phải, vì analyzer kiểm gối
     vượt mũi chân theo hai chiều đối xứng (`left_knee.x > left_foot.x` nhưng
     `right_knee.x < right_foot.x`) — người quay mặt vào camera.
     """
     pose = blank_pose(visibility)
+    right_angle = knee_angle if right_knee_angle is None else right_knee_angle
 
-    for hip_i, knee_i, ankle_i, foot_i, heel_i, shoulder_i, side_x, outward in (
-        (LEFT_HIP, LEFT_KNEE, LEFT_ANKLE, LEFT_FOOT_INDEX, LEFT_HEEL, LEFT_SHOULDER, 0.45, +1),
-        (RIGHT_HIP, RIGHT_KNEE, RIGHT_ANKLE, RIGHT_FOOT_INDEX, RIGHT_HEEL, RIGHT_SHOULDER, 0.55, -1),
+    for hip_i, knee_i, ankle_i, foot_i, heel_i, shoulder_i, side_x, outward, angle in (
+        (LEFT_HIP, LEFT_KNEE, LEFT_ANKLE, LEFT_FOOT_INDEX, LEFT_HEEL, LEFT_SHOULDER, 0.45, +1, knee_angle),
+        (RIGHT_HIP, RIGHT_KNEE, RIGHT_ANKLE, RIGHT_FOOT_INDEX, RIGHT_HEEL, RIGHT_SHOULDER, 0.55, -1, right_angle),
     ):
         hip = kp(side_x, 0.45, visibility=visibility)
         knee = kp(side_x, 0.65, visibility=visibility)
-        ankle = place_at_angle(hip, knee, knee_angle, length=0.18)
+        ankle = place_at_angle(hip, knee, angle, length=0.18)
         ankle = kp(ankle.x, ankle.y, visibility=visibility)
         shoulder = place_at_angle(knee, hip, back_angle, length=0.25)
         shoulder = kp(shoulder.x, shoulder.y, visibility=visibility)
