@@ -22,9 +22,11 @@ cổ là sai hoàn toàn.
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
+from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
+from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.plank import PlankAnalyzer
@@ -283,6 +285,38 @@ _CURL_VARIANTS = [
     #     (thanh đòn nên bắt buộc hai tay đồng thời).
 ]
 
+_LATERAL_RAISE_VARIANTS = [
+    # Nâng tay dạng vai hai bên đồng thời — LateralRaiseAnalyzer lấy avg()
+    # góc hông-vai-khuỷu tay, cùng rủi ro một tay như curl/row (quy tắc 1).
+    "band lateral raise",
+    "cable front raise",
+    "dumbbell front raise",
+    "dumbbell incline front raise",
+    "dumbbell lateral raise",
+    "dumbbell laying reverse fly",   # Rear Delt Fly: cùng chiều lateral raise
+    "dumbbell rear delt fly",        # (khép->mở), KHÔNG cùng chiều chest fly.
+    "dumbbell seated rear delt fly",
+    "kettlebell front raise",
+    "machine lateral raise",
+    "plate front raise",
+    # KHÔNG có (một tay — quy tắc 1): Band Single Arm Lateral Raise, Cable
+    # Low Single Arm Lateral Raise, Leaning Cable Lateral Raise (đứng
+    # nghiêng người, luôn tập một tay để đủ biên độ), Single Arm Cable Fly.
+]
+
+_CHEST_FLY_VARIANTS = [
+    # Khép tay hai bên đồng thời trước ngực — chiều rep NGƯỢC lateral raise
+    # (xem docstring chest_fly.py), không được gộp chung danh sách trên.
+    "cable bench chest fly",
+    "cable high to low fly",
+    "cable low to high fly",
+    "cable pec fly",
+    "dumbbell chest fly",
+    "dumbbell decline chest fly",
+    "dumbbell incline chest fly",
+    "machine pec fly",
+]
+
 _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (SquatAnalyzer, _SQUAT_VARIANTS),
     (LungeAnalyzer, _LUNGE_VARIANTS),
@@ -294,6 +328,8 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (PlankAnalyzer, _PLANK_VARIANTS),
     (CatCowAnalyzer, _CAT_COW_VARIANTS),
     (CurlAnalyzer, _CURL_VARIANTS),
+    (LateralRaiseAnalyzer, _LATERAL_RAISE_VARIANTS),
+    (ChestFlyAnalyzer, _CHEST_FLY_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ

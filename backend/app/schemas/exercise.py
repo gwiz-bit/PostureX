@@ -26,7 +26,7 @@ class ExerciseOut(BaseModel):
     muscle_groups: list[str] = []
 
     # Bài tập có analyzer tư thế riêng hay không. Thư viện có hơn 400 bài
-    # nhưng chỉ 10 analyzer; nếu client cho bấm "Phân tích tư thế" ở bài không
+    # nhưng chỉ 12 analyzer; nếu client cho bấm "Phân tích tư thế" ở bài không
     # hỗ trợ thì backend fallback sang SquatAnalyzer và đọc to feedback squat
     # cho một bài tập cổ hay bắp chân. Cờ này để client ẩn nút đó đi.
     supports_analysis: bool = False

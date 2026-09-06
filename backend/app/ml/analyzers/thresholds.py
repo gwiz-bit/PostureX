@@ -2,7 +2,7 @@
 
 BÀI TOÁN
 --------
-Chỉ có 10 analyzer cho 126 bài tập, nên mọi biến thể cùng họ đang bị chấm bằng
+Chỉ có 12 analyzer cho 145 bài tập, nên mọi biến thể cùng họ đang bị chấm bằng
 đúng một bộ ngưỡng. Có những chỗ sai rõ ràng: `Seal Row` nằm sấp trên ghế
 nhưng dùng chung ngưỡng "lưng thẳng ≥100°" với `Barbell Bent Over Row` cúi
 45°; `Machine Hack Squat` tựa thân vào đệm nhưng dùng chung ngưỡng lưng ≥150°
@@ -76,6 +76,15 @@ VALUE_COLUMN: dict[str, str] = {
     # Cat-Cow
     "cat": "max_angle",
     "cow": "min_angle",
+    # Lateral raise / front raise / rear delt fly
+    "shoulder_rest": "max_angle",
+    "shoulder_raised": "min_angle",
+    # Chest fly / pec fly — chiều ngược lateral raise, khoá khác nhưng cùng
+    # cột (đỉnh rep vẫn là max_angle, nghỉ vẫn là min_angle).
+    "shoulder_contracted": "max_angle",
+    "shoulder_extended": "min_angle",
+    # Chung cho cả hai (lệch hai tay quá mức này).
+    "shoulder_asymmetry": "max_angle",
 }
 
 

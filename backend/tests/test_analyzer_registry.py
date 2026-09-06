@@ -10,8 +10,10 @@ nhận hướng dẫn sai trong khi app vẫn báo là đang phân tích đúng 
 import pytest
 
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
+from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
+from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.registry import ANALYZER_REGISTRY, supports_analysis
 from app.ml.analyzers.row import RowAnalyzer
@@ -62,6 +64,10 @@ def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
         "Dumbbell Standing Single Arm Curl",
         "Dumbbell Concentration Curl",  # luôn một tay theo định nghĩa
         "Bayesian Curl",  # cable sau lưng, gần như luôn một tay
+        # LateralRaiseAnalyzer/ChestFlyAnalyzer cũng lấy avg() hai vai.
+        "Band Single Arm Lateral Raise",
+        "Leaning Cable Lateral Raise",  # đứng nghiêng người, luôn một tay
+        "Single Arm Cable Fly",
     ],
 )
 def test_bai_mot_ben_bi_loai(exercise: str) -> None:
@@ -100,6 +106,9 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Barbell Curl", CurlAnalyzer),
         ("Dumbbell Hammer Curl", CurlAnalyzer),
         ("Ez Bar Preacher Curl", CurlAnalyzer),
+        ("Dumbbell Lateral Raise", LateralRaiseAnalyzer),
+        ("Dumbbell Rear Delt Fly", LateralRaiseAnalyzer),
+        ("Dumbbell Chest Fly", ChestFlyAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

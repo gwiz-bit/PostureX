@@ -14,9 +14,11 @@ import pytest
 
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
+from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
+from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.plank import PlankAnalyzer
@@ -24,7 +26,7 @@ from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.rep_counter import RepCounter
 from app.ml.session_state import SessionState
-from tests.pose_builders import arm_pose, hinge_pose, plank_pose, spine_pose, squat_pose
+from tests.pose_builders import arm_pose, hinge_pose, plank_pose, shoulder_raise_pose, spine_pose, squat_pose
 
 # 14 frame mỗi chiều ≈ một rep 2,5 giây ở 12 fps — đúng nhịp tập thường gặp,
 # và cũng chính là vùng tốc độ mà lỗi đếm gấp đôi từng xảy ra.
@@ -111,6 +113,8 @@ PERFECT_REPS = [
     ("deadlift", DeadliftAnalyzer, lambda a: hinge_pose(a), 175, 100),
     ("hip_thrust", HipThrustAnalyzer, lambda a: hinge_pose(a), 170, 100),
     ("curl", CurlAnalyzer, lambda a: arm_pose(a), 170, 35),
+    ("lateral_raise", LateralRaiseAnalyzer, lambda a: shoulder_raise_pose(a), 15, 85),
+    ("chest_fly", ChestFlyAnalyzer, lambda a: shoulder_raise_pose(a), 90, 25),
 ]
 
 
@@ -181,6 +185,39 @@ def test_curl_nhac_chua_du_cao_dung_MOT_lan() -> None:
     warnings = 0
     for angle in [170, 120, 90, 100, 165, 170]:
         if any("Chưa curl đủ cao" in e for e in analyzer.analyze(arm_pose(angle)).errors):
+            warnings += 1
+    assert warnings == 1
+
+
+def test_lateral_raise_bao_hai_tay_khong_deu() -> None:
+    result = LateralRaiseAnalyzer().analyze(shoulder_raise_pose(70.0, right_shoulder_angle=20.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_lateral_raise_nhac_chua_du_cao_dung_MOT_lan() -> None:
+    """Góc thô (không phải góc bù nội bộ): nghỉ = nhỏ, nâng = lớn — ngược
+    chiều mọi analyzer khác trong file, xem chú thích BẪY GÓC trong
+    lateral_raise.py. Dãy góc mô phỏng nâng lên nửa chừng (50°, chưa đạt
+    ngưỡng 80°) rồi hạ xuống lại."""
+    analyzer = LateralRaiseAnalyzer()
+    warnings = 0
+    for angle in [15, 45, 65, 50, 20, 15]:
+        if any("Chưa nâng tay đủ cao" in e for e in analyzer.analyze(shoulder_raise_pose(angle)).errors):
+            warnings += 1
+    assert warnings == 1
+
+
+def test_chest_fly_bao_hai_tay_khong_deu() -> None:
+    result = ChestFlyAnalyzer().analyze(shoulder_raise_pose(70.0, right_shoulder_angle=20.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_chest_fly_nhac_chua_khep_du_dung_MOT_lan() -> None:
+    """Cùng cơ chế shallow_reversal của curl/row: khép nửa chừng rồi mở lại."""
+    analyzer = ChestFlyAnalyzer()
+    warnings = 0
+    for angle in [90, 60, 45, 55, 90, 90]:
+        if any("Chưa khép tay đủ" in e for e in analyzer.analyze(shoulder_raise_pose(angle)).errors):
             warnings += 1
     assert warnings == 1
 

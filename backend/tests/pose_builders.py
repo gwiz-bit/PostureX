@@ -182,6 +182,38 @@ def arm_pose(
     return pose
 
 
+def shoulder_raise_pose(
+    shoulder_angle: float,
+    *,
+    right_shoulder_angle: float | None = None,
+    visibility: float = 1.0,
+) -> list[Keypoint]:
+    """Tư thế nâng tay dạng vai: góc hông-vai-khuỷu tay, đỉnh tại vai.
+
+    Dùng chung cho `LateralRaiseAnalyzer` (Lateral/Front Raise, Rear Delt Fly)
+    và `ChestFlyAnalyzer` (Chest/Pec Fly) — cả hai đọc cùng một góc, chỉ khác
+    chiều ngưỡng rep. `shoulder_angle` nhỏ = tay xuôi theo thân/khép lại, lớn
+    = tay nâng ngang vai/mở rộng.
+    """
+    pose = blank_pose(visibility)
+    right_angle = shoulder_angle if right_shoulder_angle is None else right_shoulder_angle
+
+    for hip_i, shoulder_i, elbow_i, side_x, angle in (
+        (LEFT_HIP, LEFT_SHOULDER, LEFT_ELBOW, 0.45, shoulder_angle),
+        (RIGHT_HIP, RIGHT_SHOULDER, RIGHT_ELBOW, 0.55, right_angle),
+    ):
+        hip = kp(side_x, 0.6, visibility=visibility)
+        shoulder = kp(side_x, 0.35, visibility=visibility)
+        elbow = place_at_angle(hip, shoulder, angle, length=0.2)
+        elbow = kp(elbow.x, elbow.y, visibility=visibility)
+
+        pose[hip_i] = hip
+        pose[shoulder_i] = shoulder
+        pose[elbow_i] = elbow
+
+    return pose
+
+
 def plank_pose(
     body_angle: float,
     *,

@@ -16,6 +16,8 @@ class KeyAngles(BaseModel):
     right_hip: float | None = None
     left_elbow: float | None = None
     right_elbow: float | None = None
+    left_shoulder: float | None = None
+    right_shoulder: float | None = None
     back_angle: float | None = None
 
 

@@ -14,8 +14,8 @@ class ExerciseAnalyzer(ABC):
     analyze() nhận 33 keypoints, cập nhật RepCounter, trả FrameAnalysisResult.
 
     `thresholds` là các ngưỡng ghi đè riêng cho một bài tập cụ thể, đọc từ
-    bảng `ExercisePostureRules` (xem `analyzers/thresholds.py`). Chỉ có 10
-    analyzer cho hơn 100 bài, nên nếu không có cơ chế này thì `Seal Row` nằm
+    bảng `ExercisePostureRules` (xem `analyzers/thresholds.py`). Chỉ có 12
+    analyzer cho hơn 140 bài, nên nếu không có cơ chế này thì `Seal Row` nằm
     sấp sẽ bị chấm bằng đúng ngưỡng lưng của `Barbell Bent Over Row` cúi 45°.
 
     Truyền `None` hoặc thiếu khoá thì analyzer dùng hằng số mặc định của nó —
