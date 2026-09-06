@@ -8,6 +8,27 @@ lịch sử đầy đủ luôn có trong `git log`. Mục mới nhất ở trên
 
 ## ▶ BẮT ĐẦU TỪ ĐÂY (phiên sau)
 
+### 0. ~~hiephann không đăng nhập được, quên mật khẩu không nhận mã~~ — KHÔNG PHẢI LỖI, 06/09/2026
+
+Không đăng nhập được (`hiepdvfb@gmail.com`) và forgot-password không gửi mã —
+tưởng là bug SMTP tái phát, nhưng đọc thẳng DB qua SSH (`SELECT ... FROM
+Users`) thấy VPS chỉ còn 3 tài khoản, không có `hiepdvfb@gmail.com`.
+
+Nguyên nhân: đúng tài khoản này (`hieptest`) đã được tạo ở mục 3 bên dưới rồi
+**bị xoá chủ động** ở mục 5 sau khi xác nhận xong tính năng video (đúng chủ
+đích "không để dữ liệu test trên production") — không phải mất dữ liệu do
+chuyển VPS, và không có ai báo lại cho hiephann biết để đăng ký lại. Forgot
+password im lặng không gửi mã đúng như thiết kế chống dò email (mục 1) — email
+không tồn tại thì không gửi gì, vẫn báo thành công.
+
+**Bài học:** xoá tài khoản test dùng chung (không phải tài khoản riêng của
+người tạo) thì nên báo lại trong file này, không chỉ ghi "đã xoá" — người khác
+tưởng nhầm là bug mới, mất cả buổi để loại trừ SMTP/DB/VPS trước khi nghĩ tới
+khả năng tài khoản bị xoá.
+
+Xử lý: đăng ký lại `hiepdvfb@gmail.com` qua giao diện — OTP tới bình thường,
+xác nhận SMTP vẫn hoạt động tốt.
+
 ### 1. ~~SMTP trên VPS bị Gmail từ chối~~ — ĐÃ SỬA 05/09/2026
 
 VanGiap sửa lại khoá ứng dụng Gmail trong `.env` trên VPS. Đã xác nhận bằng
