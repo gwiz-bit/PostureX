@@ -135,21 +135,41 @@ qua `ExercisePostureRules`/`scripts/seed_posture_rules.py` sau khi có người
 test thật, đặc biệt `LateralRaiseAnalyzer` vì công thức góc bù khó kiểm bằng
 mắt hơn các analyzer còn lại.
 
-⚠️ **Chưa deploy Giai đoạn 2 lên VPS** — chỉ mới ở `hiep05`/local lúc ghi mục
-này, chưa merge + `git pull` + `systemctl restart posturex`.
+Đã merge `hiep05` → `main` (fast-forward, sau khi phát hiện lỡ commit thẳng
+vào `main` rồi phải đồng bộ ngược lại `hiep05`) và deploy lên VPS ngay trong
+ngày — 19 bài raise/fly hoạt động thật trên server.
+
+**`CalfRaiseAnalyzer` — Giai đoạn 3, +5 bài tập** (nhón gót — analyzer thứ
+13). Rà tay 9 bài calf/ankle, chỉ nhận 5 bài đối xứng hai chân (Bodyweight
+Donkey Calf Raise, Kettlebell/Smith Machine/Standing Calf Raise Machine,
+Seated Calf Raise). Loại 2 bài một chân (Dumbbell Single Leg / Single Leg
+Standing Calf Raise — quy tắc 1), `Tibialis Raise` (tên gần giống nhưng là
+**gập mu bàn chân — ngược chiều hẳn** calf raise, cùng bẫy tên với Leg
+Curl/Wrist Curl ở Giai đoạn 1), và `Horizontal Leg Press Calf Press` (máy
+chuyên dụng, không đủ tự tin về góc camera, để rà lại ở Giai đoạn 4).
+
+Khớp chính là mắt cá (góc gối-mắt cá-mũi chân) — nghỉ (bàn chân áp sàn) vốn
+đã là góc lớn hơn `down_threshold`, khớp đúng giả định `Phase.TOP` mặc định
+của `RepCounter` nên **không dính bẫy góc bù** như `LateralRaiseAnalyzer` ở
+Giai đoạn 2 (đã tránh được nhờ nhận diện trước, không phải phát hiện lại).
+
+Độ phủ registry: 157 khoá tên / 13 analyzer, 150/417 bài. Cập nhật số liệu
+"12 analyzer"/"145 bài" ở CLAUDE.md và docstring code.
+
+⚠️ Cùng cảnh báo với Giai đoạn 1-2: ngưỡng góc là ước lượng hình học, chưa đo
+trên người thật.
 
 #### Còn nợ sau ngày này
 
-- **Chưa deploy Giai đoạn 2 (`LateralRaiseAnalyzer`/`ChestFlyAnalyzer`) lên VPS.**
 - **Chưa xác nhận rep-count tăng đúng số** qua nhiều rep liên tiếp trên điện
   thoại thật (khung xương đã xác nhận đúng vị trí sau khi sửa `libGLESv2`,
   nhưng chưa ai squat liên tục 3-5 lần để xem số REPS có nhảy đúng không).
-- **272/417 bài vẫn chưa có analyzer** (giảm từ 311 đầu ngày, qua 2 giai
-  đoạn: +20 curl, +19 raise/fly). Kế hoạch còn 2 giai đoạn nữa: Calf Raise
-  (8 bài, góc mắt cá — analyzer mới, đơn giản nhất), rồi rà tay tiếp phần
-  Push-up/Pulldown/Extension và ~150 bài "hỗn tạp" còn lại. Cố tình KHÔNG
-  làm: Cardio (~22+ bài, không có "góc đúng/sai") và Stretch/Mobility (giữ
-  tư thế tĩnh, khác cơ chế đếm rep theo góc).
+- **267/417 bài vẫn chưa có analyzer** (giảm từ 311 đầu ngày, qua 3 giai
+  đoạn: +20 curl, +19 raise/fly, +5 calf raise). Còn lại Giai đoạn 4: rà tay
+  Push-up/Pulldown/Extension, `Horizontal Leg Press Calf Press`, và ~150 bài
+  "hỗn tạp" chưa phân loại. Cố tình KHÔNG làm: Cardio (~22+ bài, không có
+  "góc đúng/sai") và Stretch/Mobility (giữ tư thế tĩnh, khác cơ chế đếm rep
+  theo góc).
 
 ### 04/09/2026
 
@@ -385,11 +405,11 @@ Phần đáng chú ý nhất là `app/ml/`: `pose_estimator.py` chạy pose land
 
 **Đừng bao giờ gọi thẳng `PoseEstimator.estimate()` từ code async.** `detect()` của MediaPipe là lời gọi CPU 30–60 ms và không nhả điều khiển, nên chạy nó bên trong handler WebSocket sẽ đóng băng *toàn bộ* event loop — đăng nhập và mọi request khác đều xếp hàng sau người đang tập dở. `app/ml/pose_estimator_pool.py` đẩy việc đó sang luồng riêng và giới hạn số lượng chạy cùng lúc. Phải là pool chứ không phải chỉ `asyncio.to_thread`, vì `PoseLandmarker` **không thread-safe**: hai luồng dùng chung một instance là hành vi không xác định. Instance được tạo lười, số lượng lấy theo số CPU và chặn trên ở 4.
 
-`ANALYZER_REGISTRY` nằm ở `app/ml/analyzers/registry.py` (không phải `routes/realtime.py` — `routes/exercises.py` cũng cần nó, mà import module realtime sẽ kéo cả mediapipe vào chỉ để đọc vài cái tên). Nó ánh xạ **152 khoá tên bài tập vào 12 class analyzer**, phủ 145 trong khoảng 417 bài của thư viện (thêm `CurlAnalyzer`, `LateralRaiseAnalyzer`, `ChestFlyAnalyzer` ngày 06/09/2026 — xem Nhật ký thay đổi). Danh sách được liệt kê từng tên một cách có chủ đích: khớp theo chuỗi con nhìn thì tiện nhưng sai theo kiểu đánh lừa người dùng — "Barbell Upright Row" là bài vai, "Nar-row Pulldown" chỉ tình cờ chứa mấy chữ cái đó, "Rowing Machine Steady State" là bài cardio. Các biến thể cũng bị loại khi analyzer gộp hoặc so sánh hai bên (row một tay không bao giờ chạm ngưỡng co vì cánh tay rảnh kéo giá trị trung bình lên), và split squat được ánh xạ sang `LungeAnalyzer` chứ không phải `SquatAnalyzer` vì lunge lấy `min()` của hai gối trong khi squat lấy trung bình. `tests/test_analyzer_registry.py` khoá lại các quyết định loại trừ đó. Tên không có trong bảng sẽ rơi về `SquatAnalyzer` kèm một cảnh báo trong log, nhưng client nên dùng cờ `supports_analysis` của `GET /exercises` để người dùng không bao giờ rơi vào nhánh dự phòng đó.
+`ANALYZER_REGISTRY` nằm ở `app/ml/analyzers/registry.py` (không phải `routes/realtime.py` — `routes/exercises.py` cũng cần nó, mà import module realtime sẽ kéo cả mediapipe vào chỉ để đọc vài cái tên). Nó ánh xạ **157 khoá tên bài tập vào 13 class analyzer**, phủ 150 trong khoảng 417 bài của thư viện (thêm `CurlAnalyzer`, `LateralRaiseAnalyzer`, `ChestFlyAnalyzer`, `CalfRaiseAnalyzer` ngày 06/09/2026 — xem Nhật ký thay đổi). Danh sách được liệt kê từng tên một cách có chủ đích: khớp theo chuỗi con nhìn thì tiện nhưng sai theo kiểu đánh lừa người dùng — "Barbell Upright Row" là bài vai, "Nar-row Pulldown" chỉ tình cờ chứa mấy chữ cái đó, "Rowing Machine Steady State" là bài cardio. Các biến thể cũng bị loại khi analyzer gộp hoặc so sánh hai bên (row một tay không bao giờ chạm ngưỡng co vì cánh tay rảnh kéo giá trị trung bình lên), và split squat được ánh xạ sang `LungeAnalyzer` chứ không phải `SquatAnalyzer` vì lunge lấy `min()` của hai gối trong khi squat lấy trung bình. `tests/test_analyzer_registry.py` khoá lại các quyết định loại trừ đó. Tên không có trong bảng sẽ rơi về `SquatAnalyzer` kèm một cảnh báo trong log, nhưng client nên dùng cờ `supports_analysis` của `GET /exercises` để người dùng không bao giờ rơi vào nhánh dự phòng đó.
 
 Các analyzer là **ngưỡng góc viết tay, không phải model đã huấn luyện** — `squat.py` ghi cứng `KNEE_DEPTH_THRESHOLD = 95.0` và tương tự. Đó là **giá trị mặc định**; từng bài tập ghi đè được qua bảng `ExercisePostureRules` (xem `app/ml/analyzers/thresholds.py`).
 
-**Ngưỡng theo từng bài.** Chỉ có 12 analyzer cho 145 bài nên mọi biến thể cùng họ vốn dùng chung một bộ ngưỡng — `Seal Row` nằm sấp bị chấm bằng đúng ngưỡng lưng của `Barbell Bent Over Row` cúi 45°. Analyzer giữ nguyên phần logic phức tạp (gối vượt mũi chân, lệch hai bên, nhận biết tư thế nằm) và chỉ đọc CON SỐ ngưỡng từ DB. Bài chưa nhập ngưỡng riêng thì dùng mặc định, nên bật cơ chế này lên không đổi hành vi bài nào đang chạy.
+**Ngưỡng theo từng bài.** Chỉ có 13 analyzer cho 150 bài nên mọi biến thể cùng họ vốn dùng chung một bộ ngưỡng — `Seal Row` nằm sấp bị chấm bằng đúng ngưỡng lưng của `Barbell Bent Over Row` cúi 45°. Analyzer giữ nguyên phần logic phức tạp (gối vượt mũi chân, lệch hai bên, nhận biết tư thế nằm) và chỉ đọc CON SỐ ngưỡng từ DB. Bài chưa nhập ngưỡng riêng thì dùng mặc định, nên bật cơ chế này lên không đổi hành vi bài nào đang chạy.
 
 Ba điều cần nhớ khi nhập ngưỡng: `RuleName` là **khoá máy** (`back_straight_min`, `knee_depth`…), không phải mô tả — tên khác sẽ bị bỏ qua trong im lặng, trong đó có 4 dòng seed sẵn của schema đặt tên tiếng Việt. Mỗi khoá lấy giá trị từ **cột cố định** (`MinAngle` cho cận dưới, `MaxAngle` cho cận trên) — nhầm cột thì ngưỡng đảo chiều mà không có lỗi nào báo. Và `RepCounter` có **biên dung sai 10°** quanh đáy cho trường hợp FPS thấp, nên hai ngưỡng cách nhau dưới 10° sẽ cho cùng kết quả. Dùng `scripts/seed_posture_rules.py` (có `--dry-run`, chạy lại an toàn) để nhập.
 
@@ -436,7 +456,7 @@ Asset duy nhất được đóng gói là `assets/video/` (hiện có `squat.mp4
 
 `tests/pose_builders.py` dựng bộ 33 keypoint giả đặt đúng vị trí hình học, nên kiểm được toàn bộ logic phân tích mà không cần camera hay MediaPipe — cách còn lại là nhờ người đứng trước camera tập thử, vừa chậm vừa không tái hiện được. Đã xác minh bộ dựng chính xác: yêu cầu góc 95° thì đo lại đúng 95,0°.
 
-`tests/test_analyzers.py` phủ cả 12 analyzer, `tests/test_posture_thresholds.py` phủ cơ chế ngưỡng theo từng bài. Chạy analyzer qua một dãy góc mô phỏng nhịp tập thật (14 frame mỗi chiều ≈ một rep 2,5 giây ở 12 fps) rồi so với kỳ vọng.
+`tests/test_analyzers.py` phủ cả 13 analyzer, `tests/test_posture_thresholds.py` phủ cơ chế ngưỡng theo từng bài. Chạy analyzer qua một dãy góc mô phỏng nhịp tập thật (14 frame mỗi chiều ≈ một rep 2,5 giây ở 12 fps) rồi so với kỳ vọng.
 
 Ba lỗi từng lọt qua vì **không lỗi nào nhìn thấy được khi chạy app** — số rep vẫn nhảy, vẫn có lời nhắc, mọi thứ trông như đang hoạt động. Viết test cho phần này nghĩa là bơm chuỗi góc đã biết trước vào và so kết quả, không phải mở app ra nhìn.
 

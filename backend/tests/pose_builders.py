@@ -214,6 +214,36 @@ def shoulder_raise_pose(
     return pose
 
 
+def calf_raise_pose(
+    ankle_angle: float,
+    *,
+    right_ankle_angle: float | None = None,
+    visibility: float = 1.0,
+) -> list[Keypoint]:
+    """Tư thế nhón gót: góc gối-mắt cá-mũi chân, đỉnh tại mắt cá.
+
+    `ankle_angle` nhỏ (~90-100°) = bàn chân áp sàn (nghỉ), lớn (~140-150°) =
+    đã nhón gót lên cao (đỉnh rep).
+    """
+    pose = blank_pose(visibility)
+    right_angle = ankle_angle if right_ankle_angle is None else right_ankle_angle
+
+    for knee_i, ankle_i, foot_i, side_x, angle in (
+        (LEFT_KNEE, LEFT_ANKLE, LEFT_FOOT_INDEX, 0.45, ankle_angle),
+        (RIGHT_KNEE, RIGHT_ANKLE, RIGHT_FOOT_INDEX, 0.55, right_angle),
+    ):
+        knee = kp(side_x, 0.6, visibility=visibility)
+        ankle = kp(side_x, 0.85, visibility=visibility)
+        foot = place_at_angle(knee, ankle, angle, length=0.12)
+        foot = kp(foot.x, foot.y, visibility=visibility)
+
+        pose[knee_i] = knee
+        pose[ankle_i] = ankle
+        pose[foot_i] = foot
+
+    return pose
+
+
 def plank_pose(
     body_angle: float,
     *,

@@ -13,6 +13,7 @@ sau này đổi ngưỡng theo từng bài tập thì biết ngay có làm hỏn
 import pytest
 
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
+from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
@@ -26,7 +27,15 @@ from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.rep_counter import RepCounter
 from app.ml.session_state import SessionState
-from tests.pose_builders import arm_pose, hinge_pose, plank_pose, shoulder_raise_pose, spine_pose, squat_pose
+from tests.pose_builders import (
+    arm_pose,
+    calf_raise_pose,
+    hinge_pose,
+    plank_pose,
+    shoulder_raise_pose,
+    spine_pose,
+    squat_pose,
+)
 
 # 14 frame mỗi chiều ≈ một rep 2,5 giây ở 12 fps — đúng nhịp tập thường gặp,
 # và cũng chính là vùng tốc độ mà lỗi đếm gấp đôi từng xảy ra.
@@ -115,6 +124,7 @@ PERFECT_REPS = [
     ("curl", CurlAnalyzer, lambda a: arm_pose(a), 170, 35),
     ("lateral_raise", LateralRaiseAnalyzer, lambda a: shoulder_raise_pose(a), 15, 85),
     ("chest_fly", ChestFlyAnalyzer, lambda a: shoulder_raise_pose(a), 90, 25),
+    ("calf_raise", CalfRaiseAnalyzer, lambda a: calf_raise_pose(a), 138, 80),
 ]
 
 
@@ -234,6 +244,7 @@ def test_hip_thrust_bao_lech_ben() -> None:
         (DeadliftAnalyzer, hinge_pose, "Chưa đứng thẳng", 100.0, 150.0),
         (HipThrustAnalyzer, hinge_pose, "Chưa đẩy hông lên hết", 100.0, 150.0),
         (OverheadPressAnalyzer, arm_pose, "Chưa khoá tay", 85.0, 140.0),
+        (CalfRaiseAnalyzer, calf_raise_pose, "Chưa nhón gót đủ cao", 80.0, 115.0),
     ],
 )
 def test_bao_chua_duoi_het_o_dinh(cls, build, message, bottom, half_top) -> None:
@@ -268,6 +279,7 @@ def test_bao_chua_duoi_het_o_dinh(cls, build, message, bottom, half_top) -> None
         (DeadliftAnalyzer, hinge_pose, 175, 100),
         (HipThrustAnalyzer, hinge_pose, 170, 100),
         (OverheadPressAnalyzer, arm_pose, 168, 85),
+        (CalfRaiseAnalyzer, calf_raise_pose, 138, 80),
     ],
 )
 def test_duoi_het_o_dinh_thi_khong_nhac(cls, build, top, bottom) -> None:
@@ -276,6 +288,11 @@ def test_duoi_het_o_dinh_thi_khong_nhac(cls, build, top, bottom) -> None:
     session = run(analyzer, build, rep_sequence(top, bottom, reps=3))
     assert analyzer.rep_counter.rep_count == 3
     assert session.accuracy == 100.0
+
+
+def test_calf_raise_bao_lech_ben() -> None:
+    result = CalfRaiseAnalyzer().analyze(calf_raise_pose(140.0, right_ankle_angle=100.0))
+    assert any("không đều" in e for e in result.errors)
 
 
 def test_deadlift_bao_goi_vuot_mui_chan() -> None:

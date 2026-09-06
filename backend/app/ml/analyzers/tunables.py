@@ -170,6 +170,14 @@ TUNABLES: dict[str, list[Tunable]] = {
         Tunable("shoulder_asymmetry", "Lệch hai tay — chênh quá góc này là khép lệch bên",
                 25.0, 5.0, 60.0),
     ],
+    "CalfRaiseAnalyzer": [
+        Tunable("ankle_rest", "Vị trí nghỉ — góc mắt cá dưới mức này là bàn chân đang áp sàn",
+                85.0, 60.0, 110.0, affects_rep_count=True),
+        Tunable("ankle_raised", "Đã nhón đủ cao — vượt góc này là đã nhón gót hết cỡ",
+                130.0, 100.0, 170.0, affects_rep_count=True),
+        Tunable("ankle_asymmetry", "Lệch hai bên — chênh quá góc này là nhón lệch bên",
+                20.0, 5.0, 60.0),
+    ],
 }
 
 # Cặp ngưỡng buộc phải giữ đúng thứ tự (cận dưới, cận trên).
@@ -190,6 +198,7 @@ ORDERED_PAIRS: tuple[tuple[str, str], ...] = (
     ("cat", "cow"),
     ("shoulder_rest", "shoulder_raised"),
     ("shoulder_contracted", "shoulder_extended"),
+    ("ankle_rest", "ankle_raised"),
 )
 
 # Khoảng cách tối thiểu giữa hai đầu của một rep.

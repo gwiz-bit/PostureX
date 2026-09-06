@@ -10,6 +10,7 @@ nhận hướng dẫn sai trong khi app vẫn báo là đang phân tích đúng 
 import pytest
 
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
+from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
@@ -37,6 +38,9 @@ from app.ml.analyzers.squat import SquatAnalyzer
         "Barbell Wrist Curl",  # cổ tay
         "Barbell Spinal Jefferson Curl",  # cột sống, không phải khuỷu tay
         "Neck Curl",  # cổ
+        # Chứa "raise" nhưng gập mu bàn chân (dorsiflexion) — ngược hẳn calf
+        # raise (gập lòng bàn chân).
+        "Tibialis Raise",
     ],
 )
 def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
@@ -68,6 +72,9 @@ def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
         "Band Single Arm Lateral Raise",
         "Leaning Cable Lateral Raise",  # đứng nghiêng người, luôn một tay
         "Single Arm Cable Fly",
+        # CalfRaiseAnalyzer cũng lấy avg() hai mắt cá.
+        "Dumbbell Single Leg Calf Raise",
+        "Single Leg Standing Calf Raise",
     ],
 )
 def test_bai_mot_ben_bi_loai(exercise: str) -> None:
@@ -109,6 +116,7 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Dumbbell Lateral Raise", LateralRaiseAnalyzer),
         ("Dumbbell Rear Delt Fly", LateralRaiseAnalyzer),
         ("Dumbbell Chest Fly", ChestFlyAnalyzer),
+        ("Kettlebell Calf Raise", CalfRaiseAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

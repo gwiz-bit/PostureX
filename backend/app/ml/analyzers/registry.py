@@ -21,6 +21,7 @@ cổ là sai hoàn toàn.
 
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
+from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
@@ -317,6 +318,28 @@ _CHEST_FLY_VARIANTS = [
     "machine pec fly",
 ]
 
+_CALF_RAISE_VARIANTS = [
+    # Nhón gót hai bên đồng thời — CalfRaiseAnalyzer lấy avg() hai mắt cá,
+    # cùng rủi ro một chân như curl/row (quy tắc 1).
+    "bodyweight donkey calf raise",  # cúi gập hông, nhưng góc mắt cá là khớp
+                                       # cục bộ nên không phụ thuộc góc hông.
+    "kettlebell calf raise",
+    "seated calf raise",              # ngồi, chỉ mắt cá di chuyển — vẫn đọc
+                                       # đúng vì góc mắt cá không phụ thuộc
+                                       # tư thế ngồi/đứng (cùng lý do bench
+                                       # press không phụ thuộc nằm/đứng).
+    "smith machine calf raise",
+    "standing calf raise machine",
+    # KHÔNG có (một chân — quy tắc 1): Dumbbell Single Leg Calf Raise, Single
+    # Leg Standing Calf Raise.
+    # KHÔNG có (khác chiều động tác dù tên gần giống): Tibialis Raise — đây
+    # là GẬP MU BÀN CHÂN (dorsiflexion, kéo mũi chân lên), ngược hẳn calf
+    # raise (gập LÒNG bàn chân, đẩy gót lên) — dùng chung analyzer sẽ chấm
+    # sai chiều hoàn toàn.
+    # KHÔNG có (thiếu tự tin về góc camera trên máy chuyên dụng, để rà kỹ ở
+    # giai đoạn sau): Horizontal Leg Press Calf Press.
+]
+
 _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (SquatAnalyzer, _SQUAT_VARIANTS),
     (LungeAnalyzer, _LUNGE_VARIANTS),
@@ -330,6 +353,7 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (CurlAnalyzer, _CURL_VARIANTS),
     (LateralRaiseAnalyzer, _LATERAL_RAISE_VARIANTS),
     (ChestFlyAnalyzer, _CHEST_FLY_VARIANTS),
+    (CalfRaiseAnalyzer, _CALF_RAISE_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ
