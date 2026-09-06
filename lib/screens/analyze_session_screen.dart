@@ -601,6 +601,11 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                             painter: SkeletonPainter(
                               keypoints: _keypoints,
                               correct: _correct,
+                              // CameraPreview auto-mirrors the front camera
+                              // for display, but the coordinates the backend
+                              // returns are computed from the un-mirrored
+                              // sensor JPEG — see SkeletonPainter.mirror.
+                              mirror: _lensDirection == CameraLensDirection.front,
                             ),
                           ),
                         ],

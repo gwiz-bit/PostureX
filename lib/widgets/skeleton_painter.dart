@@ -25,10 +25,24 @@ class SkeletonPainter extends CustomPainter {
   const SkeletonPainter({
     required this.keypoints,
     required this.correct,
+    this.mirror = false,
   });
 
   final Map<String, Point>? keypoints;
   final bool correct;
+
+  /// True when the frames came from the FRONT camera.
+  ///
+  /// `_encodeCameraImage` sends the backend the raw sensor JPEG (only
+  /// rotated, never mirrored) — the pose coordinates it returns are in that
+  /// same un-mirrored space. But `CameraPreview` auto-mirrors the front
+  /// camera for on-screen display (so it behaves like a real mirror the
+  /// user is used to), which this painter draws directly on top of. Without
+  /// this flag the two disagree on which side is which, so every joint
+  /// lands nowhere near the body it's meant to trace — the skeleton looks
+  /// simply absent rather than "slightly off". Back camera has no such
+  /// mismatch since `CameraPreview` doesn't mirror it.
+  final bool mirror;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -45,7 +59,8 @@ class SkeletonPainter extends CustomPainter {
     Offset? offsetFor(String name) {
       final p = points[name];
       if (p == null) return null;
-      return Offset(p.x * size.width, p.y * size.height);
+      final x = mirror ? 1 - p.x : p.x;
+      return Offset(x * size.width, p.y * size.height);
     }
 
     for (final (a, b) in _bones) {
@@ -64,5 +79,7 @@ class SkeletonPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SkeletonPainter oldDelegate) =>
-      oldDelegate.keypoints != keypoints || oldDelegate.correct != correct;
+      oldDelegate.keypoints != keypoints ||
+      oldDelegate.correct != correct ||
+      oldDelegate.mirror != mirror;
 }
