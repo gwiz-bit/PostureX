@@ -59,6 +59,7 @@ class FrameAnalysisResult {
     required this.keyAngles,
     required this.phase,
     required this.keypoints,
+    required this.allKeypoints,
   });
 
   final int repCount;
@@ -69,8 +70,19 @@ class FrameAnalysisResult {
 
   /// Keyed by joint name (e.g. "left_knee") — `null`/absent entries mean
   /// that joint wasn't confidently detected this frame. `null` as a whole
-  /// means no person was detected at all.
+  /// means no person was detected at all. Only the joints THIS exercise's
+  /// analyzer actually uses for angle math (squat has no elbows, curl has
+  /// no knees) — not a full skeleton. Kept mainly for debugging/analysis;
+  /// [allKeypoints] is what the UI should draw.
   final Map<String, Point>? keypoints;
+
+  /// Every MediaPipe landmark the backend bothers to expose (33 minus the
+  /// fingertip points — too small/noisy to be worth drawing), independent
+  /// of which exercise is being analyzed. This is what [SkeletonPainter]
+  /// should use so the overlay tracks the whole body (face, elbows,
+  /// wrists...) instead of only the handful of joints the active
+  /// exercise's rep-counting math happens to touch.
+  final Map<String, Point>? allKeypoints;
 
   factory FrameAnalysisResult.fromJson(Map<String, dynamic> json) =>
       FrameAnalysisResult(
@@ -80,6 +92,9 @@ class FrameAnalysisResult {
         keyAngles: KeyAngles.fromJson(json['key_angles'] as Map<String, dynamic>),
         phase: json['phase'] as String,
         keypoints: (json['keypoints'] as Map<String, dynamic>?)?.map(
+          (key, value) => MapEntry(key, Point.fromJson(value as Map<String, dynamic>)),
+        ),
+        allKeypoints: (json['all_keypoints'] as Map<String, dynamic>?)?.map(
           (key, value) => MapEntry(key, Point.fromJson(value as Map<String, dynamic>)),
         ),
       );

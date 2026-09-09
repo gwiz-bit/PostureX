@@ -10,9 +10,12 @@ from jose import JWTError
 from app.core.database import AsyncSessionLocal
 from app.core.security import decode_token
 from app.ml.analyzers.base import ExerciseAnalyzer
+from app.ml.analyzers.common import visible_points
 from app.ml.analyzers.registry import ANALYZER_REGISTRY
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.thresholds import load_thresholds
+from app.ml.keypoint_smoother import KeypointSmoother
+from app.ml.pose_estimator import named_keypoints
 from app.ml.pose_estimator_pool import get_pose_estimator_pool
 from app.ml.session_state import SessionState
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
@@ -121,6 +124,11 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
     await websocket.accept()
     session: SessionState | None = None
     analyzer: ExerciseAnalyzer | None = None
+    # Một bộ làm mượt RIÊNG cho phiên này — xem docstring KeypointSmoother
+    # về lý do không dùng chung giữa các phiên (sẽ trộn người này với người
+    # khác) và không đổi hẳn RunningMode của MediaPipe (xung đột với pool
+    # dùng chung nhiều phiên).
+    smoother = KeypointSmoother()
 
     try:
         # --- Bước 1: nhận message khởi tạo ---
@@ -168,8 +176,10 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
                 await websocket.send_json({"error": "Không đọc được frame."})
                 continue
 
-            # Chạy pose estimation
-            keypoints = await _pose_estimator_pool.estimate(jpeg_bytes)
+            # Chạy pose estimation, rồi làm mượt so với frame trước trong
+            # CÙNG phiên này — xem docstring KeypointSmoother. Mất người thì
+            # smoother tự xoá trạng thái cũ (không nội suy nhầm).
+            keypoints = smoother.smooth(await _pose_estimator_pool.estimate(jpeg_bytes))
             if keypoints is None:
                 await websocket.send_json({
                     "rep_count": session.rep_counter.rep_count,
@@ -178,12 +188,19 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
                     "key_angles": KeyAngles().model_dump(),
                     "phase": session.rep_counter.phase.value,
                     "keypoints": None,
+                    "all_keypoints": None,
                 })
                 continue
 
             # Phân tích kỹ thuật
             result: FrameAnalysisResult = analyzer.analyze(keypoints)
             session.record_frame(result.errors)
+
+            # Khung xương ĐẦY ĐỦ cho client vẽ (mặt, khuỷu tay, cổ tay...),
+            # tách khỏi `result.keypoints` (chỉ những khớp analyzer này thực
+            # sự dùng để tính góc) — gán SAU khi analyzer trả về, không
+            # analyzer nào cần biết hay sửa gì cho trường này.
+            result.all_keypoints = visible_points(named_keypoints(keypoints))
 
             await websocket.send_json(result.model_dump())
 

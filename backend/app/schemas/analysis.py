@@ -40,5 +40,15 @@ class FrameAnalysisResult(BaseModel):
     key_angles: KeyAngles
     phase: str              # "going_down" / "bottom" / "going_up" / "top"
     # Khớp theo tên (vd "left_knee") — None nếu không phát hiện được người.
-    # Chỉ gồm các khớp analyzer thực sự dùng (không phải đủ 33 khớp).
+    # Chỉ gồm các khớp analyzer thực sự dùng để tính góc/lỗi (khác nhau tuỳ
+    # bài — squat không có khuỷu tay, curl không có gối), KHÔNG phải để vẽ
+    # khung xương đầy đủ. Xem `all_keypoints` cho việc đó.
     keypoints: dict[str, Point] | None = None
+    # TOÀN BỘ khớp MediaPipe nhận diện được (trừ đầu ngón tay — quá nhỏ, dễ
+    # nhiễu), không phụ thuộc analyzer đang chạy là gì. Route
+    # (`routes/realtime.py`) tự gán field này SAU KHI analyzer trả về kết
+    # quả — analyzer không biết và không cần biết trường này tồn tại, nên
+    # 16 file analyzer không phải sửa gì khi thêm nó. Dùng để vẽ khung
+    # xương chi tiết (mặt, khuỷu tay, cổ tay...) phía client, độc lập với
+    # `keypoints` (vẫn giữ nguyên cho phần tính toán/debug góc).
+    all_keypoints: dict[str, Point] | None = None

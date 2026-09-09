@@ -64,6 +64,70 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 09/09/2026
+
+**Test thật đầu tiên trên điện thoại của loạt analyzer mới 06/09 — lộ ra 2
+việc, cả hai đã sửa.** Ảnh chụp thật: khung xương "nhảy loạn", không cố định
+một hướng (loại được khả năng lệch toạ độ/crop), và khung xương chỉ vẽ dạng
+"hộp" quanh thân (vai-hông-gối-mắt cá), không có mặt/khuỷu tay/cổ tay dù đang
+tập Band Curl.
+
+**1) Khung xương nhảy loạn — sửa bằng `KeypointSmoother` mới
+(`app/ml/keypoint_smoother.py`).** Nguyên nhân: `PoseEstimator` chạy
+MediaPipe ở `RunningMode.IMAGE` (mỗi frame độc lập, không có ngữ cảnh thời
+gian) — đúng thiết kế ban đầu, không phải lỗi mới. **Cố tình KHÔNG đổi sang
+`RunningMode.VIDEO`/`LIVE_STREAM`** (chế độ MediaPipe tự làm mượt): xung đột
+với `PoseEstimatorPool` — một instance MediaPipe phục vụ xen kẽ NHIỀU phiên
+tập khác nhau để tiết kiệm CPU, trong khi VIDEO/LIVE_STREAM giả định một
+luồng liên tục CÙNG một người; trộn hai điều này sẽ làm hỏng bộ làm mượt nội
+bộ (tưởng nhầm người khác là "frame tiếp theo"). Đổi đúng cách cần thiết kế
+lại pool cho gắn instance riêng theo từng phiên — việc lớn, để dành sau.
+
+Làm mượt EMA (α=0.5, ước lượng ban đầu chưa đo người thật) ở TẦNG ỨNG DỤNG
+thay vào đó — một `KeypointSmoother` RIÊNG cho mỗi phiên WebSocket
+(`routes/realtime.py`) và mỗi video upload (`video_analysis_service.py`),
+không dùng chung giữa các phiên (tránh trộn người). Mất người (`None`) hoặc
+số khớp phát hiện đổi khác thì XOÁ trạng thái cũ thay vì nội suy — nối một
+tư thế mới với vị trí cũ (có thể của người khác) sẽ tạo chuyển động giả,
+tệ hơn không làm mượt. `visibility` KHÔNG bị làm mượt — giữ nguyên tín hiệu
+"đang thấy rõ không" của đúng frame hiện tại, làm mượt nó sẽ khiến
+`is_visible()` phản ứng trễ.
+
+**2) Khung xương chỉ vẽ dạng "hộp", thiếu chi tiết — sửa bằng field mới
+`all_keypoints`.** Nguyên nhân: `FrameAnalysisResult.keypoints` chỉ gồm
+đúng những khớp ANALYZER ĐANG CHẠY thực sự dùng để tính góc — squat không
+có khuỷu tay/mặt vì squat không cần, curl không có gối. Route
+`routes/realtime.py` nay tự gắn thêm `all_keypoints` SAU KHI analyzer trả
+kết quả, dựng từ TOÀN BỘ khớp MediaPipe (33 khớp, trừ đầu ngón tay — quá
+nhỏ/nhiễu, không đáng vẽ) qua `pose_estimator.named_keypoints()` mới — 16
+file analyzer không phải sửa gì, không cần biết field này tồn tại.
+
+`SkeletonPainter` (Flutter) vẽ theo bộ xương ĐẦY ĐỦ mới (thêm khuỷu
+tay/cổ tay/bàn chân/mặt), và `AnalyzeSessionScreen` đổi sang truyền
+`frame.allKeypoints ?? frame.keypoints` (fallback chỉ để an toàn, không có
+ý nghĩa thực tế vì backend/app luôn deploy cùng lúc). Khớp mặt (mũi, mắt,
+tai, khoé miệng) chỉ vẽ CHẤM, không nối đường — nối đường giữa các khớp mặt
+sát nhau ở khoảng cách camera thường đứng để tập sẽ rối, không phải chi tiết.
+
+Chỉ áp dụng cho WebSocket real-time — `video_analysis_service.py` không cần
+`all_keypoints` vì không có màn hiện trực tiếp cho video đã upload, chỉ có
+bản tóm tắt lưu vào DB sau khi phân tích xong.
+
+Thêm `tests/test_keypoint_smoother.py` (7 test) và `tests/test_pose_estimator.py`
+(4 test, chỉ phần thuần không đụng MediaPipe/model file). 334 test backend
+xanh (không phải sửa lại kỳ vọng nào của `test_realtime_ws.py`/
+`test_video_analysis.py` — biên độ sẵn có trong các test đó đã đủ hấp thụ
+độ trễ do làm mượt). 63 test Flutter xanh, `flutter analyze` 0 lỗi/cảnh báo
+(chỉ còn các `info` có từ trước, không liên quan).
+
+⚠️ **Ngưỡng α=0.5 của `KeypointSmoother` chưa đo trên người thật** — cùng
+tình trạng với ngưỡng góc của các analyzer 06/09. Nếu vẫn thấy nhảy sau khi
+deploy, thử giảm α (mượt hơn, nhưng trễ hơn); nếu thấy khung xương "trôi"
+theo sau chuyển động thật rõ rệt, tăng α.
+
+⚠️ **Chưa deploy lên VPS**, chưa xác nhận lại trên chính chiếc điện thoại đã
+chụp hai ảnh trên.
+
 ### 06/09/2026
 
 **Video upload nay được phân tích thật** — lấp một trong hai lỗ hổng lớn nhất

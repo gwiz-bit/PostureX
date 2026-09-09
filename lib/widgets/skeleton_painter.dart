@@ -2,19 +2,41 @@ import 'package:flutter/material.dart';
 
 import '../models/frame_analysis_result.dart';
 
-/// The joint pairs drawn as bones — only covers what the backend's squat
-/// analyzer actually sends (shoulders/hips/knees/ankles), not the full
-/// 33-point MediaPipe skeleton.
+/// Bone pairs drawn as lines. Covers the whole body (arms, legs, feet) —
+/// not just the handful of joints a given exercise's analyzer happens to
+/// use for its own angle math (see [FrameAnalysisResult.allKeypoints]).
+/// Face landmarks are deliberately NOT in this list — see [_faceLandmarks].
 const _bones = [
   ('left_shoulder', 'right_shoulder'),
   ('left_shoulder', 'left_hip'),
   ('right_shoulder', 'right_hip'),
   ('left_hip', 'right_hip'),
+  ('left_shoulder', 'left_elbow'),
+  ('left_elbow', 'left_wrist'),
+  ('right_shoulder', 'right_elbow'),
+  ('right_elbow', 'right_wrist'),
   ('left_hip', 'left_knee'),
-  ('right_hip', 'right_knee'),
   ('left_knee', 'left_ankle'),
+  ('right_hip', 'right_knee'),
   ('right_knee', 'right_ankle'),
+  ('left_ankle', 'left_heel'),
+  ('left_ankle', 'left_foot_index'),
+  ('right_ankle', 'right_heel'),
+  ('right_ankle', 'right_foot_index'),
 ];
+
+/// Drawn as small dots only, no connecting lines — a face full of criss-cross
+/// bone lines between eyes/ears/mouth reads as clutter, not detail, at the
+/// distance people stand from the camera to fit their whole body in frame.
+const _faceLandmarks = {
+  'nose',
+  'left_eye',
+  'right_eye',
+  'left_ear',
+  'right_ear',
+  'mouth_left',
+  'mouth_right',
+};
 
 /// Draws a stick-figure skeleton over the camera preview from the
 /// normalized joint coordinates the analyze socket sends each frame.
@@ -28,6 +50,12 @@ class SkeletonPainter extends CustomPainter {
     this.mirror = false,
   });
 
+  /// Pass [FrameAnalysisResult.allKeypoints] here, not `.keypoints` — the
+  /// latter is only the subset the active exercise's analyzer uses for
+  /// angle math (squat has no elbows, curl has no knees), which is why the
+  /// overlay used to look like a box around the torso instead of a full
+  /// body outline. `allKeypoints` covers the whole body regardless of
+  /// exercise (see CHANGELOG 09/09/2026).
   final Map<String, Point>? keypoints;
   final bool correct;
 
@@ -73,7 +101,8 @@ class SkeletonPainter extends CustomPainter {
 
     for (final name in points.keys) {
       final offset = offsetFor(name);
-      if (offset != null) canvas.drawCircle(offset, 6, jointPaint);
+      if (offset == null) continue;
+      canvas.drawCircle(offset, _faceLandmarks.contains(name) ? 4 : 6, jointPaint);
     }
   }
 

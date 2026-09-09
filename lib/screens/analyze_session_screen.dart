@@ -332,7 +332,11 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         _phase = frame.phase;
         _correct = frame.correct;
         _errors = frame.errors;
-        _keypoints = frame.keypoints;
+        // allKeypoints (whole body) over keypoints (only what this exercise's
+        // analyzer uses for angle math) — see SkeletonPainter's doc comment.
+        // Falls back to keypoints only in case a stale build ever talks to a
+        // backend that hasn't deployed all_keypoints yet.
+        _keypoints = frame.allKeypoints ?? frame.keypoints;
       });
       return;
     }

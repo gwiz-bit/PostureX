@@ -36,6 +36,7 @@ from sqlalchemy import select
 from app.core.database import AsyncSessionLocal
 from app.ml.analyzers.registry import ANALYZER_REGISTRY
 from app.ml.analyzers.thresholds import load_thresholds
+from app.ml.keypoint_smoother import KeypointSmoother
 from app.ml.pose_estimator import Keypoint
 from app.ml.pose_estimator_pool import get_pose_estimator_pool
 from app.ml.session_state import SessionState
@@ -144,10 +145,14 @@ def _analyze_keypoint_sequence(
     cls = ANALYZER_REGISTRY[exercise.lower()]
     analyzer = cls(thresholds=thresholds)
     session = SessionState(exercise)
+    # Cùng bộ làm mượt dùng cho WebSocket live (xem routes/realtime.py và
+    # docstring KeypointSmoother) — một instance RIÊNG cho video này.
+    smoother = KeypointSmoother()
     error_counts: Counter[str] = Counter()
     detected_frames = 0
 
-    for keypoints in keypoints_sequence:
+    for raw_keypoints in keypoints_sequence:
+        keypoints = smoother.smooth(raw_keypoints)
         if keypoints is None:
             continue
         detected_frames += 1

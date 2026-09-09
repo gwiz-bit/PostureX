@@ -14,6 +14,19 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL_PATH = Path(__file__).parent / "models" / "pose_landmarker_full.task"
 
+# Đầu ngón tay — quá nhỏ trên khung hình thường gặp (người đứng cách camera
+# vài mét để camera thấy trọn người), MediaPipe nhận diện kém ổn định nhất
+# trong 33 khớp, và không có giá trị hiển thị cho một app tư thế/thể hình.
+# Loại khỏi khung xương HIỂN THỊ ĐẦY ĐỦ (`all_keypoints` trong
+# `FrameAnalysisResult`, xem `routes/realtime.py`) — không ảnh hưởng
+# `keypoints` (tập khớp riêng từng analyzer dùng để tính góc), vì không
+# analyzer nào đọc tới các khớp này.
+_FINE_HAND_LANDMARKS = frozenset({
+    "left_pinky", "right_pinky",
+    "left_index", "right_index",
+    "left_thumb", "right_thumb",
+})
+
 
 @dataclass
 class Keypoint:
@@ -102,3 +115,17 @@ class PoseEstimator:
 
     def __exit__(self, *_: object) -> None:
         self.close()
+
+
+# Toàn bộ khớp đáng hiển thị — 33 khớp MediaPipe trừ đầu ngón tay
+# (`_FINE_HAND_LANDMARKS`) — theo đúng thứ tự chỉ số gốc.
+DISPLAY_LANDMARK_NAMES: list[str] = [
+    name for name in PoseEstimator.LANDMARK_NAMES if name not in _FINE_HAND_LANDMARKS
+]
+
+
+def named_keypoints(keypoints: list[Keypoint]) -> dict[str, Keypoint]:
+    """Gắn tên cho từng khớp trong [DISPLAY_LANDMARK_NAMES] — dùng để dựng
+    khung xương hiển thị đầy đủ, tách khỏi tập khớp riêng từng analyzer chọn
+    để tính góc (xem `FrameAnalysisResult.all_keypoints`)."""
+    return {name: keypoints[PoseEstimator.LANDMARK_NAMES[name]] for name in DISPLAY_LANDMARK_NAMES}
