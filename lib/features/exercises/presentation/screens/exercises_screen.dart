@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../utils/app_locale.dart';
+import '../../../../utils/text_highlight.dart';
 import '../../../../widgets/icon_badge.dart';
 import '../../../../widgets/section_card.dart';
 import '../../../../widgets/tag_chip.dart';
@@ -192,12 +193,24 @@ class _ExercisesScreenState extends State<ExercisesScreen> with AppLocaleMixin {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  exercise.name,
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
+                                Text.rich(
+                                  TextSpan(
+                                    // Tô phần tên khớp với ô search bằng màu
+                                    // chủ đạo; không search thì cả tên một màu.
+                                    children: highlightSpans(
+                                      exercise.name,
+                                      _query,
+                                      baseStyle: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      highlightStyle: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
