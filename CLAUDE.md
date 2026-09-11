@@ -64,6 +64,69 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 11/09/2026 (4)
+
+**Bước 4 — tích hợp production + hiển thị lên app, đã deploy.** Tiếp nối
+mục (3) ngay bên dưới.
+
+Backend: `SimilarityScorer` (mới) nối vào `routes/realtime.py`, chạy CỘNG
+THÊM song song với `KeypointSmoother`/rep-counting hiện có — thêm field
+`similarity_score` (0-100, `None` nếu bài chưa có chuẩn hoặc cửa sổ live
+chưa đủ frame) vào `FrameAnalysisResult`. Tách `reference_joints.py` (bảng
+khớp chính dùng chung giữa script trích chuẩn và scorer, tránh lặp lại và
+lệch nhau dần) và `reference_library.py` (đọc + cache bằng `lru_cache` chuỗi
+góc từ 113 file JSON chuẩn — file không đổi sau khi sinh, tính lại mỗi
+frame/mỗi phiên là lãng phí CPU trên máy 2 vCPU vốn chia sẻ với pose
+estimation).
+
+**Lỗi tự phát hiện lúc viết, đã sửa + khoá bằng test:** viết nhầm điều kiện
+chọn phép chiếu — `if self._reference.analyzer` luôn đúng (chuỗi khác rỗng)
+nên code LUÔN dùng 2D bất kể chuẩn đã chọn 2D hay 3D lúc trích. Sửa bằng
+cách lưu hẳn `projection` vào `ReferenceMotion` thay vì suy luận lại từ tên
+analyzer, và thêm test `test_uses_projection_stored_in_reference_not_a_fixed_choice`
+dựng chuyển động CHỈ lộ ra ở trục z để bẫy đúng loại lỗi này nếu tái phạm.
+
+Cũng đưa vào chặn "đứng yên trong ROM vẫn điểm cao" đã phát hiện ở
+`dtw_prototype.py`: biên độ cửa sổ live < 8° → trả thẳng điểm 0, không chạy
+DTW — rẻ hơn nhiều so với ràng buộc step-pattern đầy đủ trong DTW (cần thêm
+một chiều trạng thái trong quy hoạch động) mà vẫn nhắm đúng trường hợp lỗi
+đã đo được.
+
+18 test mới (`test_reference_library.py`, `test_similarity_scorer.py`). 357
+test backend xanh, ruff sạch.
+
+**Đã deploy lên VPS.** 113 file chuẩn tham chiếu (trước đó ở
+`/home/hiephann/reference_poses/` do chạy `extract_reference_poses.py` cần
+sudo mới copy được — `storage/` trên VPS thuộc `root:root`) đã chuyển vào
+đúng vị trí production `backend/storage/reference_poses/`. `git pull` +
+`systemctl restart posturex` không lỗi, xác nhận bằng cách import trực tiếp
+`reference_library.get_reference('bodyweight squat')` trên VPS: đọc đúng
+88 frame, đúng projection `x/y`, và trả `None` sạch cho bài không tồn tại.
+
+Flutter: `FrameAnalysisResult.similarityScore` (mới) đọc field JSON tương
+ứng. `AnalyzeSessionScreen` hiện một badge nhỏ góc phải màn hình (%, đổi
+màu xanh/vàng/đỏ theo mức điểm — `_similarityScoreColor()`) CHỈ khi
+`similarityScore != null` — ẩn hẳn thay vì hiện 0%, vì `null` nghĩa là
+"bài chưa có chuẩn hoặc cửa sổ live chưa đủ dữ liệu", không phải "tập sai
+hoàn toàn". `flutter analyze` 0 lỗi (38 info có từ trước, không liên quan),
+72 test Flutter xanh — không phải sửa test nào khác vì `FrameAnalysisResult`
+chỉ được dựng ở đúng 1 chỗ (`fromJson`).
+
+⚠️ **Chưa test qua app thật trên điện thoại.** Toàn bộ xác nhận trên đều
+qua test tự động + smoke-test import trực tiếp trên VPS (không qua WebSocket
+thật). Cần: mở `AnalyzeSessionScreen` với một bài đã có chuẩn (vd Bodyweight
+Squat, Barbell Curl — xem log Bước 2 cho danh sách 113 bài), xác nhận badge
+hiện và điểm số hợp lý (tập đúng theo video mẫu → điểm cao dần, đứng yên
+hoặc tập khác hẳn → điểm thấp), và xác nhận bài KHÔNG có chuẩn (vd Overhead
+Press, bị loại vì chất lượng video) thì badge không hiện, không có gì đổi
+khác so với trước.
+
+⚠️ **Ngưỡng `SCALE_DEGREES=30.0` và `MIN_LIVE_RANGE_DEGREES=8.0` trong
+`similarity_scorer.py` là ước lượng, chưa đo trên người thật** — cùng tình
+trạng với mọi ngưỡng khác trong dự án lúc mới viết. Nếu điểm số thật tế quá
+khắt khe (người tập đúng vẫn ra điểm thấp) thì tăng `SCALE_DEGREES`; nếu quá
+dễ dãi thì giảm.
+
 ### 11/09/2026 (3)
 
 **Bắt đầu hướng "so khớp real-time với video mẫu bằng AI" — Giai đoạn A/B đã
