@@ -6,7 +6,7 @@ import '../../../../utils/app_locale.dart';
 import '../../../../widgets/app_logo.dart';
 import '../../../../widgets/icon_badge.dart';
 import '../../../../widgets/section_card.dart';
-import '../../../video/presentation/screens/upload_video_screen.dart';
+import '../../../exercises/presentation/screens/exercises_screen.dart';
 
 /// One exercise within a [_Routine] — [label] is what's shown to the user,
 /// [key] is the lowercase string sent to the backend's analyzer registry
@@ -210,8 +210,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> with AppLocaleMixin {
               ),
               const SizedBox(height: 12),
               TextButton.icon(
+                // No exercise is selected at this point — send the user to
+                // pick one first (each exercise's detail screen has its own
+                // "Upload a video instead" that carries the right name
+                // along). Used to push straight to `UploadVideoScreen()`
+                // with no exercise at all, which silently hardcoded
+                // `exercise: 'squat'` in the upload call — every uploaded
+                // video got analyzed as a squat regardless of what was
+                // actually in it (found 11/09/2026 testing B Stance Hip
+                // Thrust, which came back with squat feedback).
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const UploadVideoScreen()),
+                  MaterialPageRoute(builder: (_) => const ExercisesScreen()),
                 ),
                 style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                 icon: const Icon(Icons.upload_file_rounded, size: 18),

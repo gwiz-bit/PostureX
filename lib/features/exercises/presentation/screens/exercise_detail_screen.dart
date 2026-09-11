@@ -41,7 +41,9 @@ class ExerciseDetailScreen extends StatelessWidget {
 
   void _uploadInstead(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const UploadVideoScreen()),
+      MaterialPageRoute(
+        builder: (_) => UploadVideoScreen(exercise: exercise.name),
+      ),
     );
   }
 

@@ -1,6 +1,10 @@
-/// Maps the backend's `VideoOut` schema. Note that upload never triggers
-/// analysis server-side — [durationSeconds]/[totalReps]/[accuracyScore]/
-/// [analysisSummary] are always null/0 right after upload.
+/// Maps the backend's `VideoOut` schema. Analysis runs server-side in the
+/// background after upload (see `video_analysis_service.py`) — right after
+/// upload [durationSeconds]/[totalReps]/[accuracyScore]/[analysisSummary]
+/// are still null/0; poll `GET /videos/{id}` until [analysisSummary] is
+/// non-null (it is ALWAYS set once the background job finishes, even for
+/// an unsupported exercise or an unreadable file — see
+/// `VideoUploadController`'s polling logic).
 class Video {
   const Video({
     required this.id,

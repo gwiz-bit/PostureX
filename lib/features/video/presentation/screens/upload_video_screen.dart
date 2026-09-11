@@ -8,13 +8,20 @@ import '../../../../widgets/section_card.dart';
 import '../../video_module.dart';
 import '../controllers/video_upload_controller.dart';
 
-/// Lets the user pick or record a past workout video and upload it. The
-/// backend does not run analysis on uploaded videos (duration/reps/accuracy
-/// stay null/0), so this screen intentionally does not create a workout
-/// history entry — that would fabricate a fake zero-accuracy session (see
-/// `UploadVideo` use case doc).
+/// Lets the user pick or record a past workout video and upload it for
+/// [exercise] — analysis runs server-side in the background (see
+/// `VideoUploadController`'s polling), and this screen shows the result as
+/// a tappable card once it's ready.
 class UploadVideoScreen extends StatefulWidget {
-  const UploadVideoScreen({super.key});
+  const UploadVideoScreen({super.key, required this.exercise});
+
+  /// Exact exercise name (must match `Exercises.ExerciseName` / an
+  /// `ANALYZER_REGISTRY` key) — sent verbatim to the backend so the right
+  /// analyzer runs on the footage. Callers must resolve this from an actual
+  /// exercise (e.g. `ExerciseDetailScreen`'s `exercise.name`), never a
+  /// placeholder — a wrong name silently analyzes the video as the wrong
+  /// exercise (see CHANGELOG 11/09/2026).
+  final String exercise;
 
   @override
   State<UploadVideoScreen> createState() => _UploadVideoScreenState();
@@ -23,6 +30,7 @@ class UploadVideoScreen extends StatefulWidget {
 class _UploadVideoScreenState extends State<UploadVideoScreen> {
   final _picker = ImagePicker();
   late final VideoUploadController _controller;
+  bool _resultExpanded = false;
 
   @override
   void initState() {
@@ -43,6 +51,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
     final file = File(video.path);
     final size = await file.length();
     _controller.selectFile(file, size);
+    setState(() => _resultExpanded = false);
   }
 
   @override
@@ -63,12 +72,24 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                       icon: const Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary, size: 32),
                     ),
                     const SizedBox(width: 4),
-                    const Text(
-                      'Upload Video',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Upload Video',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'For: ${widget.exercise}',
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -134,13 +155,6 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                           style: const TextStyle(color: Colors.redAccent, fontSize: 13),
                         ),
                       ],
-                      if (_controller.uploadSucceeded) ...[
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Video uploaded — analysis coming soon.',
-                          style: TextStyle(color: AppColors.chartGreen, fontSize: 13),
-                        ),
-                      ],
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
@@ -148,7 +162,7 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                         child: ElevatedButton(
                           onPressed: selectedFile == null || _controller.isUploading
                               ? null
-                              : () => _controller.upload(exercise: 'squat'),
+                              : () => _controller.upload(exercise: widget.exercise),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.onPrimary,
@@ -169,9 +183,91 @@ class _UploadVideoScreenState extends State<UploadVideoScreen> {
                     ],
                   ),
                 ),
+                if (_controller.uploadSucceeded) ...[
+                  const SizedBox(height: 16),
+                  _buildResultCard(),
+                ],
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultCard() {
+    if (_controller.isAnalyzing) {
+      return SectionCard(
+        child: Row(
+          children: const [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.primary),
+            ),
+            SizedBox(width: 12),
+            Text('Analyzing your video…', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    final video = _controller.analyzedVideo;
+    if (video == null) {
+      // Either polling timed out, or the upload just succeeded and polling
+      // hasn't started reporting yet (both states briefly overlap for one
+      // frame right after upload) — same neutral copy covers both.
+      return SectionCard(
+        child: Text(
+          _controller.analysisTimedOut
+              ? "Still analyzing — this is taking longer than usual. Check back on this exercise's upload screen shortly."
+              : 'Video uploaded — analysis starting…',
+          style: const TextStyle(color: AppColors.chartGreen, fontSize: 13),
+        ),
+      );
+    }
+
+    return SectionCard(
+      child: InkWell(
+        onTap: () => setState(() => _resultExpanded = !_resultExpanded),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.analytics_outlined, color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'View analysis',
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Icon(
+                  _resultExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+            if (_resultExpanded) ...[
+              const SizedBox(height: 12),
+              if (video.totalReps > 0) ...[
+                Text('Reps: ${video.totalReps}', style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                const SizedBox(height: 4),
+              ],
+              if (video.accuracyScore != null) ...[
+                Text(
+                  'Accuracy: ${video.accuracyScore!.round()}%',
+                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+              ],
+              Text(
+                video.analysisSummary ?? '',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+            ],
+          ],
         ),
       ),
     );

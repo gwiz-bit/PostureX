@@ -26,6 +26,7 @@ class VideoModule {
 
   static VideoUploadController uploadController() => VideoUploadController(
         uploadVideo: uploadVideo(),
+        getVideo: getVideo(),
         validateVideoFile: validateVideoFile,
       );
 }

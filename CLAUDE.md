@@ -64,6 +64,64 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 11/09/2026 (5)
+
+**Video upload: kết quả phân tích chưa từng hiển thị lên app, cộng một lỗi
+nghiêm trọng — mọi video upload bị phân tích NHƯ THỂ LÀ SQUAT.** Phát hiện
+lúc test thật (`B Stance Hip Thrust` → upload → không có cách nào xem kết
+quả). Backend đã phân tích video ngầm từ 06/09/2026 (`video_analysis_service.py`,
+ghi `analysis_summary`/`total_reps`/`accuracy_score` vào bảng `videos`), và
+toàn bộ tầng domain/data phía Flutter (`VideoRepository.getVideo`,
+usecase `GetVideo`, `ApiClient.fetchVideo`) **đã có sẵn, đã nối đủ dây** —
+chỉ riêng tầng presentation (`UploadVideoScreen`/`VideoUploadController`)
+chưa bao giờ dùng tới, tài liệu code (`UploadVideo`/`Video` doc comment) còn
+ghi sai "backend never runs analysis" từ trước 06/09, không cập nhật khi
+backend đổi — đây chính là lý do gap này lọt qua nhiều đợt.
+
+**Lỗi nặng hơn phát hiện cùng lúc:** `UploadVideoScreen` cũ gọi cứng
+`_controller.upload(exercise: 'squat')` — KHÔNG NHẬN tham số bài tập nào cả
+(constructor không có field `exercise`), nên bất kể người dùng đang xem/quay
+video cho bài nào, backend luôn chạy `SquatAnalyzer` lên nó. Ca thật: video
+"B Stance Hip Thrust" bị đọc feedback góc gối như squat — sai hoàn toàn,
+đúng kiểu rủi ro đã cảnh báo ở CHANGELOG 06/09/2026 nhưng nặng hơn nhiều
+(không phải "tên lạ rơi về mặc định", mà là MỌI video, MỌI bài, MỌI lần).
+
+Sửa:
+- `UploadVideoScreen` nay nhận `exercise` bắt buộc — `ExerciseDetailScreen`
+  truyền đúng `exercise.name` (đã có sẵn, chỉ chưa được truyền). Route
+  "Upload a video" chung ở tab Workout (không có bài nào được chọn sẵn) đổi
+  sang mở `ExercisesScreen` để người dùng chọn bài trước, thay vì âm thầm
+  gán sai — sửa gốc rễ, không phải giấu triệu chứng.
+- `VideoUploadController` thêm polling: sau `upload()` thành công, gọi
+  `GetVideo(id)` mỗi 3 giây (tối đa 20 lần ≈ 60 giây) tới khi
+  `analysisSummary != null` — trường này LUÔN được set khi job nền xong
+  (kể cả video lỗi/bài chưa hỗ trợ, xem `video_analysis_service.py`), nên
+  đó là tín hiệu "xong" đáng tin, không cần đoán qua `total_reps`/
+  `accuracy_score` (có thể hợp lệ bằng 0/null ngay cả khi đã phân tích xong).
+- `UploadVideoScreen` hiện thẻ kết quả CÓ THỂ NHẤN MỞ RA ngay dưới nút
+  Upload — đúng yêu cầu "xem phân tích ngay trong trang đó" thay vì dòng chữ
+  tĩnh "analysis coming soon" cũ không dẫn tới đâu cả.
+
+3 test mới (`test/features/video/video_upload_controller_test.dart`, dùng
+`fakeAsync` cùng cách `api_client_timeout_test.dart` đã làm) khoá lại state
+machine polling: tới đúng lúc mới dừng gọi thêm (không rò rỉ timer), hết
+giờ đúng lúc nếu server không bao giờ xong, và chọn file mới xoá sạch kết
+quả phân tích cũ. `flutter analyze` 0 lỗi, 75 test Flutter xanh.
+
+⚠️ **Cat-Cow trong routine "Posture Primer" (xem mục (4) bên dưới, đã sửa
+Row/Plank/Lunge/Deadlift/Hip Thrust) KHÔNG sửa được bằng cách đổi khoá** —
+thư viện hiện không có video/bài nào thuộc họ Cat-Cow (xem comment
+`_CAT_COW_VARIANTS` trong `registry.py`). Cần quyết định sản phẩm: bỏ khỏi
+routine, hay tìm nguồn video/nhập bài mới.
+
+⚠️ **Chưa test qua app thật** — toàn bộ xác nhận trên bằng test tự động
+(`fakeAsync`, không chạm mạng/BackgroundTasks thật). Cần: build lại APK,
+upload một video thật cho một bài CÓ analyzer (khác squat, vd Barbell Bent
+Over Row) và xác nhận thẻ "View analysis" hiện đúng reps/accuracy sau vài
+chục giây, cùng một video cho bài KHÔNG có analyzer (vd B Stance Hip Thrust)
+xác nhận thẻ hiện đúng câu "Bài này chưa hỗ trợ phân tích tự động" thay vì
+lại đọc nhầm thành squat như trước.
+
 ### 11/09/2026 (4)
 
 **Bước 4 — tích hợp production + hiển thị lên app, đã deploy.** Tiếp nối

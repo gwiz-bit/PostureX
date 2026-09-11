@@ -3,9 +3,11 @@ import 'dart:io';
 import '../entities/video.dart';
 import '../repositories/video_repository.dart';
 
-/// Uploads a workout video. The backend never runs analysis on it
-/// (duration/reps/accuracy come back null/0) — callers should not
-/// synthesize a workout history entry from the result.
+/// Uploads a workout video for the given [exercise] (must be the exact
+/// exercise name — the backend picks the analyzer by matching it against
+/// `ANALYZER_REGISTRY`, and a wrong/generic name silently analyzes the
+/// footage as the wrong exercise). Analysis runs in the background after
+/// this call returns — see [Video]'s doc comment for how to poll for it.
 class UploadVideo {
   const UploadVideo(this._repository);
 
