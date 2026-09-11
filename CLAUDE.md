@@ -96,8 +96,9 @@ từ 0.5 xuống **0.25** — công thức EMA có "bộ nhớ hiệu dụng" ~1
 frame, nên 0.25 tương đương làm mượt trên ~4 frame gần nhất thay vì ~2 frame
 như trước, đổi lại khung xương trễ hơn một chút so với chuyển động thật.
 
-Đã build lại APK (`app-arm64-v8a-release.apk`) và cài trực tiếp qua ADB lên
-điện thoại đang cắm để test lại ngay.
+Đã build lại APK (`app-arm64-v8a-release.apk`) — điện thoại lúc này đã ngắt
+kết nối USB nên không cài trực tiếp qua ADB được như commit trước, gửi thẳng
+file APK để tự cài.
 
 334 test backend xanh (đổi default `alpha` không cần sửa test nào — mọi test
 đều tự truyền `alpha=` riêng), 72 test Flutter xanh, `flutter analyze` 0 lỗi.
