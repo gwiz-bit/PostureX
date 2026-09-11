@@ -103,6 +103,12 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   Map<String, Point>? _keypoints;
   final List<bool> _correctnessSamples = [];
 
+  /// "Độ giống bài mẫu" (0-100) của frame gần nhất — `null` khi bài chưa có
+  /// chuẩn tham chiếu hoặc cửa sổ live chưa đủ dữ liệu để tính (xem
+  /// [FrameAnalysisResult.similarityScore]); `null` ẩn hẳn thanh điểm thay
+  /// vì hiện 0% (0% sẽ đọc nhầm thành "tập sai hoàn toàn").
+  double? _similarityScore;
+
   CameraLensDirection _lensDirection = CameraLensDirection.front;
   bool _isFlipping = false;
 
@@ -338,6 +344,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         // Falls back to keypoints only in case a stale build ever talks to a
         // backend that hasn't deployed all_keypoints yet.
         _keypoints = frame.allKeypoints ?? frame.keypoints;
+        _similarityScore = frame.similarityScore;
       });
       return;
     }
@@ -582,6 +589,12 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     );
   }
 
+  Color _similarityScoreColor(double score) {
+    if (score >= 80) return AppColors.chartGreen;
+    if (score >= 50) return Colors.amberAccent;
+    return Colors.redAccent;
+  }
+
   Widget _buildCameraPanel(CameraController controller) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -759,6 +772,59 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                 ),
               ),
             ),
+            // "Độ giống bài mẫu" — chỉ hiện khi backend trả điểm thật (bài
+            // có chuẩn tham chiếu VÀ cửa sổ live đã đủ frame để tính, xem
+            // FrameAnalysisResult.similarityScore); `null` ẩn hẳn thay vì
+            // hiện 0%, vì 0% sẽ đọc nhầm thành "tập sai hoàn toàn".
+            if (_similarityScore != null)
+              Positioned(
+                top: 90,
+                right: 16,
+                child: Container(
+                  width: 64,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        AppLocale.t('analyze_similarity_label'),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_similarityScore!.round()}%',
+                        style: TextStyle(
+                          color: _similarityScoreColor(_similarityScore!),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: (_similarityScore! / 100).clamp(0.0, 1.0),
+                          minHeight: 4,
+                          backgroundColor: Colors.white24,
+                          valueColor: AlwaysStoppedAnimation(
+                            _similarityScoreColor(_similarityScore!),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             Positioned(
               bottom: 0,
               left: 0,

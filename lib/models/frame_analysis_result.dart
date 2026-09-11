@@ -60,6 +60,7 @@ class FrameAnalysisResult {
     required this.phase,
     required this.keypoints,
     required this.allKeypoints,
+    required this.similarityScore,
   });
 
   final int repCount;
@@ -84,6 +85,13 @@ class FrameAnalysisResult {
   /// exercise's rep-counting math happens to touch.
   final Map<String, Point>? allKeypoints;
 
+  /// "Độ giống bài mẫu" (0-100), so chuỗi góc live với chuẩn trích từ video
+  /// mẫu — xem `app/ml/similarity_scorer.py`. `null` khi bài chưa có chuẩn
+  /// tham chiếu (đa số bài, mới 113/204) HOẶC cửa sổ live chưa đủ frame để
+  /// tính — KHÔNG có nghĩa "tập sai hoàn toàn", UI nên ẩn hẳn thanh điểm khi
+  /// `null` thay vì hiện 0%.
+  final double? similarityScore;
+
   factory FrameAnalysisResult.fromJson(Map<String, dynamic> json) =>
       FrameAnalysisResult(
         repCount: json['rep_count'] as int,
@@ -97,5 +105,6 @@ class FrameAnalysisResult {
         allKeypoints: (json['all_keypoints'] as Map<String, dynamic>?)?.map(
           (key, value) => MapEntry(key, Point.fromJson(value as Map<String, dynamic>)),
         ),
+        similarityScore: (json['similarity_score'] as num?)?.toDouble(),
       );
 }
