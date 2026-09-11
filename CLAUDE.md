@@ -64,6 +64,77 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 11/09/2026 (3)
+
+**Bắt đầu hướng "so khớp real-time với video mẫu bằng AI" — Giai đoạn A/B đã
+xác nhận khả thi, CHƯA tích hợp vào production.** Xuất phát từ nhận thức lại
+trọng tâm dự án: tracking hiện tại chấm điểm bằng ngưỡng góc viết tay
+(xem "Các analyzer là ngưỡng góc viết tay" ở mục Bố cục backend), KHÔNG thực
+sự "đối chiếu với bài tập mẫu" như yêu cầu ban đầu — video mẫu (`assets/video/`)
+chỉ phát song song để người dùng tự nhìn so sánh, không có phép so sánh tính
+toán nào. Hướng đã thống nhất: giữ nguyên phát song song video mẫu, cộng
+thêm điểm "độ giống bài mẫu" tính bằng so khớp chuỗi góc thời gian thực với
+chuẩn trích từ video mẫu — bổ sung, không thay hệ rep-counting/ngưỡng hiện có
+(hệ đó đã ổn định, không đụng vào).
+
+**Bước 1-2 — trích chuẩn tham chiếu.** `backend/scripts/extract_reference_poses.py`
+(mới) trích chuỗi keypoint từ video mẫu, quyết định dùng góc 2D hay 3D cho
+từng video theo công thức đã kiểm chứng qua 3 bài thử tay (Squat/Barbell
+Curl/Overhead Press) trước khi viết script chính thức: **độ nhảy trung bình
+giữa hai frame liên tiếp nhỏ hơn thắng** (mượt hơn = tín hiệu chuyển động
+thật) — CHỦ Ý không dùng variance, vì variance cao có thể đến từ nhiễu ngẫu
+nhiên chứ không riêng chuyển động thật (ca thật: Barbell Curl bị variance
+chọn nhầm 2D). Kèm hai điều kiện loại: biên độ góc (max-min) phải ≥20° (loại
+trường hợp góc đó không thấy chuyển động gì), và tỉ lệ mất dấu người trong
+video phải ≤10% (video mẫu tự nó kém thì không đáng tin làm chuẩn — ca thật:
+Overhead Press mất dấu 13.3%, bị loại đúng như kỳ vọng).
+
+Đã chạy thật trên VPS qua 204 khoá tên bài trong `ANALYZER_REGISTRY`: **113
+dựng được chuẩn, 91 bị loại** (thiếu file video khớp tên, hoặc không đạt
+chất lượng/biên độ). Phát hiện đáng chú ý: 2D/3D **không phải thuộc tính cố
+định theo họ bài tập** mà theo TỪNG VIDEO — cùng là squat nhưng
+`band squat`/`bodyweight squat` chọn 2D trong khi `barbell banded back squat`/
+`dumbbell goblet squat` chọn 3D, vì mỗi video mẫu quay góc camera khác nhau.
+Đúng thiết kế đã định — không gộp quyết định 2D/3D theo class analyzer.
+
+Kết quả (~28MB, 113 file JSON) lưu ở `/home/hiephann/reference_poses/` trên
+VPS, **không đi theo git** — cùng cách `videos`/model MediaPipe cũng
+gitignore, đây là dữ liệu sinh ra chứ không phải mã nguồn.
+
+**Bước 3 — prototype DTW + đo thời gian.** `backend/scripts/dtw_prototype.py`
+(mới, script thử nghiệm — CHƯA phải code sẽ chạy production) dùng
+**Subsequence DTW** (không phải DTW cổ điển hai đầu cố định) để so một cửa
+sổ trượt N frame gần nhất của "live" với toàn bộ chuẩn tham chiếu, cho phép
+điểm bắt đầu/kết thúc khớp tự do trong chuẩn — đúng bài toán thật: người
+đang tập dở chỉ ở MỘT ĐOẠN của chu kỳ rep, không phải cả chu kỳ.
+
+**Lỗi phát hiện lúc thử lần đầu, đã sửa:** dùng nhầm DTW cổ điển (2 đầu cố
+định) trước, cho điểm chỉ ~60/100 ngay cả khi so khớp đúng y hệt chính chuẩn
+— vì nó ép cửa sổ live ngắn phải giãn ra khớp hết chiều dài chuẩn dài hơn,
+phạt điểm giả tạo dù khớp hoàn hảo một đoạn. Đổi điều kiện biên (hàng khởi
+tạo toàn 0 thay vì tích luỹ dần, lấy min ở cột kết thúc thay vì cố định cột
+cuối) sửa đúng vấn đề — sau khi sửa, so khớp với chính chuẩn cho điểm
+**100/100** chính xác.
+
+Thời gian mỗi lần cập nhật DTW: **~1ms trung bình** (window=30 frame,
+chuẩn~88 frame) trên VPS 2 vCPU — so với pose estimation ~30-60ms/frame đã
+ghi ở mục "Đừng bao giờ gọi thẳng PoseEstimator.estimate()", chi phí DTW gần
+như không đáng kể, không có rủi ro làm rớt FPS.
+
+⚠️ **Giới hạn đã phát hiện, CHƯA xử lý:** DTW không giới hạn số bước cho
+phép "dính" vào đúng một frame chuẩn nhiều lần liên tiếp — đứng yên ở một tư
+thế nằm TRONG phạm vi chuyển động của bài vẫn được điểm không thấp (ca thử:
+đứng yên ở ~90° trong squat được 47.7/100, đáng lẽ phải rất thấp vì không hề
+tập). Bản sản xuất (Bước 4, CHƯA làm) cần thêm ràng buộc kiểu bước đi
+(step-pattern constraint — giới hạn số bước lặp liên tiếp cùng cột) để đứng
+yên không còn được điểm giả tạo cao.
+
+⚠️ **Toàn bộ Giai đoạn A/B mới dừng ở script thử nghiệm chạy tay trên VPS,
+CHƯA tích hợp vào `routes/realtime.py`, CHƯA có điểm số nào hiển thị trên
+app.** Bước 4 (tích hợp vào production, đo lại hiệu năng khi chạy CÙNG lúc
+với pose estimation thật trong một phiên WebSocket, thêm ràng buộc
+step-pattern) là việc lớn còn lại, cần phiên làm việc riêng.
+
 ### 11/09/2026 (2)
 
 **AI Coach nay lưu lại lịch sử chat, và được nối với "Personalize with AI"
