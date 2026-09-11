@@ -63,13 +63,18 @@ class SkeletonPainter extends CustomPainter {
   ///
   /// `_encodeCameraImage` sends the backend the raw sensor JPEG (only
   /// rotated, never mirrored) — the pose coordinates it returns are in that
-  /// same un-mirrored space. But `CameraPreview` auto-mirrors the front
-  /// camera for on-screen display (so it behaves like a real mirror the
-  /// user is used to), which this painter draws directly on top of. Without
-  /// this flag the two disagree on which side is which, so every joint
-  /// lands nowhere near the body it's meant to trace — the skeleton looks
-  /// simply absent rather than "slightly off". Back camera has no such
-  /// mismatch since `CameraPreview` doesn't mirror it.
+  /// same un-mirrored space. `AnalyzeSessionScreen` mirrors the front
+  /// camera's on-screen preview itself (via `Transform` + `Matrix4.rotationY`,
+  /// so it behaves like a real mirror the user is used to) — it does NOT
+  /// rely on `CameraPreview` to do this anymore, because whether the plugin
+  /// mirrors the front camera on its own has proven inconsistent across
+  /// `camera_android_camerax`/rendering-backend versions (confirmed broken
+  /// on a real device 11/09/2026 — see CHANGELOG). Without this flag here
+  /// matching that same manual flip, the two disagree on which side is
+  /// which, so every joint lands nowhere near the body it's meant to trace —
+  /// the skeleton looks simply absent (or every joint on the wrong side)
+  /// rather than "slightly off". Back camera isn't mirrored either way, so
+  /// no such mismatch there.
   final bool mirror;
 
   @override

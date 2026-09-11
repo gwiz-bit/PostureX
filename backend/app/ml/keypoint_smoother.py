@@ -34,12 +34,18 @@ class KeypointSmoother:
 
     `alpha` càng gần 1 thì càng bám sát frame mới (ít mượt, ít lag); càng
     gần 0 thì càng mượt nhưng khung xương trễ hơn so với chuyển động thật.
-    0.5 là ước lượng ban đầu cân bằng hai điều đó — CHƯA đo trên người thật
-    xem có cần chỉnh không, cùng tình trạng với ngưỡng góc của các analyzer
-    mới (xem CHANGELOG 06/09/2026).
+
+    Bắt đầu ở 0.5 (06/09/2026), nhưng test thật trên điện thoại 11/09/2026
+    (cả camera trước lẫn sau) vẫn thấy khớp "nhảy loạn" — nghĩa là 0.5 CHƯA
+    đủ mượt. Hạ xuống 0.25: công thức EMA có "bộ nhớ hiệu dụng" ~1/(1-alpha)
+    frame, nên 0.25 tương đương làm mượt trên ~4 frame gần nhất thay vì ~2
+    frame như 0.5 — mượt hơn hẳn, đổi lại khung xương trễ hơn một chút so
+    với chuyển động thật. VẪN CHƯA đo lại trên người thật xem 0.25 đã đủ hay
+    còn cần hạ tiếp — cùng tình trạng "ước lượng, chưa đo người thật" với
+    ngưỡng góc của các analyzer (xem CHANGELOG 06/09/2026).
     """
 
-    def __init__(self, alpha: float = 0.5) -> None:
+    def __init__(self, alpha: float = 0.25) -> None:
         if not 0.0 < alpha <= 1.0:
             raise ValueError(f"alpha phải trong khoảng (0, 1], nhận {alpha}")
         self._alpha = alpha

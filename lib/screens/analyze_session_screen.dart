@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show pi;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -616,7 +617,29 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          CameraPreview(controller),
+                          // Mirror the FRONT camera's preview OURSELVES — do
+                          // not rely on CameraPreview to do it. It used to
+                          // (older camera_android_camerax), which is what the
+                          // SkeletonPainter.mirror flag below was written
+                          // against, but that mirroring behavior regressed in
+                          // some CameraX/rendering-backend combinations
+                          // (flutter/flutter#156974 — front preview shown
+                          // un-mirrored "like it is recorded" instead of like
+                          // a real mirror) and isn't guaranteed fixed on every
+                          // device/Flutter engine combo. Confirmed on a real
+                          // phone 11/09/2026: front-camera joints tracked on
+                          // the wrong side of the body — this is why. Doing
+                          // the flip explicitly here means correctness never
+                          // again depends on which way the plugin happens to
+                          // behave on a given device.
+                          if (_lensDirection == CameraLensDirection.front)
+                            Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.rotationY(pi),
+                              child: CameraPreview(controller),
+                            )
+                          else
+                            CameraPreview(controller),
                           // Coordinates come from the same rotated JPEG sent to
                           // the backend (see _encodeCameraImage), so they line
                           // up with CameraPreview as long as both are scaled
@@ -625,10 +648,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                             painter: SkeletonPainter(
                               keypoints: _keypoints,
                               correct: _correct,
-                              // CameraPreview auto-mirrors the front camera
-                              // for display, but the coordinates the backend
-                              // returns are computed from the un-mirrored
-                              // sensor JPEG — see SkeletonPainter.mirror.
+                              // We now mirror the front camera's PREVIEW
+                              // ourselves (see above), so the coordinates —
+                              // still computed from the un-mirrored sensor
+                              // JPEG — need the exact same flip to line up.
                               mirror: _lensDirection == CameraLensDirection.front,
                             ),
                           ),

@@ -64,6 +64,50 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 11/09/2026
+
+**Test thật trên điện thoại của bản sửa 09/09 — camera trước bị NGƯỢC hẳn
+(khớp ở sai bên cơ thể), cả hai camera vẫn còn nhảy loạn dù đã có
+`KeypointSmoother`.**
+
+**1) Camera trước ngược — lỗi hồi quy đã biết của chính plugin, không phải
+lỗi công thức lật gương của app.** `SkeletonPainter.mirror` (sửa từ phiên
+trước) giả định `CameraPreview` TỰ ĐỘNG lật gương camera trước để hiển thị —
+đúng với hành vi cũ, nhưng `camera_android_camerax` (bản đang dùng: 0.6.30)
+có một lỗi hồi quy đã biết
+([flutter/flutter#156974](https://github.com/flutter/flutter/issues/156974)):
+từ bản `0.6.8+2` trở đi, preview camera trước có lúc hiện "như quay phim"
+(KHÔNG lật gương) thay vì lật như mọi app camera thật. Bản vá chính thức
+(`0.6.18+3`) chỉ áp dụng cho **backend render Impeller** — không đảm bảo hết
+lỗi trên mọi tổ hợp thiết bị/Flutter engine, và thực tế xác nhận vẫn còn lỗi
+trên máy thật.
+
+Sửa bằng cách **tự lật gương preview**, không phụ thuộc plugin nữa:
+`AnalyzeSessionScreen` bọc `CameraPreview` trong `Transform` +
+`Matrix4.rotationY(pi)` khi đang dùng camera trước. `SkeletonPainter.mirror`
+giữ nguyên logic (vẫn lật toạ độ khớp theo đúng cách cũ) — giờ chỉ là khớp
+với phép lật TỰ QUẢN LÝ thay vì lật của plugin, nên đúng bất kể phiên bản
+plugin/thiết bị cư xử thế nào.
+
+**2) Vẫn nhảy loạn dù `KeypointSmoother` đã deploy — `alpha=0.5` chưa đủ
+mượt.** Xác nhận VPS đang chạy đúng bản có bộ làm mượt (`d6ad083`, khớp
+commit deploy 09/09) nên đây không phải do quên deploy. Hạ `alpha` mặc định
+từ 0.5 xuống **0.25** — công thức EMA có "bộ nhớ hiệu dụng" ~1/(1-alpha)
+frame, nên 0.25 tương đương làm mượt trên ~4 frame gần nhất thay vì ~2 frame
+như trước, đổi lại khung xương trễ hơn một chút so với chuyển động thật.
+
+Đã build lại APK (`app-arm64-v8a-release.apk`) và cài trực tiếp qua ADB lên
+điện thoại đang cắm để test lại ngay.
+
+334 test backend xanh (đổi default `alpha` không cần sửa test nào — mọi test
+đều tự truyền `alpha=` riêng), 72 test Flutter xanh, `flutter analyze` 0 lỗi.
+
+⚠️ **Cả hai con số (`Matrix4.rotationY(pi)` cho lật gương và `alpha=0.25` cho
+làm mượt) đều CHƯA được xác nhận lại trên chính điện thoại đã báo lỗi** — chỉ
+mới build/cài xong, chưa có kết quả test thật. Nếu `alpha=0.25` vẫn chưa đủ
+mượt, hạ tiếp (0.15-0.2); nếu khung xương "trễ" rõ rệt so với chuyển động
+thật, tăng lên lại.
+
 ### 09/09/2026
 
 **Test thật đầu tiên trên điện thoại của loạt analyzer mới 06/09 — lộ ra 2
