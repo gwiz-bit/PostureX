@@ -32,29 +32,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import cv2
 
+from app.ml.analyzers.reference_joints import primary_joints_for
 from app.ml.analyzers.registry import ANALYZER_REGISTRY
-from app.ml.pose_estimator import DISPLAY_LANDMARK_NAMES, PoseEstimator, named_keypoints
 from app.ml.angle_utils import calculate_angle, calculate_angle_3d
+from app.ml.pose_estimator import DISPLAY_LANDMARK_NAMES, PoseEstimator, named_keypoints
 
 VIDEO_DIR = Path(__file__).resolve().parent.parent / "storage" / "exercise_videos"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "storage" / "reference_poses"
 SAMPLE_FPS = 10.0
 MISSING_RATE_LIMIT = 0.10
 MIN_RANGE_DEGREES = 20.0
-
-# Bộ ba khớp đại diện để QUYẾT ĐỊNH dùng 2D hay 3D, theo từng họ analyzer —
-# không cần chính xác tuyệt đối cho MỌI khớp, chỉ cần đại diện đúng trục
-# chuyển động chính của họ đó. Analyzer nào chưa liệt kê thì dùng mặc định
-# vai-khuỷu-cổ tay (khớp tay là phổ biến nhất trong 16 analyzer hiện có).
-_PRIMARY_JOINTS = {
-    "SquatAnalyzer": ("left_hip", "left_knee", "left_ankle"),
-    "LungeAnalyzer": ("left_hip", "left_knee", "left_ankle"),
-    "DeadliftAnalyzer": ("left_shoulder", "left_hip", "left_knee"),
-    "HipThrustAnalyzer": ("left_shoulder", "left_hip", "left_knee"),
-    "CalfRaiseAnalyzer": ("left_knee", "left_ankle", "left_foot_index"),
-    "LegExtensionAnalyzer": ("left_hip", "left_knee", "left_ankle"),
-}
-_DEFAULT_JOINTS = ("left_shoulder", "left_elbow", "left_wrist")
 
 
 def _extract(video_path: Path, joints: tuple[str, str, str]):
@@ -127,7 +114,7 @@ def build_reference(exercise_name: str) -> dict | None:
     if not video_path.exists():
         return None
 
-    joints = _PRIMARY_JOINTS.get(cls.__name__, _DEFAULT_JOINTS)
+    joints = primary_joints_for(cls.__name__)
     frames_full, a2, a3, missing_rate = _extract(video_path, joints)
     if missing_rate > MISSING_RATE_LIMIT:
         return None
@@ -148,7 +135,7 @@ def build_reference(exercise_name: str) -> dict | None:
 async def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     built = skipped = 0
-    for name in sorted({n for n in ANALYZER_REGISTRY}):
+    for name in sorted(set(ANALYZER_REGISTRY)):
         ref = build_reference(name)
         if ref is None:
             skipped += 1

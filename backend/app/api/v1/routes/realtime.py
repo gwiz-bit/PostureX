@@ -18,6 +18,7 @@ from app.ml.keypoint_smoother import KeypointSmoother
 from app.ml.pose_estimator import named_keypoints
 from app.ml.pose_estimator_pool import get_pose_estimator_pool
 from app.ml.session_state import SessionState
+from app.ml.similarity_scorer import SimilarityScorer
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 
 logger = logging.getLogger(__name__)
@@ -129,6 +130,10 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
     # khác) và không đổi hẳn RunningMode của MediaPipe (xung đột với pool
     # dùng chung nhiều phiên).
     smoother = KeypointSmoother()
+    # Chấm điểm "độ giống bài mẫu" — bổ sung, không thay hệ rep-counting/
+    # ngưỡng hiện có (xem CHANGELOG 11/09/2026 (3)). Tạo SAU khi biết
+    # `exercise` (bên dưới), vì cần tên bài để tra chuẩn tham chiếu.
+    scorer: SimilarityScorer | None = None
 
     try:
         # --- Bước 1: nhận message khởi tạo ---
@@ -141,6 +146,7 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
 
         session = SessionState(exercise=exercise)
         analyzer = _get_analyzer(exercise, session, await _load_exercise_thresholds(exercise))
+        scorer = SimilarityScorer(exercise)
 
         await websocket.send_json({
             "status": "ready",
@@ -189,6 +195,7 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
                     "phase": session.rep_counter.phase.value,
                     "keypoints": None,
                     "all_keypoints": None,
+                    "similarity_score": None,
                 })
                 continue
 
@@ -200,7 +207,10 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
             # tách khỏi `result.keypoints` (chỉ những khớp analyzer này thực
             # sự dùng để tính góc) — gán SAU khi analyzer trả về, không
             # analyzer nào cần biết hay sửa gì cho trường này.
-            result.all_keypoints = visible_points(named_keypoints(keypoints))
+            named = named_keypoints(keypoints)
+            result.all_keypoints = visible_points(named)
+            if scorer is not None:
+                result.similarity_score = scorer.update(named)
 
             await websocket.send_json(result.model_dump())
 

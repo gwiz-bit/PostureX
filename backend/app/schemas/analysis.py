@@ -52,3 +52,11 @@ class FrameAnalysisResult(BaseModel):
     # xương chi tiết (mặt, khuỷu tay, cổ tay...) phía client, độc lập với
     # `keypoints` (vẫn giữ nguyên cho phần tính toán/debug góc).
     all_keypoints: dict[str, Point] | None = None
+    # "Độ giống bài mẫu" (0-100), so chuỗi góc live với chuẩn trích từ video
+    # mẫu qua Subsequence DTW — xem `app/ml/similarity_scorer.py`. `None`
+    # khi bài chưa có chuẩn tham chiếu (đa số — mới có 113/204 bài, xem
+    # CHANGELOG 11/09/2026 (3)) HOẶC cửa sổ live chưa đủ frame để tính, KHÔNG
+    # phải điểm 0 — client không nên hiểu `None` là "tập sai hoàn toàn".
+    # Route tự gán field này SAU KHI analyzer trả về, giống `all_keypoints`
+    # — không analyzer nào cần biết trường này tồn tại.
+    similarity_score: float | None = None
