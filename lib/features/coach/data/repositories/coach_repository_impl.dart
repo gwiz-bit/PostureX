@@ -10,9 +10,35 @@ class CoachRepositoryImpl implements CoachRepository {
   final CoachRemoteDataSource _remote;
 
   @override
-  Future<String> sendMessage({required String message, required List<ChatMessage> history}) async {
+  Future<String> sendMessage({required String message}) async {
     try {
-      return await _remote.sendMessage(message: message, history: history);
+      return await _remote.sendMessage(message: message);
+    } on ApiException catch (e) {
+      throw ServerFailure(e.message);
+    } on AppFailure {
+      rethrow;
+    } catch (_) {
+      throw const NetworkFailure();
+    }
+  }
+
+  @override
+  Future<List<ChatMessage>> fetchHistory() async {
+    try {
+      return await _remote.fetchHistory();
+    } on ApiException catch (e) {
+      throw ServerFailure(e.message);
+    } on AppFailure {
+      rethrow;
+    } catch (_) {
+      throw const NetworkFailure();
+    }
+  }
+
+  @override
+  Future<void> clearHistory() async {
+    try {
+      await _remote.clearHistory();
     } on ApiException catch (e) {
       throw ServerFailure(e.message);
     } on AppFailure {

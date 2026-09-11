@@ -6,6 +6,7 @@ import '../models/workout_plan.dart';
 import '../services/api_client.dart';
 import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
+import '../utils/ai_plan_apply.dart';
 import '../utils/app_locale.dart';
 import '../utils/workout_stats.dart';
 import '../widgets/app_logo.dart';
@@ -33,20 +34,7 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
   Future<void> _generateAiPlan() async {
     setState(() => _isGeneratingPlan = true);
     try {
-      final aiPlan = await ApiClient.instance.generateAiPlan();
-      UserSession.plan.applyAiWeek([
-        for (final day in aiPlan.days)
-          (
-            dayLabel: day.dayLabel,
-            sessionName: day.sessionName,
-            isRest: day.isRest,
-            exercises: [
-              for (final e in day.exercises)
-                PlannedExercise(name: e.name, setsReps: e.setsReps),
-            ],
-            nutritionTip: day.nutritionTip,
-          ),
-      ]);
+      await generateAndApplyAiPlan();
       if (!mounted) return;
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

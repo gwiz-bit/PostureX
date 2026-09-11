@@ -6,7 +6,11 @@ class CoachRemoteDataSource {
 
   final ApiClient _client;
 
-  Future<String> sendMessage({required String message, required List<ChatMessage> history}) {
-    return _client.sendCoachMessage(message: message, history: history);
+  Future<String> sendMessage({required String message}) {
+    return _client.sendCoachMessage(message: message);
   }
+
+  Future<List<ChatMessage>> fetchHistory() => _client.fetchCoachHistory();
+
+  Future<void> clearHistory() => _client.clearCoachHistory();
 }

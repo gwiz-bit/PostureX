@@ -64,6 +64,57 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 11/09/2026 (2)
+
+**AI Coach nay lưu lại lịch sử chat, và được nối với "Personalize with AI"
+trên Home.** Trước đó: (1) `AiCoachController.messages` chỉ tồn tại trong
+RAM, tạo mới trắng tinh mỗi lần `CoachModule.controller()` được gọi (mỗi lần
+mở màn) — rời màn AI Coach là mất sạch; (2) chat và sinh lịch tập ("Personalize
+with AI" ở Home) là hai tính năng gọi Gemini hoàn toàn tách rời, không biết
+gì về nhau — **lưu ý:** nút "Personalize with AI" tự nó ĐÃ hoạt động thật từ
+trước (gọi `POST /coach/plan` thật, dùng hồ sơ + lịch sử tập thật), không
+phải một chỗ chưa nối dây như ban đầu nghĩ — cái thiếu chỉ là sự LIÊN KẾT
+giữa nó và chat.
+
+**1) Lịch sử chat.** Bảng `coach_messages` mới (`user_id`, `role`, `content`,
+`created_at`) — server giờ là nguồn sự thật duy nhất. `POST /coach/chat`
+KHÔNG còn nhận `history` từ client (field đã xoá khỏi `CoachChatRequest`) —
+tự đọc `DEFAULT_CONTEXT_LIMIT=20` tin nhắn gần nhất từ DB làm ngữ cảnh, rồi
+lưu lại cả câu hỏi lẫn câu trả lời SAU KHI Gemini trả lời thành công (lưu
+trước lúc gọi sẽ để lại câu hỏi mồ côi nếu request lỗi giữa chừng). Thêm
+`GET /coach/history` (khôi phục lại đoạn chat lúc mở màn) và
+`DELETE /coach/history` (nút "Xoá cuộc trò chuyện" mới trên AppBar).
+
+**Bẫy tìm thấy lúc chạy cả bộ test cùng lúc:** hai `add_message()` gọi liên
+tiếp có thể trùng `created_at` tới độ chính xác micro-giây, khiến
+`ORDER BY created_at` một mình không ổn định (thứ tự đảo lộn giữa các lần
+chạy, dù luôn đúng khi test riêng lẻ). Sửa bằng cách thêm `id` (tự tăng, luôn
+đúng thứ tự chèn thật) làm tiêu chí phụ trong `crud/coach_message.py`.
+
+**2) Nối chat với sinh lịch tập.** `POST /coach/plan` giờ đọc thêm 10 lượt
+chat gần nhất, định dạng gọn rồi nhét vào prompt (`ai_coach_service.generate_plan`
+có thêm tham số `chat_context`, rỗng thì hành vi y hệt trước — không phá gì
+đang chạy). Yêu cầu Gemini tôn trọng nguyện vọng/ràng buộc đã nói trong chat
+(vd "tránh tập lưng vì đang đau") khi soạn lịch. Phía Flutter, `AiCoachScreen`
+có thêm nút "Tạo lịch tập từ đoạn chat này" (icon ✨ trên AppBar) — gọi cùng
+hàm dùng chung mới `generateAndApplyAiPlan()` (`lib/utils/ai_plan_apply.dart`,
+tách ra từ `HomeScreen._generateAiPlan` để hai nơi không copy-paste logic áp
+lịch vào `UserSession.plan`).
+
+Thêm `tests/test_coach.py` (12 test, Gemini bị giả hoàn toàn — không test
+nào gọi API thật): CRUD thuần, lưu đúng cả hai chiều hỏi-đáp, lượt hỏi sau
+thấy được lịch sử lượt trước, xoá lịch sử, và `chat_context` tới đúng
+`generate_plan` khi có/không có lịch sử chat. 346 test backend xanh, ruff
+sạch. 72 test Flutter xanh (sửa 1 test cũ còn gọi `sendCoachMessage(...,
+history: [])` — tham số đã xoá), `flutter analyze` 0 lỗi.
+
+⚠️ **Cần chạy `scripts/ensure_tables.py` trên VPS sau khi deploy** để tạo
+bảng `coach_messages` mới — không tự nhiên có, và `git pull` không đi kèm
+migration DB (đúng quy trình đã ghi ở mục "Triển khai" cho mọi bảng mới).
+
+⚠️ Chưa test bằng tài khoản thật trên điện thoại — toàn bộ xác nhận trên
+đều bằng test tự động.
+
 ### 11/09/2026
 
 **Test thật trên điện thoại của bản sửa 09/09 — camera trước bị NGƯỢC hẳn

@@ -10,6 +10,7 @@ from sqlalchemy import text
 
 from app.core.database import Base, engine
 from app.models import (  # noqa: F401 dang ky model de resolve FK
+    coach_message,
     device_token,
     email_otp,
     goal,

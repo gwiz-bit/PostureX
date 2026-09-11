@@ -45,7 +45,7 @@ void main() {
     fakeAsync((async) {
       Object? thrown;
       stalling()
-          .sendCoachMessage(message: 'xin chào', history: const [])
+          .sendCoachMessage(message: 'xin chào')
           .catchError((Object e) {
         thrown = e;
         return '';

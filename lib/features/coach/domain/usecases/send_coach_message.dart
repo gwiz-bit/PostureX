@@ -1,4 +1,3 @@
-import '../entities/chat_message.dart';
 import '../repositories/coach_repository.dart';
 
 class SendCoachMessage {
@@ -6,7 +5,7 @@ class SendCoachMessage {
 
   final CoachRepository _repository;
 
-  Future<String> call({required String message, required List<ChatMessage> history}) {
-    return _repository.sendMessage(message: message, history: history);
+  Future<String> call({required String message}) {
+    return _repository.sendMessage(message: message);
   }
 }

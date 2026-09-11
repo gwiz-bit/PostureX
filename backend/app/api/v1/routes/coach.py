@@ -11,12 +11,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
+from app.crud import coach_message as coach_message_crud
 from app.crud.exercise import get_active_exercises, get_muscle_groups_by_exercise
 from app.crud.profile import get_profile
 from app.ml.analyzers.registry import supports_analysis
+from app.models.coach_message import CoachMessage
 from app.models.user import User
 from app.models.workout import Workout
-from app.schemas.coach import AiPlanResponse, CoachChatRequest, CoachChatResponse
+from app.schemas.auth import MessageResponse
+from app.schemas.coach import (
+    AiPlanResponse,
+    ChatMessage,
+    CoachChatRequest,
+    CoachChatResponse,
+    CoachMessageOut,
+)
 from app.services import ai_coach_service
 from app.utils.deps import get_current_user
 
@@ -200,6 +209,18 @@ async def _build_user_context(db: AsyncSession, user: User) -> str:
     return "\n".join(lines)
 
 
+def _format_chat_context(messages: list[CoachMessage]) -> str:
+    """Định dạng vài lượt hội thoại gần nhất thành text gọn cho vào prompt
+    sinh lịch tập — nối tính năng chat với tính năng lịch tập (trước
+    11/09/2026 hai cái tách rời hoàn toàn, xem CHANGELOG)."""
+    if not messages:
+        return ""
+    lines = [
+        f"{'User' if m.role == 'user' else 'AI Coach'}: {m.content}" for m in messages
+    ]
+    return "\n".join(lines)
+
+
 @router.post("/chat", response_model=CoachChatResponse)
 @limiter.limit("10/minute;100/hour")
 async def chat(
@@ -220,6 +241,9 @@ async def chat(
 
     `request: Request` là tham số slowapi bắt buộc phải có để lấy IP, không
     phải dư thừa — bỏ đi là decorator ném lỗi lúc khởi động.
+
+    Từ 11/09/2026: lịch sử hội thoại đọc từ bảng `coach_messages` (server tự
+    quản lý), KHÔNG còn nhận qua request nữa — xem docstring `CoachChatRequest`.
     """
     if not settings.GEMINI_API_KEY:
         raise HTTPException(
@@ -228,9 +252,11 @@ async def chat(
         )
 
     user_context = await _build_user_context(db, current_user)
+    history_rows = await coach_message_crud.get_recent_messages(db, current_user.id)
+    history = [ChatMessage(role=m.role, content=m.content) for m in history_rows]
     try:
         reply = await ai_coach_service.ask(
-            message=data.message, history=data.history, user_context=user_context
+            message=data.message, history=history, user_context=user_context
         )
     except Exception as e:
         logger.warning("AI Coach request failed: %s", e)
@@ -239,7 +265,33 @@ async def chat(
             detail="Không thể kết nối tới AI Coach lúc này. Thử lại sau.",
         )
 
+    # Lưu CẢ HAI chiều sau khi Gemini trả lời thành công — lưu trước lúc gọi
+    # Gemini thì một request lỗi giữa chừng sẽ để lại câu hỏi mồ côi không
+    # bao giờ có câu trả lời đi kèm.
+    await coach_message_crud.add_message(db, current_user.id, "user", data.message)
+    await coach_message_crud.add_message(db, current_user.id, "model", reply)
+
     return CoachChatResponse(reply=reply)
+
+
+@router.get("/history", response_model=list[CoachMessageOut])
+async def get_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[CoachMessage]:
+    """Toàn bộ lịch sử chat của user, cũ trước — gọi lúc mở màn AI Coach để
+    khôi phục lại cuộc hội thoại thay vì luôn bắt đầu trắng."""
+    return await coach_message_crud.get_all_messages(db, current_user.id)
+
+
+@router.delete("/history", response_model=MessageResponse)
+async def clear_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MessageResponse:
+    """Xoá sạch lịch sử chat của user — nút "Xoá cuộc trò chuyện" phía client."""
+    await coach_message_crud.clear_messages(db, current_user.id)
+    return MessageResponse(message="Đã xoá lịch sử trò chuyện.")
 
 
 @router.post("/plan", response_model=AiPlanResponse)
@@ -258,6 +310,10 @@ async def generate_plan(
     output cho cả 7 ngày — trong khi nhu cầu thật chỉ vài lần mỗi tuần.
     5/phút vẫn đủ để bấm lại ngay khi lịch chưa ưng ý, 20/giờ chặn lạm dụng.
 
+    Từ 11/09/2026: cũng đọc vài lượt chat gần nhất (nếu có) làm ngữ cảnh
+    thêm — nối tính năng chat với tính năng sinh lịch, trước đó hai cái
+    hoàn toàn tách rời (xem CHANGELOG và docstring `_format_chat_context`).
+
     Xem chú thích ở `chat` về lý do bắt buộc có `request: Request`.
     """
     if not settings.GEMINI_API_KEY:
@@ -268,10 +324,12 @@ async def generate_plan(
 
     user_context = await _build_user_context(db, current_user)
     exercise_catalogue = await _build_exercise_catalogue(db)
+    recent_messages = await coach_message_crud.get_recent_messages(db, current_user.id, limit=10)
     try:
         return await ai_coach_service.generate_plan(
             user_context=user_context,
             exercise_catalogue=exercise_catalogue,
+            chat_context=_format_chat_context(recent_messages),
         )
     except Exception as e:
         logger.warning("AI plan generation failed: %s", e)

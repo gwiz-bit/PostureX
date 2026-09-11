@@ -1,24 +1,38 @@
 """Pydantic schemas cho AI Coach chat (tư vấn tập luyện/dinh dưỡng)."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
 class ChatMessage(BaseModel):
-    """Một lượt hội thoại — role 'user' (người dùng) hoặc 'model' (AI)."""
+    """Một lượt hội thoại — role 'user' (người dùng) hoặc 'model' (AI). Dùng
+    nội bộ để dựng ngữ cảnh gửi Gemini (xem `ai_coach_service._to_contents`),
+    KHÔNG phải hình dạng API — client không còn gửi lịch sử lên nữa, xem
+    `CoachChatRequest`."""
     role: str = Field(pattern="^(user|model)$")
     content: str
 
 
 class CoachChatRequest(BaseModel):
+    """Từ 11/09/2026: KHÔNG còn trường `history`. Server tự đọc lịch sử gần
+    nhất từ bảng `coach_messages` (xem `crud/coach_message.py`) thay vì tin
+    vào client gửi kèm — sửa đúng lỗ hổng "rời màn chat là mất lịch sử" vì
+    trước đó lịch sử chỉ tồn tại trong RAM phía Flutter."""
     message: str = Field(min_length=1, max_length=2000)
-    # Lịch sử hội thoại do client tự giữ và gửi lại mỗi lần (server không
-    # lưu trữ hội thoại) — giới hạn 20 lượt gần nhất để tránh prompt phình
-    # to vô hạn.
-    history: list[ChatMessage] = Field(default_factory=list, max_length=20)
 
 
 class CoachChatResponse(BaseModel):
     reply: str
+
+
+class CoachMessageOut(BaseModel):
+    """Một tin nhắn đã lưu, trả về cho `GET /coach/history`."""
+    model_config = {"from_attributes": True}
+
+    role: str
+    content: str
+    created_at: datetime
 
 
 class PlanExerciseOut(BaseModel):

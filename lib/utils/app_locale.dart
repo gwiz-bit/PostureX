@@ -403,6 +403,11 @@ class AppLocale {
       'coach_title': 'AI Coach',
       'coach_hint': 'Ask about training, nutrition...',
       'coach_empty': 'Ask AI Coach anything about\ntraining & nutrition',
+      'coach_generate_plan': 'Generate plan from this chat',
+      'coach_clear_chat': 'Clear conversation',
+      'coach_clear_confirm_title': 'Clear conversation?',
+      'coach_clear_confirm_body': 'This permanently deletes your chat history with AI Coach.',
+      'coach_history_load_failed': 'Could not load chat history.',
 
       // Privacy Policy
       'privacy_title': 'Privacy Policy',
@@ -734,6 +739,11 @@ class AppLocale {
       'coach_title': 'AI Coach',
       'coach_hint': 'Hỏi về chế độ tập, dinh dưỡng...',
       'coach_empty': 'Hỏi AI Coach bất cứ điều gì về\ntập luyện & dinh dưỡng',
+      'coach_generate_plan': 'Tạo lịch tập từ đoạn chat này',
+      'coach_clear_chat': 'Xoá cuộc trò chuyện',
+      'coach_clear_confirm_title': 'Xoá cuộc trò chuyện?',
+      'coach_clear_confirm_body': 'Toàn bộ lịch sử trò chuyện với AI Coach sẽ bị xoá vĩnh viễn.',
+      'coach_history_load_failed': 'Không tải được lịch sử trò chuyện.',
 
       // Privacy Policy
       'privacy_title': 'Chính sách bảo mật',

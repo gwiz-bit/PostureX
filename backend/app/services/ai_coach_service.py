@@ -225,24 +225,41 @@ xơ), khác nhau giữa ngày tập nặng và ngày nghỉ (ngày tập nặng 
 carb/protein hơn để phục hồi). Không lặp lại y hệt nhau ở cả 7 ngày.
 - session_name của ngày tập nêu rõ trọng tâm (vd "Lower Body & Core", \
 "Upper Body — Push").
+- Nếu có mục "Trao đổi gần đây với AI Coach" bên dưới, ĐỌC KỸ và ưu tiên tôn \
+trọng nguyện vọng/ràng buộc user đã nói ra ở đó (vd "tránh tập lưng vì đang \
+đau", "muốn tập trọng tâm chân tuần này", "chỉ có 30 phút mỗi buổi") khi soạn \
+lịch — đừng phớt lờ chỉ vì đó là hội thoại chứ không phải một trường dữ liệu \
+có cấu trúc. Nếu không có mục đó hoặc nó không liên quan gì đến việc lên lịch, \
+bỏ qua, không cần nhắc tới trong kết quả.
 
 Thông tin user:
 {user_context}
 
 Bài tập có sẵn trong app (gom theo nhóm cơ, `*` = app chấm được kỹ thuật):
-{exercise_catalogue}"""
+{exercise_catalogue}
+{chat_context}"""
 
 
-async def generate_plan(*, user_context: str, exercise_catalogue: str) -> AiPlanResponse:
+async def generate_plan(
+    *, user_context: str, exercise_catalogue: str, chat_context: str = ""
+) -> AiPlanResponse:
     """Sinh lịch tập + dinh dưỡng 7 ngày cá nhân hóa bằng Gemini, trả về đã
     parse sẵn thành `AiPlanResponse` (structured output — không cần tự parse
     JSON tay, SDK validate theo đúng schema Pydantic).
+
+    `chat_context` (tuỳ chọn) nối lịch tập với hội thoại AI Coach — trước
+    11/09/2026 hai tính năng này hoàn toàn tách rời, sinh lịch không biết gì
+    về nội dung user vừa trò chuyện trong chat. Rỗng thì bỏ qua hoàn toàn,
+    không đổi hành vi cũ.
 
     Ném ra Exception nguyên bản nếu gọi API thất bại hoặc response không hợp
     lệ — route gọi hàm này chịu trách nhiệm bọc lại thành HTTPException."""
     prompt = _PLAN_SYSTEM_PROMPT.format(
         user_context=user_context,
         exercise_catalogue=exercise_catalogue,
+        chat_context=(
+            f"\nTrao đổi gần đây với AI Coach:\n{chat_context}" if chat_context else ""
+        ),
     )
     response = await _generate_with_retry(
         model=settings.GEMINI_MODEL,

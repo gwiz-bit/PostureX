@@ -591,23 +591,30 @@ class ApiClient {
 
   // --- AI Coach ---------------------------------------------------------
 
-  /// Sends [message] to the AI Coach along with [history] (the caller's
-  /// own running conversation — the backend doesn't persist chat history)
-  /// so replies stay personalized to the user's real profile/workout data.
-  Future<String> sendCoachMessage({
-    required String message,
-    required List<ChatMessage> history,
-  }) async {
+  /// Sends [message] to the AI Coach. The server keeps the conversation
+  /// history itself (`coach_messages` table, see CHANGELOG 11/09/2026) and
+  /// uses it both to answer this message and as context for future ones —
+  /// the client no longer tracks/sends history.
+  Future<String> sendCoachMessage({required String message}) async {
     final json = await _post(
       '/api/v1/coach/chat',
       auth: true,
       timeout: _aiTimeout,
-      body: {
-        'message': message,
-        'history': history.map((m) => m.toJson()).toList(),
-      },
+      body: {'message': message},
     );
     return (json as Map<String, dynamic>)['reply'] as String;
+  }
+
+  /// Full chat history, oldest first — call on opening the AI Coach screen
+  /// to restore the conversation instead of always starting blank.
+  Future<List<ChatMessage>> fetchCoachHistory() async {
+    final json = await _get('/api/v1/coach/history', auth: true);
+    return (json as List).map((e) => ChatMessage.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Permanently deletes the user's AI Coach chat history.
+  Future<void> clearCoachHistory() async {
+    await _delete('/api/v1/coach/history', auth: true);
   }
 
   /// Generates a personalized 7-day (Mon..Sun) workout + nutrition plan from

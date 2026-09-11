@@ -25,6 +25,7 @@ from app.main import app
 
 # Import mọi model để Base.metadata biết đủ bảng trước khi create_all — thiếu một
 # cái là khoá ngoại trỏ vào bảng không tồn tại và create_all nổ.
+from app.models.coach_message import CoachMessage  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.notification import Notification  # noqa: F401
 from app.models.role import USER_ROLE_NAME, Role

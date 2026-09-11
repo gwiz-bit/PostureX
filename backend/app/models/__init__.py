@@ -1,3 +1,4 @@
+from app.models.coach_message import CoachMessage
 from app.models.device_token import DeviceToken
 from app.models.email_otp import EmailOtp
 from app.models.exercise import Exercise
@@ -13,6 +14,7 @@ from app.models.video import Video
 from app.models.workout import Workout
 
 __all__ = [
+    "CoachMessage",
     "Role",
     "User",
     "Video",

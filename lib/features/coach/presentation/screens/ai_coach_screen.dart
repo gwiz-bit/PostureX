@@ -7,7 +7,8 @@ import '../../domain/entities/chat_message.dart';
 
 /// Chat with the AI Coach — personalized training/nutrition advice backed
 /// by the real user profile + workout history (see `POST /api/v1/coach/chat`).
-/// History is kept client-side only; the backend doesn't persist it.
+/// The server persists history (`coach_messages` table) and restores it on
+/// open — see CHANGELOG 11/09/2026.
 class AiCoachScreen extends StatefulWidget {
   const AiCoachScreen({super.key});
 
@@ -27,8 +28,46 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
   }
 
   void _onControllerChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
     _scrollToBottom();
+    if (_controller.planMessage != null) {
+      _controller.clearPlanMessage();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocale.t('home_ai_plan_ready'))),
+      );
+    }
+  }
+
+  Future<void> _confirmClear() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppLocale.t('coach_clear_confirm_title'),
+          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          AppLocale.t('coach_clear_confirm_body'),
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            child: Text(AppLocale.t('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: Text(AppLocale.t('coach_clear_chat')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _controller.clear();
   }
 
   @override
@@ -71,10 +110,35 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
           AppLocale.t('coach_title'),
           style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
         ),
+        actions: [
+          IconButton(
+            tooltip: AppLocale.t('coach_generate_plan'),
+            onPressed: _controller.isGeneratingPlan ? null : _controller.generatePlan,
+            icon: _controller.isGeneratingPlan
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                  )
+                : const Icon(Icons.auto_awesome_rounded, color: AppColors.primary),
+          ),
+          if (messages.isNotEmpty)
+            IconButton(
+              tooltip: AppLocale.t('coach_clear_chat'),
+              onPressed: _confirmClear,
+              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.textSecondary),
+            ),
+        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
+            if (_controller.isLoadingHistory)
+              const LinearProgressIndicator(
+                color: AppColors.primary,
+                backgroundColor: AppColors.surface,
+                minHeight: 2,
+              ),
             Expanded(
               child: messages.isEmpty
                   ? _EmptyState(onSuggestionTap: (text) {

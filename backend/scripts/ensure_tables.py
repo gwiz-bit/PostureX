@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.database import Base, engine
 from app.models import (  # noqa: F401 đăng ký hết model để Base.metadata đầy đủ
+    coach_message,
     device_token,
     email_otp,
     exercise,
