@@ -59,11 +59,21 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
   /// three exercises to check now, same pattern as the Workout tab's
   /// routine picker (each key has a real backend analyzer registered in
   /// `ANALYZER_REGISTRY`).
+  ///
+  /// Second element is BOTH the WebSocket `exercise` field AND the exact
+  /// string matched against `Exercises.ExerciseName` for the demo-video
+  /// lookup (see `AnalyzeSessionScreen._loadGuideVideo`) — a bare analyzer
+  /// alias like 'row' is a valid `ANALYZER_REGISTRY` key but matches no real
+  /// library exercise, so the demo video silently never loads. Using the
+  /// full library name of one representative variant (still registered to
+  /// the same analyzer — see `_ROW_VARIANTS`/`_PLANK_VARIANTS`) fixes both
+  /// at once; 'squat' is left as-is since it already has a bundled asset
+  /// fallback (`assets/video/squat.mp4`).
   void _startFullBodyCheck(BuildContext context) {
     const exercises = [
       ('Squat', 'squat'),
-      ('Row', 'row'),
-      ('Plank', 'plank'),
+      ('Row', 'barbell bent over row'),
+      ('Plank', 'front plank'),
     ];
     showModalBottomSheet<void>(
       context: context,

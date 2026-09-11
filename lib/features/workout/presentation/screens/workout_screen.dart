@@ -12,6 +12,19 @@ import '../../../video/presentation/screens/upload_video_screen.dart';
 /// [key] is the lowercase string sent to the backend's analyzer registry
 /// (see `ANALYZER_REGISTRY` in `app/api/v1/routes/realtime.py`) and used to
 /// match an admin-uploaded guide video by exercise name.
+///
+/// [key] must be the FULL library exercise name (e.g. "barbell bent over
+/// row"), not a bare analyzer alias (e.g. "row") — `AnalyzeSessionScreen`
+/// looks up the demo video by an EXACT, case-insensitive match against
+/// `Exercises.ExerciseName`, and a bare alias (though a perfectly valid
+/// `ANALYZER_REGISTRY` key on its own) matches no real library row, so the
+/// video silently never loads (confirmed 11/09/2026 real-device test: Row/
+/// Plank/Lunge/Deadlift/Hip Thrust showed no guide video). Picking any one
+/// variant already registered to the intended analyzer (see the
+/// `_ROW_VARIANTS`/`_PLANK_VARIANTS`/etc. comments in registry.py) fixes
+/// both the video AND keeps analyzer selection correct — it does not need
+/// to be the "canonical" name of the exercise family, just A name that maps
+/// to the right analyzer and has a demo video on the server.
 class _RoutineExercise {
   const _RoutineExercise(this.label, this.key);
 
@@ -49,18 +62,23 @@ class _WorkoutScreenState extends State<WorkoutScreen> with AppLocaleMixin {
       icon: Icons.accessibility_new_rounded,
       exercises: [
         _RoutineExercise('Squat', 'squat'),
-        _RoutineExercise('Row', 'row'),
+        _RoutineExercise('Row', 'barbell bent over row'),
         _RoutineExercise('Bench', 'dumbbell bench press'),
-        _RoutineExercise('Plank', 'plank'),
+        _RoutineExercise('Plank', 'front plank'),
       ],
     ),
     _Routine(
       name: 'Posture Primer',
       icon: Icons.self_improvement_rounded,
       exercises: [
+        // Cat-Cow has NO exercise in the library at all (see
+        // `_CAT_COW_VARIANTS` in registry.py: "Thư viện hiện KHÔNG có bài
+        // nào thuộc họ này") — no demo video exists to link to, not a bug
+        // to fix here. Left as-is; flagged 11/09/2026 for a product call on
+        // whether to source a video or drop it from this routine.
         _RoutineExercise('Cat-Cow', 'cat-cow'),
-        _RoutineExercise('Plank', 'plank'),
-        _RoutineExercise('Lunge', 'lunge'),
+        _RoutineExercise('Plank', 'front plank'),
+        _RoutineExercise('Lunge', 'forward lunge'),
       ],
     ),
     _Routine(
@@ -68,9 +86,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> with AppLocaleMixin {
       icon: Icons.fitness_center_rounded,
       useLogo: true,
       exercises: [
-        _RoutineExercise('Deadlift', 'deadlift'),
+        _RoutineExercise('Deadlift', 'barbell deadlift'),
         _RoutineExercise('OHP', 'barbell overhead press'),
-        _RoutineExercise('Hip Thrust', 'hip thrust'),
+        _RoutineExercise('Hip Thrust', 'barbell hip thrust'),
       ],
     ),
   ];
