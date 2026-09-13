@@ -64,6 +64,85 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13-14/09/2026 (9)
+
+**Đợt 5 — hai việc không đổi số bài nhưng đáng ghi: (a) sửa `reference_joints.py`
+thiếu 19/25 analyzer (ảnh hưởng tính năng "độ giống bài mẫu"), (b) mô phỏng
+bằng số thay vì suy luận giấy để xác nhận DỨT KHOÁT 4 bài "để dành" còn lại
+của Nhóm C.**
+
+**1) `reference_joints.py` — phát hiện lúc trả lời câu hỏi của user "app có
+thật sự đối chiếu với bài mẫu không".** File này (viết 11/09/2026) quyết
+định 3 khớp đại diện cho `SimilarityScorer` (tính năng DTW so khớp thời gian
+thực với video mẫu) dùng cho TỪNG analyzer — nhưng chỉ khai 6/16 analyzer
+lúc viết, analyzer nào thiếu thì ÂM THẦM rơi về mặc định vai-khuỷu-cổ tay.
+Mặc định đó ĐÚNG cho 7 analyzer thật sự tính góc khuỷu tay (Row/Curl/
+BenchPress/OverheadPress/Pulldown/TricepExtension/FacePull), nhưng SAI cho
+`LateralRaiseAnalyzer`/`ChestFlyAnalyzer`/`PulloverAnalyzer` (tính góc ở VAI,
+không phải khuỷu tay — đã sai từ 11/09, không phải lỗi mới) và SAI cho toàn
+bộ 9 analyzer thêm trong ngày 13/09 (HipAbduction/HipAdduction/Kickback/
+CossackSquat/LegCurl/LegPress/Crunch/CatCow/Plank — chưa từng được thêm vào
+file này). Hậu quả nếu bài đó có chuẩn tham chiếu: `SimilarityScorer` so
+sánh nhầm góc khuỷu tay (gần như không đổi trong các bài này) thay vì góc
+thật đại diện chuyển động, cho điểm vô nghĩa.
+
+Bổ sung đủ 25/25 analyzer, xác nhận từng khớp bằng cách ĐỌC TRỰC TIẾP lệnh
+`calculate_angle_3d`/`calculate_angle` trong mỗi file analyzer (không suy
+đoán theo tên bài). Thêm test tự kiểm: mọi analyzer trong `ANALYZER_REGISTRY`
+phải được xét tới tường minh (có trong `PRIMARY_JOINTS` hoặc trong danh sách
+đã xác nhận dùng đúng mặc định) — bắt lỗi ngay nếu quên khai báo khi thêm
+analyzer mới sau này, đúng bài học đã lặp lại nhiều lần trong ngày cho
+`tunables.py`/`thresholds.py`/`posture_rule.py`. 434 test backend xanh (từ
+421), ruff sạch.
+
+⚠️ **Sửa code không tự động tạo ra chuẩn tham chiếu.** 113 file chuẩn đã
+trích (11/09) vẫn giữ dữ liệu CŨ (sai khớp cho Lateral Raise/Chest Fly/
+Pullover nếu có), và 9 analyzer thêm 13/09 chưa có file chuẩn nào — lần trích
+duy nhất chạy TRƯỚC KHI các bài đó tồn tại trong registry. Đã chạy lại
+`scripts/extract_reference_poses.py` trên VPS (chạy nền bằng `nohup`, ~20-40
+phút cho khoảng 279 bài) ngay sau khi deploy code fix — xem kết quả ở mục
+"Còn nợ" bên dưới nếu phiên làm việc kết thúc trước khi log báo xong.
+
+**2) Mô phỏng bằng script thay vì suy luận giấy cho 4 bài "để dành" cuối
+cùng của Nhóm C — bài học rút ra từ chính lỗi giấu trong đợt 4 (calf raise):
+suy luận đúng hướng KHÔNG đồng nghĩa an toàn, phải chạy thử chuỗi góc thật
+qua đúng analyzer mới biết chắc.**
+
+- **Step-up Knee Drive (2 bài) — CHUYỂN từ "rủi ro chưa kiểm chứng" sang
+  "lỗi đã XÁC NHẬN".** Mô phỏng chuỗi góc thật qua `LungeAnalyzer` (chân làm
+  việc 175→100→175, chân đá gối giữ ~170 rồi spike xuống ~80 đúng lúc chân
+  làm việc đã gần đứng thẳng lại) cho kết quả **đếm khống 2 rep cho 1 rep
+  thật** — cú đá gối bị đọc nhầm thành một rep mới bắt đầu VÀ hoàn thành chỉ
+  trong một frame. Xác nhận dứt khoát không làm được với cơ chế `min()` hiện
+  tại, không phải chỉ là thận trọng.
+- **Curtsy Lunge (2 bài) — xác nhận lỗi THẬT nhưng khác loại đã đoán.** Mô
+  phỏng chân bắt chéo dao động lệch nhịp so với chân trước không gây đếm
+  khống rep trong kịch bản thử, nhưng gây **báo oan "Chùng chân chưa đủ sâu"
+  ngay sau khi rep đã hoàn thành đúng** — chân bắt chéo còn lưỡng lự ở giữa
+  chừng sau khi chân trước đã gần về thẳng, `min()` đọc nhầm thành đang hạ
+  xuống lại. Cùng HỌ lỗi với bug calf raise đợt 4 (lời nhắc sai, không phải
+  đếm rep sai) — vẫn đủ để giữ loại trừ.
+- **Kickstand RDL, Dumbbell Step Up Low (mỗi bài 1) — VẪN để dành, nhưng lý
+  do khác hẳn hai nhóm trên.** Thử mô phỏng bằng số tự đặt cho Kickstand RDL
+  thì `active_side()` chọn đúng — nhưng khác Step-up (nơi "knee drive" là
+  chuyển động MẠNH có tên gọi cụ thể, đủ căn cứ ước lượng biên độ dù không
+  có video), chân kiềng chỉ điều chỉnh nhẹ giữ thăng bằng — không có cơ sở
+  nào để biết số tự đặt có phản ánh đúng thực tế hay không. Mô phỏng bằng số
+  bịa ra không chứng minh được gì trong hai trường hợp này — khác hẳn Step-up
+  Knee Drive (mô phỏng THẬT SỰ có ý nghĩa vì biên độ "knee drive" ước lượng
+  được với độ tin cậy cao). Cần video mẫu thật, không đoán.
+
+Không có test mới cho phần (2) — đây là điều tra xác nhận quyết định loại
+trừ đã có, không phải code mới, nên không cần khoá bằng test (các bài này
+vẫn không có trong `ANALYZER_REGISTRY`, `test_bai_khac_mat_phang_chuyen_dong_bi_loai`/
+`test_bai_mot_ben_hinh_hoc_khac_van_bi_loai` đã khoá đúng rồi từ đợt 3).
+
+**Còn nợ:** kết quả `extract_reference_poses.py` trên VPS (chạy nền lúc kết
+thúc phiên, chưa xác nhận log cuối cùng) — cần kiểm `storage/reference_poses/`
+có đủ file cho các bài 13/09 hay không sau khi chạy xong, và xác nhận badge
+"độ giống bài mẫu" hiện đúng trên app thật cho ít nhất một bài trong số đó
+(vd Bodyweight Hip Abduction).
+
 ### 13/09/2026 (8)
 
 **Đợt 4 — `active_side_max()` mới (`common.py`) sửa được calf raise một
