@@ -21,7 +21,9 @@ from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.face_pull import FacePullAnalyzer
 from app.ml.analyzers.hip_abduction import HipAbductionAnalyzer
+from app.ml.analyzers.hip_adduction import HipAdductionAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
+from app.ml.analyzers.kickback import KickbackAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
 from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
@@ -143,6 +145,12 @@ PERFECT_REPS = [
     ("crunch", CrunchAnalyzer, lambda a: hinge_pose(a), 170, 100),
     ("face_pull", FacePullAnalyzer, lambda a: arm_pose(a), 163, 60),
     ("hip_abduction", HipAbductionAnalyzer, lambda a: hinge_pose(a), 175, 130),
+    # Bù góc 180-raw nội bộ (xem BẪY GÓC trong hip_adduction.py/kickback.py):
+    # "top"/"bottom" ở đây là góc THÔ đưa vào hinge_pose, không phải góc bù —
+    # top luôn là giá trị nghỉ (raw NHỎ), bottom luôn là đỉnh rep (raw LỚN),
+    # đúng cách lateral_raise đã làm ở trên dù raw đi ngược hướng thông thường.
+    ("hip_adduction", HipAdductionAnalyzer, lambda a: hinge_pose(a), 132, 178),
+    ("kickback", KickbackAnalyzer, lambda a: hinge_pose(a), 122, 172),
 ]
 
 
@@ -362,6 +370,26 @@ def test_hip_abduction_dem_dung_khi_chan_tru_dung_yen() -> None:
     analyzer = HipAbductionAnalyzer()  # single_side=True mặc định
     for left in [175, 155, 140, 130, 140, 155, 175]:
         analyzer.analyze(hinge_pose(float(left), right_hip_angle=175.0))
+    assert analyzer.rep_counter.rep_count == 1
+
+
+def test_hip_adduction_nhac_chua_khep_du_dung_MOT_lan() -> None:
+    """Cùng cơ chế shallow_reversal — nhắc đúng lúc đảo chiều mở chân ra khi
+    chưa khép đủ, không lặp lại suốt lúc mở."""
+    analyzer = HipAdductionAnalyzer()
+    warnings = 0
+    for angle in [132, 145, 155, 145, 132]:
+        if any("Chưa khép chân đủ" in e for e in analyzer.analyze(hinge_pose(float(angle))).errors):
+            warnings += 1
+    assert warnings == 1
+
+
+def test_kickback_dem_dung_khi_chan_tru_dung_yen() -> None:
+    """Chân trụ (phải) giữ nguyên góc nghỉ 130°, chân trái kick trọn một rep
+    130 -> 172 -> 130."""
+    analyzer = KickbackAnalyzer()  # single_side=True mặc định
+    for left in [130, 145, 160, 172, 160, 145, 130]:
+        analyzer.analyze(hinge_pose(float(left), right_hip_angle=130.0))
     assert analyzer.rep_counter.rep_count == 1
 
 

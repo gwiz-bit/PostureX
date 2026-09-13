@@ -1,7 +1,19 @@
-"""Phân tích kỹ thuật Deadlift: gập/duỗi hông (hip hinge), gối không vượt mũi chân."""
+"""Phân tích kỹ thuật Deadlift: gập/duỗi hông (hip hinge), gối không vượt mũi chân.
+
+Hỗ trợ single_side từ 13/09/2026 cho họ single-leg Romanian Deadlift ĐÚNG kiểu
+"chân sau duỗi thẳng, thân-hông-chân sau tạo thành một đường thẳng" (Single Leg
+Dumbbell/Kettlebell Deficit/Single Legged) — xem docstring tham số `single_side`
+bên dưới. KHÔNG áp cho mọi biến thể một chân: Kickstand Dumbbell Romanian
+Deadlift dùng tư thế "kiềng" (chân sau chỉ chạm nhẹ gần sàn để giữ thăng bằng,
+không duỗi thẳng ra sau thành một đường), nên góc vai-hông-gối của chân đó
+KHÔNG giữ ổn định ở vùng góc lớn suốt bài như giả định của `active_side()` —
+để dành, chưa đủ tự tin. Dumbbell Cross Body Romanian Deadlift có xoay thân
+(reach tay chéo sang chân đối diện) — nằm trong giới hạn chung "không đo được
+xoay quanh trục dọc" của cả dự án, không liên quan single_side.
+"""
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.analyzers.common import active_side, avg, is_visible, visible_points
 from app.ml.angle_utils import calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -17,10 +29,13 @@ KNEE_OVERSHOOT_RATIO = 0.05        # Gối không được vượt qua mũi châ
 class DeadliftAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật deadlift và trả feedback tiếng Việt."""
 
+    SUPPORTS_SINGLE_SIDE = True
+
     def __init__(
         self,
         rep_counter: RepCounter | None = None,
         thresholds: dict[str, float] | None = None,
+        single_side: bool = False,
     ) -> None:
         t = thresholds or {}
         super().__init__(
@@ -31,6 +46,12 @@ class DeadliftAnalyzer(ExerciseAnalyzer):
             ),
             thresholds,
         )
+        # Bài single-leg RDL (xem docstring module) — chân trụ (đang chịu lực)
+        # là bên có góc vai-hông-gối NHỎ HƠN tại từng thời điểm: chân sau nhấc
+        # lên duỗi thẳng ra sau tạo thành một đường thẳng với thân, nên góc
+        # phía đó gần như giữ nguyên ~170-180° suốt bài — an toàn cho
+        # `active_side()`, cùng lý do đã dùng cho HipThrust/HipAbduction.
+        self._single_side = single_side
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -56,7 +77,11 @@ class DeadliftAnalyzer(ExerciseAnalyzer):
         if right_hip_ok:
             right_hip_angle = calculate_angle_3d(right_shoulder, right_hip, right_knee)
 
-        hip_angle = avg(left_hip_angle, right_hip_angle)
+        hip_angle = (
+            active_side(left_hip_angle, right_hip_angle)
+            if self._single_side
+            else avg(left_hip_angle, right_hip_angle)
+        )
 
         phase = self.rep_counter.phase.value
         if hip_angle is not None:

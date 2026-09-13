@@ -64,6 +64,115 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13/09/2026 (6)
+
+**Đợt 2 rà nốt Nhóm C + 2 analyzer mới (HipAdduction/Kickback), +7 bài
+(274/412 trong checklist, 66,5%).** Tiếp nối kế hoạch 4 nhóm (I → C → F → H) —
+Nhóm I xong hoàn toàn, đợt này rà nốt phần còn lại của Nhóm C (22 bài để dành
+từ mục (2) cùng ngày) cộng khoản nợ riêng "Machine Hip Adduction". Kỷ luật giữ
+nguyên: rà tay + suy luận hình học trước, chỉ thêm bài nào xác nhận được thật
+sự an toàn — không đoán suông.
+
+**1) `DeadliftAnalyzer` thêm `single_side`, +3 bài single-leg RDL** (Single Leg
+Dumbbell Romanian Deadlift, Single Leg Kettlebell Romanian Deadlift Deficit,
+Single Legged Romanian Deadlifts). Suy luận hình học: ở single-leg RDL "chuẩn"
+(không phải kiểu kiềng), chân sau nhấc lên duỗi thẳng ra sau tạo thành MỘT
+ĐƯỜNG THẲNG với thân — góc vai-hông-gối phía chân đó giữ gần ~170-180° suốt
+bài (dù gối chân đó có bung nhẹ để giữ thăng bằng, hướng đùi hông-gối không
+đổi nhiều), CÙNG hình học "một đường thẳng" đã dùng để giải thích kickback ở
+mục (2) bên dưới. Chân trụ (chịu lực) luôn có góc NHỎ HƠN tại mọi thời điểm —
+an toàn cho `active_side()`, không cần đảo chiều/bù góc vì DeadliftAnalyzer
+vốn đã đúng chiều RepCounter mặc định (khác Hip Adduction/Kickback bên dưới).
+
+**CỐ TÌNH KHÔNG thêm 2 bài one gây nhầm lẫn dễ nhất khi mới nhìn tên:**
+- *Kickstand Dumbbell Romanian Deadlift* — tư thế "kiềng": chân sau chỉ CHẠM
+  NHẸ GẦN SÀN để giữ thăng bằng, KHÔNG duỗi thẳng ra sau thành một đường như
+  3 bài trên — góc phía chân kiềng không chắc giữ ổn định vùng góc lớn suốt
+  bài, `active_side()` có thể chọn nhầm. Để dành, cần đo thử.
+- *Dumbbell Cross Body Romanian Deadlift* — tay reach chéo sang chân đối diện
+  nên thân XOAY, thuộc giới hạn chung "không đo được xoay quanh trục dọc" của
+  cả dự án (cùng nhóm Wood Chopper/Russian Twist), không liên quan single_side.
+
+**2) `KickbackAnalyzer` — analyzer MỚI, +3 bài** (Cable Bench Straight Leg
+Kickback, Cable Kickback, Glute Kickback Machine). Cùng bộ ba khớp vai-hông-gối
+và `calculate_angle_3d` với Deadlift/HipThrust/HipAbduction, đo DUỖI HÔNG RA
+SAU: nghỉ (chân đứng dưới thân, hông mới gập nhẹ) → đỉnh rep (chân duỗi ra sau
+hết cỡ, gần thẳng hàng thân — cùng hình học "một đường thẳng" ở mục (1)).
+`calculate_angle_3d` đo góc 3D thật nên không phụ thuộc torso đang nghiêng bao
+nhiêu độ (đứng cúi người bên máy cáp, quỳ tựa ghế, hay đứng thẳng đẩy bàn đạp
+máy) — gộp cả ba tư thế đỡ thân vào MỘT analyzer, đúng lý do `BenchPressAnalyzer`
+gộp cả nằm lẫn đứng.
+
+**BẪY GÓC — giống hệt LateralRaiseAnalyzer (xem CHANGELOG 06/09/2026):** nghỉ
+(hông gập nhẹ) có góc THÔ NHỎ hơn đỉnh rep (hông duỗi hết, góc THÔ LỚN) —
+ngược quy ước mặc định của `RepCounter` (giả định nghỉ = góc lớn). Dùng góc bù
+`180 - raw`, y hệt cách LateralRaiseAnalyzer đã làm. LUÔN single_side=True
+(luôn kick từng chân một, không có biến thể hai chân trong thư viện) — chân
+trụ dao động quanh vùng góc "nghỉ", không trôi xa tới vùng "đỉnh rep" của chân
+đang kick, nên `active_side()` trên góc ĐÃ BÙ vẫn chọn đúng chân đang làm việc.
+
+**3) `HipAdductionAnalyzer` — analyzer MỚI, +1 bài** (Machine Hip Adduction —
+khoản nợ để dành từ đợt Nhóm C đầu tiên, mục (2) cùng ngày). Cùng bộ ba khớp
+và công thức góc với `HipAbductionAnalyzer` nhưng NGƯỢC CHIỀU BÀI TẬP: máy giữ
+hai chân banh MỞ sẵn bằng đệm (nghỉ = góc THÔ NHỎ, ~140°, giống trạng thái
+"làm việc" của Hip Abduction), người tập chủ động ép KHÉP hai chân lại (đỉnh
+rep = góc THÔ LỚN, ~172°, giống trạng thái "nghỉ" của Hip Abduction) — cùng
+BẪY GÓC như Kickback ở mục (2), dùng chung cách bù `180 - raw`. HAI CHÂN đồng
+thời (không single_side) — máy ép cả hai chân cùng lúc, khác Hip Abduction
+luôn tập từng chân một. Tái dùng ĐÚNG khoá `hip_abducted`/`hip_adducted` đã có
+của HipAbductionAnalyzer (cùng ý nghĩa vật lý, chỉ khác analyzer nào dùng làm
+down/up threshold) — không cần khoá mới, không cần sửa `thresholds.py`/
+`posture_rule.py` cho hai khoá này.
+
+Thêm 2 khoá MỚI (`hip_flexed`/`hip_hyperextended`, dùng cho Kickback) vào cả
+ba nơi bắt buộc (`tunables.py`, `thresholds.py`, `posture_rule.py`) NGAY TỪ
+ĐẦU — đúng bài học đã rút ra nhiều lần trong ngày. Thêm cả hai analyzer mới
+vào `PERFECT_REPS` dùng chung + test riêng (đếm đúng rep khi chân trụ đứng
+yên, nhắc lỗi đúng một lần) + 2 test single_side cho DeadliftAnalyzer (không
+bật thì không đếm được rep một bên, bật thì đếm đúng — cùng mẫu đã dùng cho
+Row/Curl/HipThrust). Sửa `test_analyzer_registry.py`: rút "Single Leg Dumbbell
+Romanian Deadlift" khỏi danh sách loại trừ cũ (giờ đã hỗ trợ), thay bằng
+Kickstand RDL + Cross Body RDL làm ví dụ loại trừ mới. 424 test backend xanh
+(từ 397), ruff sạch.
+
+**4) Rà lại nhưng KHÔNG thêm code — 9 bài "để dành" được viết rõ lý do cụ thể
+hơn trong checklist (không còn ghi chung chung):**
+- **Step-up** (4 bài: Barbell Front Rack/Barbell Step Up Knee Drive, Dumbbell
+  Step Up Low, Single Leg Step Down) — rủi ro thật không chỉ là "góc
+  camera/độ cao bục" như ghi trước, mà CỤ THỂ HƠN: chân đang "knee drive" (đá
+  gối lên cao ở đỉnh) có thể GẬP SÂU HƠN chân trụ đang chịu lực tại một số
+  thời điểm trong rep, khiến `active_side()`/`min()` (cơ chế đã dùng cho
+  Lunge/Cossack-nếu-làm) chọn NHẦM chân — cần theo dõi VỊ TRÍ chân (bục cao
+  hay sàn), không chỉ góc gối, để phân biệt đúng chân nào đang chịu lực.
+- **Curtsy lunge** (2 bài) — cùng rủi ro cụ thể như step-up: chân bắt chéo ra
+  sau có thể gập sâu hơn chân trước ở đáy động tác "curtsy".
+- **Cossack Squat** (2 bài) — tìm ra một HƯỚNG KHẢ THI cho session sau:
+  `calculate_angle_3d` tự nó không phụ thuộc góc camera (đã xác nhận qua
+  HipAbductionAnalyzer cùng ngày), nên về lý thuyết đo được góc hông-gối-cổ
+  chân ở mặt phẳng trán. Nhưng Squat/LungeAnalyzer còn 2 kiểm tra PHỤ THUỘC
+  camera nhìn nghiêng (gối vượt mũi chân theo toạ độ x 2D, lưng thẳng) không
+  áp được cho chuyển động sang ngang — cần một analyzer RIÊNG bỏ hẳn hai kiểm
+  tra đó cộng ước lượng ngưỡng mới, không chỉ thêm tên vào danh sách có sẵn.
+  Chưa đủ ngân sách trong phiên này.
+- **Kickstand Dumbbell Romanian Deadlift** (1 bài) — xem mục (1) ở trên.
+
+Đã rà lại nhóm F/H còn sót (Bird Dog, Dead Bug, Pallof Press, Superman(s), V
+Up, Toes To Bar) theo yêu cầu — KHÔNG tìm được hướng mới nào khả thi hơn lý do
+đã ghi trong checklist từ đợt trước (xoay/luân phiên/đa pha, ngoài khả năng đo
+của một góc 3 điểm tĩnh), giữ nguyên loại trừ.
+
+**Còn nợ của Nhóm C sau đợt này:** hình học chân lệch trọng tâm còn lại
+(Cossack Squat ×2, step-up ×4, curtsy lunge ×2, Kickstand RDL ×1 — 9 bài, xem
+mục (4)), Single Leg Back Extension (kế thừa vấn đề chưa giải của cả họ Back
+Extension, xem mục 11/09/2026), Single Leg Press (vị trí chân nghỉ không rõ
+ràng, xem mục Nhóm I 13/09/2026 (3)), Hammer Strength Iso Lateral Row (chưa
+xác nhận được cách dùng thật, không đoán suông).
+
+⚠️ Chưa deploy, chưa test qua app thật — cùng tình trạng ngưỡng ước lượng theo
+hình học của mọi đợt trước, đặc biệt Kickback/HipAdduction vì đây là lần đầu
+tiên có TỚI HAI analyzer trong cùng một đợt đều cần bù góc `180-raw` (trước đó
+chỉ LateralRaiseAnalyzer dùng kỹ thuật này).
+
 ### 13/09/2026 (5)
 
 **`HipAbductionAnalyzer` — analyzer mới, +5 bài (267/412 trong checklist,

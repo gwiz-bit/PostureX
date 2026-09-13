@@ -29,7 +29,9 @@ from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.face_pull import FacePullAnalyzer
 from app.ml.analyzers.hip_abduction import HipAbductionAnalyzer
+from app.ml.analyzers.hip_adduction import HipAdductionAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
+from app.ml.analyzers.kickback import KickbackAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
 from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
@@ -155,15 +157,28 @@ _DEADLIFT_VARIANTS = [
     "good mornings",  # gập-duỗi hông có tải trên vai, cùng trục góc với RDL.
     "cable pull through",  # đứng, gập-duỗi hông với cáp giữa hai chân — cùng
     # tư thế đứng như RDL, khác mỗi vật tải (cáp thay vì tạ). Thêm 13/09/2026.
+    # Thêm 13/09/2026 — bài MỘT CHÂN, single_side=True (xem
+    # SINGLE_SIDE_EXERCISES cuối file). Chân sau nhấc lên duỗi thẳng ra sau
+    # tạo thành MỘT ĐƯỜNG THẲNG với thân — góc vai-hông-gối phía đó giữ gần
+    # ~170-180° suốt bài, an toàn cho active_side() (xem docstring
+    # DeadliftAnalyzer và CHANGELOG 13/09/2026).
+    "single leg dumbbell romanian deadlift",
+    "single leg kettlebell romanian deadlift deficit",
+    "single legged romanian deadlifts",
     # CỐ TÌNH KHÔNG thêm họ Back Extension (Back Extension/Dumbbell Back
     # Extension/Machine 45 Degree Back Extension) dù cùng là gập-duỗi hông:
     # tập trên ghế nghiêng, NẰM chứ không ĐỨNG, chân cố định dưới đệm — kiểm
     # tra "gối vượt mũi chân" bên dưới giả định tư thế ĐỨNG nhìn từ bên, toạ
     # độ x của gối/mũi chân trên ghế nghiêng không mang ý nghĩa đó, dễ báo lỗi
-    # sai. Cần xem lại logic đó trước khi thêm họ back extension.
-    # KHÔNG có: mọi biến thể một chân (Single Leg / Single Legged / Kickstand)
-    # — thân và chân sau tạo thành đường thẳng, góc hông đọc ra khác hẳn; và
-    # Dumbbell Cross Body RDL (có xoay thân).
+    # sai. Cần xem lại logic đó trước khi thêm họ back extension (kéo theo cả
+    # Single Leg Back Extension — cộng dồn thêm rủi ro một chân).
+    # KHÔNG có: Kickstand Dumbbell Romanian Deadlift — tư thế "kiềng" (chân
+    # sau chỉ chạm nhẹ gần sàn giữ thăng bằng, KHÔNG duỗi thẳng ra sau thành
+    # một đường như 3 bài single-leg RDL ở trên), nên góc phía đó không chắc
+    # giữ ổn định vùng góc lớn suốt bài — active_side() có thể chọn nhầm. Cần
+    # thiết kế riêng, chưa đủ tự tin. Dumbbell Cross Body RDL (có xoay thân —
+    # với tay chéo sang chân đối diện, thuộc giới hạn chung "không đo được
+    # xoay quanh trục dọc" của cả dự án).
     # KHÔNG có (chưa đủ tự tin, để rà lại sau): Barbell Rack Pull (ROM một
     # phần — bắt đầu đã nửa đứng thẳng, không bao giờ chạm đủ sâu theo ngưỡng
     # mặc định của deadlift toàn biên độ), Reverse Hyperextension (nằm sấp
@@ -535,12 +550,30 @@ _HIP_ABDUCTION_VARIANTS = [
     # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
     # (HipAbductionAnalyzer, xem docstring class đó — LUÔN single_side vì
     # bài này về bản chất luôn tập từng chân). KHÔNG có Machine Hip
-    # Adduction — cơ chế hai chân, hướng ngược lại, để dành.
+    # Adduction — cơ chế hai chân, hướng ngược lại, xem HipAdductionAnalyzer
+    # riêng bên dưới.
     "band hip abduction",
     "bodyweight hip abduction",
     "cable hip abduction",
     "machine hip abduction",
     "standing cable hip abduction",
+]
+
+_HIP_ADDUCTION_VARIANTS = [
+    # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
+    # (HipAdductionAnalyzer, xem docstring class đó — HAI CHÂN đồng thời,
+    # KHÔNG single_side, ngược chiều rep với HipAbductionAnalyzer).
+    "machine hip adduction",
+]
+
+_KICKBACK_VARIANTS = [
+    # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
+    # (KickbackAnalyzer, xem docstring class đó — LUÔN single_side, duỗi hông
+    # ra sau). Gộp cả ba tư thế đỡ thân (tựa ghế/đứng cúi người/đứng-tựa máy)
+    # vì cùng một cơ chế góc vai-hông-gối.
+    "cable bench straight leg kickback",
+    "cable kickback",
+    "glute kickback machine",
 ]
 
 _CRUNCH_VARIANTS = [
@@ -614,6 +647,8 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (CrunchAnalyzer, _CRUNCH_VARIANTS),
     (FacePullAnalyzer, _FACE_PULL_VARIANTS),
     (HipAbductionAnalyzer, _HIP_ABDUCTION_VARIANTS),
+    (HipAdductionAnalyzer, _HIP_ADDUCTION_VARIANTS),
+    (KickbackAnalyzer, _KICKBACK_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ
@@ -706,6 +741,14 @@ SINGLE_SIDE_EXERCISES: frozenset[str] = frozenset({
     "cable hip abduction",
     "machine hip abduction",
     "standing cable hip abduction",
+    # Deadlift — single-leg RDL (xem comment trong _DEADLIFT_VARIANTS)
+    "single leg dumbbell romanian deadlift",
+    "single leg kettlebell romanian deadlift deficit",
+    "single legged romanian deadlifts",
+    # Kickback — LUÔN single_side (xem docstring KickbackAnalyzer)
+    "cable bench straight leg kickback",
+    "cable kickback",
+    "glute kickback machine",
 })
 
 # Tên trong SINGLE_SIDE_EXERCISES phải vừa có trong ANALYZER_REGISTRY, vừa

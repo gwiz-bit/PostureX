@@ -104,6 +104,9 @@ VALUE_COLUMN: dict[str, str] = {
     # Tricep extension/pushdown — "elbow_extended" dùng chung khoá với Curl
     # (cùng cột min_angle, cùng ý nghĩa "đã duỗi thẳng").
     "elbow_bent": "max_angle",
+    # Kickback (KickbackAnalyzer) — góc thô, không phải góc bù nội bộ.
+    "hip_flexed": "max_angle",
+    "hip_hyperextended": "min_angle",
 }
 
 

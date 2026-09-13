@@ -9,6 +9,7 @@ Khoá lại đúng hành vi mà lượt rà tay checklist 412 bài (13/09/2026) 
 """
 
 from app.ml.analyzers.curl import CurlAnalyzer
+from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.row import RowAnalyzer
 from tests.pose_builders import arm_pose, hinge_pose
@@ -54,6 +55,27 @@ def test_single_side_khong_bao_lech_hong_hip_thrust() -> None:
 
     with_flag = HipThrustAnalyzer(single_side=True).analyze(hinge_pose(150.0, right_hip_angle=110.0))
     assert not any("lệch một bên" in e for e in with_flag.errors)
+
+
+def test_deadlift_khong_bat_single_side_thi_khong_dem_duoc_rep_mot_ben() -> None:
+    """Single-leg RDL: chân trụ (phải) duỗi thẳng đứng yên ~175°, chân sau
+    (trái, nhấc lên thẳng hàng thân) đi trọn một rep 175 -> 100 -> 175 —
+    nhưng avg() hai bên không bao giờ chạm ngưỡng cúi 110° (mặc định
+    DeadliftAnalyzer) nên không đếm được, giống lỗi gốc đã sửa cho Row."""
+    analyzer = DeadliftAnalyzer()  # single_side mặc định False
+    for left in [175, 150, 125, 100, 125, 150, 175]:
+        analyzer.analyze(hinge_pose(float(left), right_hip_angle=175.0))
+    assert analyzer.rep_counter.rep_count == 0
+
+
+def test_deadlift_single_side_dem_dung_rep_khi_mot_chan_nghi() -> None:
+    """Cùng chuỗi góc như trên, chỉ khác bật single_side=True — phải đếm
+    đúng 1 rep (Single Leg Dumbbell/Kettlebell/Single Legged Romanian
+    Deadlift)."""
+    analyzer = DeadliftAnalyzer(single_side=True)
+    for left in [175, 150, 125, 100, 125, 150, 175]:
+        analyzer.analyze(hinge_pose(float(left), right_hip_angle=175.0))
+    assert analyzer.rep_counter.rep_count == 1
 
 
 def test_single_side_van_dem_rep_dung_khi_chan_kia_thuc_su_lech() -> None:

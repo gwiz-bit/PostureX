@@ -55,6 +55,8 @@ _JOINTS: dict[str, tuple[str, str, str]] = {
     "hip_extended": ("Shoulder", "Hip", "Knee"),
     "hip_abducted": ("Shoulder", "Hip", "Knee"),
     "hip_adducted": ("Shoulder", "Hip", "Knee"),
+    "hip_flexed": ("Shoulder", "Hip", "Knee"),
+    "hip_hyperextended": ("Shoulder", "Hip", "Knee"),
 }
 
 # Ngưỡng nào là mốc đếm rep — ghi vào cột `IsRepTrigger` để người đọc DB thấy
@@ -67,6 +69,7 @@ _REP_TRIGGERS = frozenset({
     "ankle_rest", "ankle_raised",
     "knee_rest", "knee_extended", "elbow_bent", "knee_contracted",
     "hip_contracted", "hip_extended", "hip_abducted", "hip_adducted",
+    "hip_flexed", "hip_hyperextended",
 })
 
 

@@ -17,7 +17,9 @@ from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.face_pull import FacePullAnalyzer
 from app.ml.analyzers.hip_abduction import HipAbductionAnalyzer
+from app.ml.analyzers.hip_adduction import HipAdductionAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
+from app.ml.analyzers.kickback import KickbackAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
 from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
@@ -68,18 +70,22 @@ def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
 @pytest.mark.parametrize(
     "exercise",
     [
-        # DeadliftAnalyzer đọc góc hông theo TRỤC thân-chân sau khi đứng
-        # thẳng hàng — hình học khác hẳn kiểu đứng cả hai chân, không phải
-        # chỉ vấn đề avg() hai bên (xem SINGLE_SIDE_EXERCISES trong
-        # registry.py cho các bài đã CHUYỂN sang single_side=True thay vì
-        # loại hẳn — CHANGELOG 13/09/2026).
-        "Single Leg Dumbbell Romanian Deadlift",
         # CalfRaiseAnalyzer quy ước NGƯỢC (chân nghỉ giữ góc NHỎ, không phải
         # LỚN như mọi analyzer khác) — active_side() sẽ chọn nhầm chân đang
         # nghỉ. Cần thiết kế riêng, chưa làm — xem comment loại trừ trong
         # `_CALF_RAISE_VARIANTS`.
         "Dumbbell Single Leg Calf Raise",
         "Single Leg Standing Calf Raise",
+        # Kickstand RDL: chân sau chỉ chạm nhẹ gần sàn giữ thăng bằng, KHÔNG
+        # duỗi thẳng ra sau thành một đường như single-leg RDL "chuẩn" (đã
+        # CHUYỂN sang single_side=True — xem SINGLE_SIDE_EXERCISES trong
+        # registry.py, CHANGELOG 13/09/2026) — góc phía chân kiềng không chắc
+        # giữ ổn định vùng góc lớn suốt bài, active_side() có thể chọn nhầm.
+        "Kickstand Dumbbell Romanian Deadlift",
+        # Có xoay thân (tay chéo sang chân đối diện) — góc vai-hông-gối đọc
+        # sai khi thân xoay, thuộc giới hạn chung "không đo được xoay quanh
+        # trục dọc" của cả dự án, không liên quan single_side.
+        "Dumbbell Cross Body Romanian Deadlift",
     ],
 )
 def test_bai_mot_ben_hinh_hoc_khac_van_bi_loai(exercise: str) -> None:
@@ -180,6 +186,16 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Machine Face Pulls", FacePullAnalyzer),
         ("Standing Cable Hip Abduction", HipAbductionAnalyzer),
         ("Machine Hip Abduction", HipAbductionAnalyzer),
+        # Thêm 13/09/2026 (đợt 2) — rà nốt Nhóm C (single-leg RDL) và 2
+        # analyzer MỚI (HipAdduction/Kickback), xem CHANGELOG cho lý do
+        # từng bài.
+        ("Single Leg Dumbbell Romanian Deadlift", DeadliftAnalyzer),
+        ("Single Leg Kettlebell Romanian Deadlift Deficit", DeadliftAnalyzer),
+        ("Single Legged Romanian Deadlifts", DeadliftAnalyzer),
+        ("Machine Hip Adduction", HipAdductionAnalyzer),
+        ("Cable Bench Straight Leg Kickback", KickbackAnalyzer),
+        ("Cable Kickback", KickbackAnalyzer),
+        ("Glute Kickback Machine", KickbackAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

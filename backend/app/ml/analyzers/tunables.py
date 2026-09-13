@@ -239,6 +239,18 @@ TUNABLES: dict[str, list[Tunable]] = {
         Tunable("hip_adducted", "Về vị trí bắt đầu — vượt góc này là đã đứng thẳng/chân khép",
                 172.0, 150.0, 180.0, affects_rep_count=True),
     ],
+    "HipAdductionAnalyzer": [
+        Tunable("hip_abducted", "Vị trí bắt đầu — góc thô dưới mức này là chân đang mở trên máy",
+                140.0, 100.0, 165.0, affects_rep_count=True),
+        Tunable("hip_adducted", "Khép hết — vượt góc thô này mới tính một rep",
+                172.0, 150.0, 180.0, affects_rep_count=True),
+    ],
+    "KickbackAnalyzer": [
+        Tunable("hip_flexed", "Vị trí bắt đầu — góc thô dưới mức này là chân đang đứng dưới thân",
+                130.0, 90.0, 160.0, affects_rep_count=True),
+        Tunable("hip_hyperextended", "Duỗi hết ra sau — vượt góc thô này mới tính một rep",
+                165.0, 140.0, 180.0, affects_rep_count=True),
+    ],
     "FacePullAnalyzer": [
         Tunable("elbow_contracted", "Kéo hết — khuỷu gập dưới góc này mới tính một rep",
                 70.0, 30.0, 110.0, affects_rep_count=True),
@@ -273,6 +285,7 @@ ORDERED_PAIRS: tuple[tuple[str, str], ...] = (
     ("knee_contracted", "knee_extended"),
     ("hip_contracted", "hip_extended"),
     ("hip_abducted", "hip_adducted"),
+    ("hip_flexed", "hip_hyperextended"),
 )
 
 # Khoảng cách tối thiểu giữa hai đầu của một rep.

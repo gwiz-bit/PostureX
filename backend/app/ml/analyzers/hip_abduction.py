@@ -16,9 +16,9 @@ trong thư viện. Chân trụ đứng yên giữ nguyên góc LỚN suốt bài
 trí "nghỉ giữa hai lần" nào khác góc đứng thẳng), an toàn cho `active_side()`
 — khác bẫy đã né ở `CalfRaiseAnalyzer` (xem CHANGELOG 13/09/2026).
 
-CỐ TÌNH CHƯA gộp Hip Adduction (Machine Hip Adduction) vào đây: đó là bài
-HAI CHÂN đồng thời (khép hai chân đang mở vào giữa trên máy), ngưỡng đi
-chiều ngược lại và không phải single_side — cần thiết kế riêng, để dành.
+KHÔNG gộp Hip Adduction (Machine Hip Adduction) vào đây: đó là bài HAI CHÂN
+đồng thời (khép hai chân đang mở vào giữa trên máy), ngưỡng đi chiều ngược lại
+và không phải single_side — xem `HipAdductionAnalyzer` riêng (13/09/2026).
 """
 
 from app.ml.analyzers.base import ExerciseAnalyzer
