@@ -147,6 +147,14 @@ _DEADLIFT_VARIANTS = [
     "smith machine sumo romanian deadlift",
     "hip hinge speed romanian deadlift",
     "good mornings",  # gập-duỗi hông có tải trên vai, cùng trục góc với RDL.
+    "cable pull through",  # đứng, gập-duỗi hông với cáp giữa hai chân — cùng
+    # tư thế đứng như RDL, khác mỗi vật tải (cáp thay vì tạ). Thêm 13/09/2026.
+    # CỐ TÌNH KHÔNG thêm họ Back Extension (Back Extension/Dumbbell Back
+    # Extension/Machine 45 Degree Back Extension) dù cùng là gập-duỗi hông:
+    # tập trên ghế nghiêng, NẰM chứ không ĐỨNG, chân cố định dưới đệm — kiểm
+    # tra "gối vượt mũi chân" bên dưới giả định tư thế ĐỨNG nhìn từ bên, toạ
+    # độ x của gối/mũi chân trên ghế nghiêng không mang ý nghĩa đó, dễ báo lỗi
+    # sai. Cần xem lại logic đó trước khi thêm họ back extension.
     # KHÔNG có: mọi biến thể một chân (Single Leg / Single Legged / Kickstand)
     # — thân và chân sau tạo thành đường thẳng, góc hông đọc ra khác hẳn; và
     # Dumbbell Cross Body RDL (có xoay thân).
@@ -249,6 +257,18 @@ _OVERHEAD_PRESS_VARIANTS = [
     "dumbbell seated overhead press",
     "kettlebell seated overhead press",
     "smith machine seated overhead press",
+    # Thêm 13/09/2026, rà tay checklist 412 bài (xem CHANGELOG). Analyzer
+    # chỉ đọc góc khuỷu tay (vai-khuỷu-cổ tay), không kiểm chân/hông, nên
+    # biến thể khác NHÓM đứng/ngồi, khác XOAY cổ tay (Arnold Press), hay có
+    # THÊM đà chân (Push Press) đều không ảnh hưởng cơ chế đếm rep — chỉ cần
+    # cùng đường đi khuỷu tay gập→duỗi qua đầu.
+    "arnold press",
+    "behind the neck press",
+    "dumbbell push press",
+    "kettlebell push press",
+    "landmine press",  # hai tay trên đòn landmine — khác "single arm landmine press" (quy tắc 1, vẫn loại)
+    "machine front military press",
+    "z press",
     # KHÔNG có: Single Arm Dumbbell Overhead Press (quy tắc 1).
 ]
 
@@ -401,12 +421,17 @@ _PULLDOWN_VARIANTS = [
     "weighted pull ups",
     "band assisted pull up",
     "machine assisted pull up",
+    # Thêm 13/09/2026 — "Narrow Pulldown" chỉ là biến thể tay cầm hẹp, cùng
+    # cơ chế góc khuỷu tay như mọi pulldown khác; trước đó chỉ được nhắc tới
+    # trong comment này để giải thích KHÔNG được hiểu nhầm thành "row" (trùng
+    # chuỗi ký tự "row" trong "Nar-row"), chưa từng thực sự thêm vào danh
+    # sách — rà tay checklist 412 bài mới lộ ra thiếu sót này.
+    "narrow pulldown",
     # KHÔNG có (một tay — quy tắc 1): Single Arm Lat Pulldown.
     # KHÔNG có (khác khớp chính dù tên gần giống): Straight Arm Lat Pulldown
     # — khuỷu tay gần như khoá thẳng suốt động tác (chuyển động ở VAI, không
     # phải khuỷu tay), góc khuỷu tay gần như không đổi nên không đếm được
-    # rep nào; Narrow Pulldown — "Nar-row" chỉ trùng chuỗi ký tự, không phải
-    # bài row (đã loại từ registry gốc).
+    # rep nào.
     # KHÔNG có (giữ tĩnh, không phải rep lặp lại): Dead Hang.
     # KHÔNG có (kết hợp thêm gập bụng/nâng chân, hai pha khác hẳn): Toes To Bar.
 ]
@@ -431,6 +456,9 @@ _TRICEP_EXTENSION_VARIANTS = [
     "dumbbell skullcrusher",
     "dumbbell decline skullcrusher",
     "tate press",
+    # Thêm 13/09/2026 — cùng động tác với "cable bar pushdown", chỉ khác
+    # tay cầm (dây thừng thay vì thanh), không đổi cơ chế góc khuỷu tay.
+    "cable rope pushdown",
     # KHÔNG có (một tay — quy tắc 1): Single Arm Overhead Cable Extension,
     # Single Arm Tricep Extension.
 ]

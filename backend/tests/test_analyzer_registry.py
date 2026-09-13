@@ -18,6 +18,7 @@ from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
+from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.pulldown import PulldownAnalyzer
 from app.ml.analyzers.registry import ANALYZER_REGISTRY, supports_analysis
 from app.ml.analyzers.row import RowAnalyzer
@@ -31,8 +32,6 @@ from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
         # Chứa "row" nhưng là bài vai kéo dọc thân, không phải kéo ngang.
         "Barbell Upright Row",
         "Dumbbell Upright Row",
-        # "Nar-row" — trùng chuỗi thuần tuý, không liên quan động tác row.
-        "Narrow Pulldown",
         # Cardio máy chèo, không phải bài kéo tạ.
         "Rowing Machine Steady State",
         "Rowing Sprint",
@@ -141,6 +140,19 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Cable Bar Pushdown", TricepExtensionAnalyzer),
         ("Lat Pulldown", PulldownAnalyzer),
         ("Pull Ups", PulldownAnalyzer),
+        # Thêm 13/09/2026, rà tay checklist 412 bài (xem CHANGELOG) — biến
+        # thể khác nhóm đứng/ngồi/xoay cổ tay/có đà chân nhưng cùng cơ chế
+        # góc khuỷu tay của analyzer gốc.
+        ("Narrow Pulldown", PulldownAnalyzer),
+        ("Cable Rope Pushdown", TricepExtensionAnalyzer),
+        ("Cable Pull Through", DeadliftAnalyzer),
+        ("Arnold Press", OverheadPressAnalyzer),
+        ("Behind The Neck Press", OverheadPressAnalyzer),
+        ("Dumbbell Push Press", OverheadPressAnalyzer),
+        ("Kettlebell Push Press", OverheadPressAnalyzer),
+        ("Landmine Press", OverheadPressAnalyzer),
+        ("Machine Front Military Press", OverheadPressAnalyzer),
+        ("Z Press", OverheadPressAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

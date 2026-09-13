@@ -64,6 +64,89 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13/09/2026
+
+**Checklist 412 bài (do thành viên khác lập) — đối chiếu với `ANALYZER_REGISTRY` thật, rồi mở
+rộng registry theo từng đợt nhỏ, kiểm kỹ từng bài thay vì gộp hàng loạt.**
+File `checklist-412-bai-tap.xlsx` ở gốc repo (không đi theo git — file cá
+nhân của một thành viên, không thuộc quy ước repo) liệt kê 412 bài, cột
+"Trạng thái" ban đầu toàn "Chưa kiểm tra". Đối chiếu trực tiếp với registry
+(không suy đoán): **202/412 (49%) đã hỗ trợ real-time**, tăng từ 192 sau đợt
+mở rộng dưới đây. Cột "Ghi chú" đã điền tên analyzer (nếu hỗ trợ) hoặc lý do
+cụ thể theo 9 nhóm (nếu chưa) cho toàn bộ 220 bài còn lại lúc đối chiếu lần
+đầu — không dùng chung một câu "Chưa có analyzer" chung chung nữa.
+
+**Rà tay 54 bài thuộc nhóm "chưa rà tới" (nhóm I trong 9 nhóm phân loại),
+không tin theo kết quả lọc từ khoá sơ bộ** — kết quả chia nhỏ hơn nhiều:
+
+- **10 bài đủ an toàn để thêm ngay**, gắn thẳng vào analyzer sẵn có (đã thêm
+  vào `registry.py`, xem chi tiết bên dưới).
+- **8 bài** hoá ra đã có lý do loại trừ từ trước trong chính code (chỉ là bộ
+  lọc từ khoá sơ bộ không bắt được) — B Stance Hip Thrust, Barbell/Dumbbell
+  Upright Row, Barbell Rack Pull, Horizontal Leg Press Calf Press, Reverse
+  Hyperextension, Romanian Deadlift Hamstring Sweeps, Straight Arm Lat
+  Pulldown — giữ nguyên loại trừ, không đụng vào.
+- **13 bài** thật ra thuộc nhóm "một tay/một chân" (step-up, curtsy lunge,
+  Cossack squat, row một bên...) — để dành đợt sau cùng nhóm C.
+- **1 bài** (Kettlebell Turkish Get Up) thuộc nhóm đa pha phức tạp — chuyển
+  sang nhóm E.
+- **2 bài** (Arc Trainer, Kettlebell Farmers Carry) không có chu kỳ góc nào
+  để đo — không phân tích được, giống nhóm cardio.
+- **14 bài** cần analyzer HOÀN TOÀN MỚI (8 bài họ leg curl — gập gối khác
+  trục squat/lunge; 4 bài họ pullover — vai duỗi cung qua đầu; 2 bài họ leg
+  press — ngồi/nằm đẩy chân, hình học khác hẳn squat đứng) — việc lớn, để
+  đợt riêng, chưa làm trong đợt này.
+- **7 bài để dành xem xét riêng** vì phát hiện rủi ro hình học lúc rà: họ
+  Back Extension (Back Extension/Dumbbell Back Extension/Machine 45 Degree
+  Back Extension) tập trên ghế nghiêng, NẰM chứ không ĐỨNG — kiểm tra "gối
+  vượt mũi chân" của `DeadliftAnalyzer` giả định tư thế đứng nhìn từ bên,
+  không có ý nghĩa gì với tư thế nằm sấp trên ghế, dễ báo lỗi sai; Lateral
+  Lunge (Bodyweight Alternating Lateral Lunge, Dumbbell Lateral Lunge) —
+  `LungeAnalyzer` cùng bẫy góc camera nhưng theo hướng khác (lunge ngang cần
+  nhìn từ trước, không phải từ bên như lunge thường); Jump Squats — tốc độ
+  thực hiện nhanh, rủi ro bỏ sót rep ở FPS lấy mẫu thấp (xem cảnh báo
+  RepCounter 01/09/2026); Sissy Squat — hình học gối/hông khác hẳn squat
+  chuẩn, cần xem xét riêng.
+
+**10 bài đã thêm vào registry (`_OVERHEAD_PRESS_VARIANTS` +7, `_PULLDOWN_VARIANTS`
++1, `_TRICEP_EXTENSION_VARIANTS` +1, `_DEADLIFT_VARIANTS` +1)** — chỉ những
+bài đã xác nhận CÙNG CƠ CHẾ GÓC với analyzer gốc và KHÔNG kích hoạt kiểm tra
+phụ nào phụ thuộc góc camera:
+
+- `OverheadPressAnalyzer` chỉ đọc góc khuỷu tay (vai-khuỷu-cổ tay), không
+  kiểm chân/hông — nên biến thể khác tư thế đứng/ngồi (Machine Front
+  Military Press, Z Press), khác xoay cổ tay (Arnold Press — xoay không đổi
+  góc GẬP khuỷu tay), hay có thêm đà chân (Dumbbell/Kettlebell Push Press —
+  chân không được đo nên đà chân không ảnh hưởng) đều an toàn: Arnold Press,
+  Behind The Neck Press, Dumbbell Push Press, Kettlebell Push Press, Landmine
+  Press (hai tay — khác "Single Arm Landmine Press" đã loại theo quy tắc 1),
+  Machine Front Military Press, Z Press.
+- `Narrow Pulldown` → `PulldownAnalyzer`: tên này TRƯỚC ĐÓ chỉ xuất hiện
+  trong comment giải thích lý do KHÔNG được hiểu nhầm thành "row" (trùng
+  chuỗi ký tự "row" trong "Nar-row"), chưa từng thực sự được thêm vào danh
+  sách — một khoảng trống thật, không phải quyết định loại trừ có chủ đích.
+  Sửa test `test_khop_chuoi_con_khong_duoc_lot_qua` (đã khoá nhầm "Narrow
+  Pulldown" vào nhóm "không bao giờ được khớp" — ý định gốc của test là
+  chặn khớp CHUỖI CON thành Row, không phải cấm nó thuộc Pulldown).
+- `Cable Rope Pushdown` → `TricepExtensionAnalyzer`: cùng động tác với
+  "Cable Bar Pushdown" đã có, chỉ khác tay cầm.
+- `Cable Pull Through` → `DeadliftAnalyzer`: đứng, gập-duỗi hông với cáp
+  giữa hai chân — cùng tư thế đứng như RDL, khác mỗi vật tải.
+
+10 test mới trong `test_analyzer_registry.py` (khẳng định map đúng analyzer,
+theo đúng mẫu test đã có), xoá 1 dòng test khoá sai (Narrow Pulldown). 366
+test backend xanh, ruff sạch.
+
+⚠️ **Chưa deploy lên VPS, chưa test qua app thật** — như mọi đợt mở rộng
+analyzer trước đây, ngưỡng góc mặc định của các analyzer gốc (OverheadPress/
+Pulldown/TricepExtension/Deadlift) áp cho các biến thể mới này là ƯỚC LƯỢNG
+theo hình học, chưa đo trên người thật tập đúng các biến thể đó.
+
+⚠️ **Còn nợ lại**: 3 nhóm lớn (một tay/một chân 13 bài, analyzer mới 14 bài,
+7 bài rủi ro hình học cần xem xét riêng) — tổng ~34 bài trong nhóm I ban đầu
+còn lại, cộng nhóm C/D/F/H gốc (~95 bài) — vẫn để dành đợt sau, đã đồng ý với
+user đi theo thứ tự I → C → F → H.
+
 ### 11/09/2026 (5)
 
 **Video upload: kết quả phân tích chưa từng hiển thị lên app, cộng một lỗi
