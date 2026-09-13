@@ -99,6 +99,8 @@ VALUE_COLUMN: dict[str, str] = {
     # Crunch/sit-up/knee raise
     "hip_contracted": "max_angle",
     "hip_extended": "min_angle",
+    "hip_abducted": "max_angle",
+    "hip_adducted": "min_angle",
     # Tricep extension/pushdown — "elbow_extended" dùng chung khoá với Curl
     # (cùng cột min_angle, cùng ý nghĩa "đã duỗi thẳng").
     "elbow_bent": "max_angle",

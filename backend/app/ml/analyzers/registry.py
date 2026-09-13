@@ -28,6 +28,7 @@ from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.face_pull import FacePullAnalyzer
+from app.ml.analyzers.hip_abduction import HipAbductionAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
@@ -530,6 +531,18 @@ _LEG_PRESS_VARIANTS = [
     "machine leg press",
 ]
 
+_HIP_ABDUCTION_VARIANTS = [
+    # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
+    # (HipAbductionAnalyzer, xem docstring class đó — LUÔN single_side vì
+    # bài này về bản chất luôn tập từng chân). KHÔNG có Machine Hip
+    # Adduction — cơ chế hai chân, hướng ngược lại, để dành.
+    "band hip abduction",
+    "bodyweight hip abduction",
+    "cable hip abduction",
+    "machine hip abduction",
+    "standing cable hip abduction",
+]
+
 _CRUNCH_VARIANTS = [
     # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
     # (CrunchAnalyzer, xem docstring class đó — gộp chung crunch/sit-up
@@ -600,6 +613,7 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (LegPressAnalyzer, _LEG_PRESS_VARIANTS),
     (CrunchAnalyzer, _CRUNCH_VARIANTS),
     (FacePullAnalyzer, _FACE_PULL_VARIANTS),
+    (HipAbductionAnalyzer, _HIP_ABDUCTION_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ
@@ -686,6 +700,12 @@ SINGLE_SIDE_EXERCISES: frozenset[str] = frozenset({
     "single arm lat pulldown",
     # Leg curl
     "cable single leg laying leg curl",
+    # Hip abduction — LUÔN single_side (xem docstring HipAbductionAnalyzer)
+    "band hip abduction",
+    "bodyweight hip abduction",
+    "cable hip abduction",
+    "machine hip abduction",
+    "standing cable hip abduction",
 })
 
 # Tên trong SINGLE_SIDE_EXERCISES phải vừa có trong ANALYZER_REGISTRY, vừa

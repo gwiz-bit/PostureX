@@ -64,6 +64,32 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13/09/2026 (5)
+
+**`HipAbductionAnalyzer` — analyzer mới, +5 bài (267/412 trong checklist,
+65%).** Rà lại nhóm "chân di chuyển mặt phẳng trán" đã để dành ở mục (4) —
+suy luận kỹ hơn thì khả thi hơn ban đầu tưởng: `calculate_angle_3d` không
+phụ thuộc góc camera chặt như lo ngại (đứng nghiêng hay trực diện đều đọc
+được), và chân TRỤ (đứng yên) luôn giữ góc LỚN suốt bài — an toàn cho
+`active_side()`, không dính bẫy `CalfRaiseAnalyzer`. Dùng bộ ba khớp vai-
+hông-gối (giống Deadlift/HipThrust), LUÔN `single_side=True` mặc định vì
+bài này về bản chất luôn tập từng chân một, không có biến thể hai chân.
+
+Áp dụng: Band/Bodyweight/Cable/Machine Hip Abduction, Standing Cable Hip
+Abduction (5 bài). **CỐ TÌNH CHƯA gộp Machine Hip Adduction** — cơ chế HAI
+CHÂN đồng thời (khép chân đang mở trên máy), ngưỡng đi chiều ngược lại,
+cần suy luận riêng — không đủ ngân sách kiểm kỹ trong phiên này, để dành.
+
+Thêm ngưỡng mới (`hip_abducted`/`hip_adducted`) vào cả ba nơi bắt buộc
+(`tunables.py`, `thresholds.py`, `posture_rule.py`) NGAY TỪ ĐẦU. Thêm vào
+`PERFECT_REPS` dùng chung + 1 test riêng xác nhận chân trụ đứng yên không
+phá đếm rep. 397 test backend xanh, ruff sạch.
+
+⚠️ Chưa deploy, chưa test qua app thật — đây là mức độ suy luận sâu nhất
+trong các analyzer thêm hôm nay (chưa có analyzer nào khác dùng cùng cơ
+chế "mặt phẳng trán" để đối chiếu), ưu tiên xác nhận trên người thật khi
+có điều kiện test.
+
 ### 13/09/2026 (4)
 
 **Nhóm F+H — 2 analyzer mới, +12 bài (262/412 trong checklist, 64%).** Rà

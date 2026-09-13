@@ -20,6 +20,7 @@ from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.face_pull import FacePullAnalyzer
+from app.ml.analyzers.hip_abduction import HipAbductionAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
@@ -141,6 +142,7 @@ PERFECT_REPS = [
     ("leg_press", LegPressAnalyzer, lambda a: squat_pose(a), 168, 78),
     ("crunch", CrunchAnalyzer, lambda a: hinge_pose(a), 170, 100),
     ("face_pull", FacePullAnalyzer, lambda a: arm_pose(a), 163, 60),
+    ("hip_abduction", HipAbductionAnalyzer, lambda a: hinge_pose(a), 175, 130),
 ]
 
 
@@ -352,6 +354,15 @@ def test_pullover_bao_lech_ben() -> None:
 def test_leg_press_bao_lech_ben() -> None:
     result = LegPressAnalyzer().analyze(squat_pose(150.0, right_knee_angle=100.0))
     assert any("không đều" in e for e in result.errors)
+
+
+def test_hip_abduction_dem_dung_khi_chan_tru_dung_yen() -> None:
+    """Chân trụ (phải) giữ nguyên góc đứng thẳng 175°, chân trái dạng ra
+    một rep trọn vẹn 175 -> 130 -> 175."""
+    analyzer = HipAbductionAnalyzer()  # single_side=True mặc định
+    for left in [175, 155, 140, 130, 140, 155, 175]:
+        analyzer.analyze(hinge_pose(float(left), right_hip_angle=175.0))
+    assert analyzer.rep_counter.rep_count == 1
 
 
 def test_crunch_khong_bao_lech_ben() -> None:

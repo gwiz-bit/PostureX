@@ -16,6 +16,7 @@ from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.face_pull import FacePullAnalyzer
+from app.ml.analyzers.hip_abduction import HipAbductionAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
@@ -177,6 +178,8 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Decline Sit Up", CrunchAnalyzer),
         ("Hanging Knee Raises", CrunchAnalyzer),
         ("Machine Face Pulls", FacePullAnalyzer),
+        ("Standing Cable Hip Abduction", HipAbductionAnalyzer),
+        ("Machine Hip Abduction", HipAbductionAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:
