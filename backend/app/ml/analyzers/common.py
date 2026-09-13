@@ -33,9 +33,34 @@ def active_side(a: float | None, b: float | None) -> float | None:
     đã dùng đúng `min()` này cho gối tay trước/sau từ trước, xem docstring
     class đó) — hàm này tổng quát hoá cách làm cùng ý tưởng cho các analyzer
     khác. Dùng trung bình (`avg`) ở đây sẽ sai: bên đang nghỉ giữ góc lớn
-    kéo trung bình lên, không bao giờ chạm ngưỡng "đang làm việc"."""
+    kéo trung bình lên, không bao giờ chạm ngưỡng "đang làm việc".
+
+    KHÔNG dùng cho analyzer có quy ước NGƯỢC (nghỉ = góc NHỎ, cùng phía
+    `down_threshold`) — xem `active_side_max()` bên dưới, viết riêng cho
+    `CalfRaiseAnalyzer` sau khi rà lại 13/09/2026."""
     if a is not None and b is not None:
         return min(a, b)
+    return a if a is not None else b
+
+
+def active_side_max(a: float | None, b: float | None) -> float | None:
+    """Trả góc LỚN HƠN trong hai bên — đối xứng với `active_side()`, dùng cho
+    analyzer có quy ước góc NGƯỢC LẠI: nghỉ = góc NHỎ (cùng phía
+    `down_threshold`), làm việc = góc tăng dần lên.
+
+    `CalfRaiseAnalyzer` là trường hợp DUY NHẤT hiện có kiểu này: chân nghỉ
+    (bàn chân áp sàn, không tham gia bài) giữ nguyên góc NHỎ ~90° suốt bài —
+    cùng phía `down_threshold` (85°) chứ không phải `up_threshold` (130°) như
+    mọi analyzer khác dùng `active_side()`. Nếu áp `active_side()` (chọn
+    `min()`) ở đây, hàm sẽ LUÔN chọn nhầm thành chân đang nghỉ (góc của nó
+    hiếm khi lớn hơn chân đang nhón), khiến rep không bao giờ đếm được mà
+    không có lỗi nào báo — đây chính là bẫy đã né khi loại CalfRaise khỏi đợt
+    single_side đầu tiên (CHANGELOG 13/09/2026). `max()` sửa đúng: chân đang
+    nhón tăng dần lên ~140°, vượt hẳn chân nghỉ đứng yên ~90°, nên `max()`
+    luôn chọn đúng chân đang làm việc; ở đáy rep (cả hai gần ~90°) chọn bên
+    nào cũng vô hại vì cả hai đều nằm trong vùng "đang nghỉ"."""
+    if a is not None and b is not None:
+        return max(a, b)
     return a if a is not None else b
 
 

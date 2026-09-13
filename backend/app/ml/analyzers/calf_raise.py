@@ -8,10 +8,19 @@ Deadlift/HipThrust — KHÔNG cần góc bù như `LateralRaiseAnalyzer`, vì �
 trí nghỉ (đứng phẳng) vốn đã nằm ở phía góc lớn hơn `down_threshold`, khớp
 đúng giả định `Phase.TOP` mặc định của `RepCounter` (xem chú thích BẪY GÓC
 trong lateral_raise.py — cùng một bẫy, nhưng calf raise không mắc phải).
+
+Hỗ trợ single_side từ 13/09/2026 (đợt 4) cho Dumbbell Single Leg/Single Leg
+Standing Calf Raise — dùng `active_side_max()` (`common.py`) thay vì
+`active_side()` thường: chân NGHỈ ở bài một chân giữ nguyên góc NHỎ ~90°
+(bàn chân áp sàn, đứng yên) — CÙNG PHÍA `down_threshold`, ngược hẳn quy ước
+"nghỉ = góc lớn" mà `active_side()` (chọn `min()`) dựa vào. Đọc kỹ docstring
+`active_side_max()` trước khi sửa gì ở đây — đây chính là bẫy đã khiến
+CalfRaise bị loại hẳn khỏi đợt single_side đầu tiên (xem CHANGELOG
+13/09/2026, mục "Nhóm C — thêm chế độ single_side").
 """
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.analyzers.common import active_side_max, avg, is_visible, visible_points
 from app.ml.angle_utils import calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -32,10 +41,13 @@ ANKLE_ASYMMETRY_THRESHOLD = 20.0
 class CalfRaiseAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật calf raise (nhón gót) và trả feedback tiếng Việt."""
 
+    SUPPORTS_SINGLE_SIDE = True
+
     def __init__(
         self,
         rep_counter: RepCounter | None = None,
         thresholds: dict[str, float] | None = None,
+        single_side: bool = False,
     ) -> None:
         t = thresholds or {}
         super().__init__(
@@ -46,6 +58,11 @@ class CalfRaiseAnalyzer(ExerciseAnalyzer):
             ),
             thresholds,
         )
+        # Bài một chân (Dumbbell Single Leg/Single Leg Standing Calf Raise) —
+        # xem docstring module: dùng active_side_max() chứ KHÔNG phải
+        # active_side() thường, vì quy ước góc ở đây ngược lại. Tắt kiểm tra
+        # lệch hai bên khi bật — bài một chân lệch có chủ đích.
+        self._single_side = single_side
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -65,7 +82,11 @@ class CalfRaiseAnalyzer(ExerciseAnalyzer):
         if is_visible(right_knee, right_ankle, right_foot):
             right_ankle_angle = calculate_angle_3d(right_knee, right_ankle, right_foot)
 
-        ankle_angle = avg(left_ankle_angle, right_ankle_angle)
+        ankle_angle = (
+            active_side_max(left_ankle_angle, right_ankle_angle)
+            if self._single_side
+            else avg(left_ankle_angle, right_ankle_angle)
+        )
 
         phase = self.rep_counter.phase.value
         if ankle_angle is not None:
@@ -79,7 +100,11 @@ class CalfRaiseAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.incomplete_lockout:
                 errors.append("Chưa nhón gót đủ cao — đẩy gót chân lên cao hết cỡ.")
 
-        if left_ankle_angle is not None and right_ankle_angle is not None:
+        if (
+            not self._single_side
+            and left_ankle_angle is not None
+            and right_ankle_angle is not None
+        ):
             limit = self.threshold("ankle_asymmetry", ANKLE_ASYMMETRY_THRESHOLD)
             if abs(left_ankle_angle - right_ankle_angle) > limit:
                 errors.append("Hai bên nhón không đều — giữ tốc độ và độ cao hai gót bằng nhau.")

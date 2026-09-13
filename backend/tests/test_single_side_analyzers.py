@@ -8,11 +8,12 @@ Khoá lại đúng hành vi mà lượt rà tay checklist 412 bài (13/09/2026) 
   đúng, và kiểm tra "lệch hai bên" (vốn không hợp lý với bài một bên) bị tắt.
 """
 
+from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.row import RowAnalyzer
-from tests.pose_builders import arm_pose, hinge_pose
+from tests.pose_builders import arm_pose, calf_raise_pose, hinge_pose
 
 
 def test_khong_bat_single_side_thi_khong_dem_duoc_rep_mot_ben() -> None:
@@ -76,6 +77,21 @@ def test_deadlift_single_side_dem_dung_rep_khi_mot_chan_nghi() -> None:
     for left in [175, 150, 125, 100, 125, 150, 175]:
         analyzer.analyze(hinge_pose(float(left), right_hip_angle=175.0))
     assert analyzer.rep_counter.rep_count == 1
+
+
+def test_single_side_khong_bao_lech_ben_calf_raise() -> None:
+    """CalfRaiseAnalyzer bình thường báo lỗi khi hai mắt cá lệch >20° — nhưng
+    bài một chân (single_side=True) thì lệch đó là ĐÚNG bản chất bài tập,
+    không phải lỗi kỹ thuật. Dùng `active_side_max()` (KHÔNG phải
+    `active_side()` thường) vì CalfRaiseAnalyzer có quy ước góc ngược — xem
+    docstring `active_side_max()` trong `common.py`."""
+    without_flag = CalfRaiseAnalyzer().analyze(calf_raise_pose(145.0, right_ankle_angle=90.0))
+    assert any("không đều" in e for e in without_flag.errors)
+
+    with_flag = CalfRaiseAnalyzer(single_side=True).analyze(
+        calf_raise_pose(145.0, right_ankle_angle=90.0)
+    )
+    assert not any("không đều" in e for e in with_flag.errors)
 
 
 def test_single_side_van_dem_rep_dung_khi_chan_kia_thuc_su_lech() -> None:

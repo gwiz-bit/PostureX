@@ -64,6 +64,57 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13/09/2026 (8)
+
+**Đợt 4 — `active_side_max()` mới (`common.py`) sửa được calf raise một
+chân, +2 bài (279/412 trong checklist, 67,7%).** Sau khi liệt kê lại toàn bộ
+135 bài còn thiếu theo nhóm lý do (theo yêu cầu), rà lại xem còn bài nào ở
+Nhóm B (lý do cụ thể nhưng có thể giải được bằng suy luận, không phải bằng
+đoán) có thể làm ngay — tìm ra Dumbbell Single Leg Calf Raise/Single Leg
+Standing Calf Raise: lý do loại trừ cũ là **bẫy toán học có thể sửa được**
+(quy ước góc ngược của `CalfRaiseAnalyzer`), khác hẳn Curtsy Lunge/Step-up
+(rủi ro về **hành vi thật ngoài đời** chưa xác nhận được, không thể suy luận
+tiếp mà không đoán).
+
+**`active_side_max()` — hàm mới trong `common.py`, đối xứng với
+`active_side()` đã có.** `CalfRaiseAnalyzer` là analyzer DUY NHẤT có quy ước
+góc NGƯỢC: chân nghỉ giữ góc NHỎ (~90°, bàn chân áp sàn — CÙNG PHÍA
+`down_threshold`), khác mọi analyzer single_side khác (nghỉ luôn ở phía
+`up_threshold`, góc LỚN). `active_side()` (chọn `min()`) sẽ luôn chọn nhầm
+thành chân đang nghỉ — không phải giả thuyết, đã kiểm chứng lại bằng cách mô
+phỏng: nếu áp `min()` lên (chân nghỉ 90°, chân tập 90→145°), kết quả LUÔN là
+90° không đổi suốt bài (vì chân tập luôn ≥ chân nghỉ) — tín hiệu hoàn toàn
+đứng yên, không đếm được rep nào. `active_side_max()` (chọn `max()`) sửa
+đúng: chân đang nhón vượt hẳn chân nghỉ khi lên cao, được chọn đúng.
+
+**Phát hiện lúc viết test, quan trọng hơn cả rep-counting:** mô phỏng bằng
+script tay (không chỉ suy luận trên giấy) lộ ra con số đếm rep bằng `avg()`
+(nếu quên bật single_side) **thường vẫn đúng** nhờ cơ chế dự phòng FPS thấp
+của `RepCounter` (`_NEAR_BOTTOM_MARGIN=10°` — xem CHANGELOG 01/09/2026) tình
+cờ vẫn bắt được đáy khi cả hai chân cùng gần ~90°. Bug THẬT không nằm ở số
+rep mà ở **lời nhắc sai**: một rep một chân hoàn hảo (chân tập lên tới 145°)
+vẫn bị `avg(145°, 90°) = 117,5°` — không bao giờ vượt `ankle_raised=130°` —
+báo oan "Chưa nhón gót đủ cao" dù đã nhón hết cỡ, cộng cảnh báo giả "Hai bên
+nhón không đều" (đương nhiên đúng bản chất bài một chân). Không mô phỏng tay
+trước khi viết test thì rất dễ viết một test khẳng định sai điều (đếm rep
+đúng/sai) không phải là bug thật.
+
+Thêm `SUPPORTS_SINGLE_SIDE = True` + tham số `single_side` cho
+`CalfRaiseAnalyzer`, dùng `active_side_max()` thay `avg()` khi bật, tắt kiểm
+tra lệch hai bên đúng mẫu các analyzer single_side khác. Đăng ký 2 bài vào
+`_CALF_RAISE_VARIANTS` + `SINGLE_SIDE_EXERCISES`. Sửa `test_analyzer_registry.py`:
+rút 2 bài khỏi bảng loại trừ cũ, thêm vào bảng khẳng định map đúng. 2 test
+mới khoá đúng phát hiện ở trên (lời nhắc sai được sửa, không phải đếm rep) +
+1 test tắt cảnh báo lệch bên theo mẫu `test_single_side_analyzers.py` có sẵn.
+421 test backend xanh (từ 419), ruff sạch.
+
+⚠️ Chưa deploy, chưa test qua app thật — cùng tình trạng ngưỡng ước lượng
+mọi đợt trước. Đáng chú ý: đây là lần đầu một fix single_side được XÁC NHẬN
+bằng mô phỏng số thực tế trước khi viết test, thay vì suy luận thuần trên
+giấy như các đợt trước — nên cân nhắc áp dụng cách làm này (chạy thử bằng
+script tay trước khi tin vào suy luận) cho các bài "để dành" còn lại nếu
+quay lại rà tiếp, đặc biệt nhóm có quy ước góc không hiển nhiên.
+
 ### 13/09/2026 (7)
 
 **Đợt 3 — `CossackSquatAnalyzer` mới (squat sang ngang) + Single Leg Step

@@ -375,6 +375,35 @@ def test_hip_abduction_dem_dung_khi_chan_tru_dung_yen() -> None:
     assert analyzer.rep_counter.rep_count == 1
 
 
+def test_calf_raise_single_side_khong_bao_loi_gia_chua_du_cao() -> None:
+    """Chân trụ (phải) đứng yên ~90° (bàn chân áp sàn), chân trái nhón lên
+    hết cỡ 145° — một rep MỘT CHÂN hoàn hảo.
+
+    KHÔNG bật single_side: `avg(145, 90) = 117.5` không bao giờ vượt ngưỡng
+    "đã nhón đủ cao" (130°) — báo oan "chưa nhón gót đủ cao" dù chân đang tập
+    đã lên hết cỡ, đúng bẫy đã né khi loại CalfRaise khỏi đợt single_side đầu
+    tiên (xem CHANGELOG 13/09/2026). Bật single_side dùng `active_side_max()`
+    đọc đúng 145° thì không báo gì."""
+    sequence = [90, 105, 120, 135, 145, 135, 120, 105, 90]
+
+    without_flag_errors: list[str] = []
+    analyzer = CalfRaiseAnalyzer()
+    for angle in sequence:
+        without_flag_errors += analyzer.analyze(
+            calf_raise_pose(float(angle), right_ankle_angle=90.0)
+        ).errors
+    assert any("Chưa nhón gót đủ cao" in e for e in without_flag_errors)
+
+    with_flag_errors: list[str] = []
+    analyzer = CalfRaiseAnalyzer(single_side=True)
+    for angle in sequence:
+        with_flag_errors += analyzer.analyze(
+            calf_raise_pose(float(angle), right_ankle_angle=90.0)
+        ).errors
+    assert not any("Chưa nhón gót đủ cao" in e for e in with_flag_errors)
+    assert analyzer.rep_counter.rep_count == 1
+
+
 def test_cossack_squat_dem_dung_khi_chan_kia_duoi_thang() -> None:
     """Chân phải (không chịu lực) giữ nguyên góc gần duỗi thẳng 175°, chân
     trái dồn trọng lượng đi trọn một rep 170 -> 88 -> 170 — min() phải luôn

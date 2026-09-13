@@ -71,12 +71,6 @@ def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
 @pytest.mark.parametrize(
     "exercise",
     [
-        # CalfRaiseAnalyzer quy ước NGƯỢC (chân nghỉ giữ góc NHỎ, không phải
-        # LỚN như mọi analyzer khác) — active_side() sẽ chọn nhầm chân đang
-        # nghỉ. Cần thiết kế riêng, chưa làm — xem comment loại trừ trong
-        # `_CALF_RAISE_VARIANTS`.
-        "Dumbbell Single Leg Calf Raise",
-        "Single Leg Standing Calf Raise",
         # Kickstand RDL: chân sau chỉ chạm nhẹ gần sàn giữ thăng bằng, KHÔNG
         # duỗi thẳng ra sau thành một đường như single-leg RDL "chuẩn" (đã
         # CHUYỂN sang single_side=True — xem SINGLE_SIDE_EXERCISES trong
@@ -217,6 +211,10 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Cossack Squat", CossackSquatAnalyzer),
         ("Dumbbell Cossack Squat", CossackSquatAnalyzer),
         ("Single Leg Step Down", LungeAnalyzer),
+        # Thêm 13/09/2026 (đợt 4) — active_side_max() thay vì active_side()
+        # thường (xem docstring calf_raise.py/common.py).
+        ("Dumbbell Single Leg Calf Raise", CalfRaiseAnalyzer),
+        ("Single Leg Standing Calf Raise", CalfRaiseAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

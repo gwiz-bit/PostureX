@@ -484,14 +484,14 @@ _CALF_RAISE_VARIANTS = [
                                        # press không phụ thuộc nằm/đứng).
     "smith machine calf raise",
     "standing calf raise machine",
-    # KHÔNG có (một chân — CỐ TÌNH KHÔNG dùng cơ chế single_side chung đã
-    # thêm 13/09/2026 cho row/curl/raise/...): Dumbbell Single Leg Calf
-    # Raise, Single Leg Standing Calf Raise. Khác các bài tay ở chỗ chân
-    # NGHỈ giữ nguyên góc NHỎ (~90°, bàn chân áp sàn — cùng phía với
-    # down_threshold), trong khi chân TAY nghỉ ở các bài row/curl luôn giữ
-    # góc LỚN (duỗi thẳng). active_side() chọn góc nhỏ hơn sẽ luôn đọc nhầm
-    # thành chân đang nghỉ, không đếm được rep nào mà KHÔNG có lỗi nào báo —
-    # cần thiết kế riêng (chọn theo góc LỚN hơn), chưa làm.
+    # Thêm 13/09/2026 (đợt 4) — bài MỘT CHÂN, single_side=True (xem
+    # SINGLE_SIDE_EXERCISES cuối file). Khác các bài tay ở chỗ chân NGHỈ giữ
+    # nguyên góc NHỎ (~90°, bàn chân áp sàn — cùng phía down_threshold), nên
+    # CalfRaiseAnalyzer dùng `active_side_max()` (chọn góc LỚN HƠN) thay vì
+    # `active_side()` thường (chọn nhỏ hơn) khi single_side=True — xem
+    # docstring `active_side_max()` trong `common.py` và `calf_raise.py`.
+    "dumbbell single leg calf raise",
+    "single leg standing calf raise",
     # KHÔNG có (khác chiều động tác dù tên gần giống): Tibialis Raise — đây
     # là GẬP MU BÀN CHÂN (dorsiflexion, kéo mũi chân lên), ngược hẳn calf
     # raise (gập LÒNG bàn chân, đẩy gót lên) — dùng chung analyzer sẽ chấm
@@ -781,6 +781,10 @@ SINGLE_SIDE_EXERCISES: frozenset[str] = frozenset({
     "cable bench straight leg kickback",
     "cable kickback",
     "glute kickback machine",
+    # Calf raise — dùng active_side_max(), không phải active_side() thường
+    # (xem docstring calf_raise.py)
+    "dumbbell single leg calf raise",
+    "single leg standing calf raise",
 })
 
 # Tên trong SINGLE_SIDE_EXERCISES phải vừa có trong ANALYZER_REGISTRY, vừa
