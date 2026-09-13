@@ -64,6 +64,68 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13/09/2026 (4)
+
+**Nhóm F+H — 2 analyzer mới, +12 bài (262/412 trong checklist, 64%).** Rà
+tay 44 bài (30 nhóm F + 14 nhóm H ban đầu) — phát hiện đây KHÔNG phải một
+cơ chế thống nhất như tên gọi "vùng bụng/xoay thân" hay "xoay vai/háng" gợi
+ý, mà là ít nhất 8 nhóm nhỏ khác hẳn nhau về cơ chế đo. Chỉ 2 nhóm nhỏ đủ
+an toàn để làm ngay:
+
+- **`CrunchAnalyzer`** (7 bài: Decline Crunch/Sit Up, Dumbbell Situp,
+  Machine Crunch, Kneeling Cable Crunch, Captains Chair Knee Raise, Hanging
+  Knee Raises) — gộp chung crunch/sit-up (thân cong về gối, chân cố định)
+  và hanging knee raise (gối kéo về thân, thân cố định) vì công thức góc
+  3 điểm (vai-hông-gối) không phân biệt đầu nào di chuyển — cùng góc,
+  cùng chiều giảm dần. CỐ TÌNH KHÔNG kiểm lệch hai bên: gập bụng là chuyển
+  động cột sống đối xứng theo bản chất, không giống tay/chân có thể lệch do
+  bù lực.
+- **`FacePullAnalyzer`** (5 bài: Band High/Cable Bar/Cable Rope Kneeling/
+  Cable Seated Rope Face Pull, Machine Face Pulls) — cùng cơ chế góc khuỷu
+  tay với `RowAnalyzer`, khác lời nhắc (kéo ngang vai ra sau, không phải về
+  hông/bụng, không kiểm lưng cong vì đứng/ngồi thẳng người).
+
+**6 nhóm còn lại (32 bài) — có lý do kỹ thuật cụ thể, KHÔNG làm được với
+cơ chế "một góc 3 điểm" hiện tại của toàn dự án, không phải chỉ là chưa có
+thời gian:**
+
+- **Xoay/nghiêng thân quanh trục dọc** (7 bài: Wood Chopper ×3, Side Bend
+  ×2, Russian Twist ×2) — một góc 3 điểm không bắt được chuyển động XOAY,
+  cần theo dõi hướng vai/hông thay đổi theo thời gian (bài toán khác hẳn,
+  phức tạp hơn nhiều). Đây là GIỚI HẠN CHUNG áp dụng cho cả nhóm H bên dưới.
+- **Xoay cẳng tay quanh trục dọc** (3 bài: External Rotation ×2, Cuban
+  Press) — MediaPipe chỉ cho toạ độ vị trí khớp, không cho góc xoay trục
+  (supination/pronation) — cùng giới hạn kỹ thuật như xoay thân.
+- **Chân di chuyển mặt phẳng trán** (6 bài: Hip Abduction ×5, Hip Adduction)
+  — cần giả định góc camera nhìn TRỰC DIỆN, khác hẳn giả định nhìn NGHIÊNG
+  của mọi analyzer hiện có (squat/lunge/deadlift...). Không phải bất khả
+  thi như xoay trục, nhưng cần thiết kế riêng — để dành.
+- **Spinal Jefferson Curl** (4 bài, mọi thiết bị) — gập cột sống CHẬM, có
+  kiểm soát — bản chất gần bài giãn cơ/mobility (nhóm B) hơn bài đếm rep.
+- **Plyo/đa pha** (5 bài: Box Jump, Burpee, Jumping Jack, Mountain Climber,
+  Wall Ball) — bật nhảy nhanh + nhiều pha trong một rep, cùng rủi ro tốc độ
+  đã né ở Jump Squats (Nhóm C) cộng thêm độ phức tạp đa pha của nhóm Olympic
+  lift đã loại từ trước.
+- **Đẳng trường/hỗn hợp** (5 bài: Bird Dog, Dead Bug, Pallof Press, Superman
+  ×2) — mỗi bài một cơ chế riêng (luân phiên tay-chân, chống xoay, ưỡn lưng
+  nằm sấp), không gộp chung được, cần nghiên cứu từng bài.
+- **Gập kép** (2 bài: V Up, Toes To Bar) — thân VÀ chân cùng lúc nâng gặp
+  nhau, phức tạp hơn crunch/knee raise đơn thuần.
+
+Thêm ngưỡng mới (`hip_contracted`/`hip_extended`) vào cả ba nơi bắt buộc
+(`tunables.py`, `thresholds.py`, `posture_rule.py` — đúng bài học rút ra ở
+mục (3) cùng ngày) NGAY TỪ ĐẦU, không đợi test đỏ mới sửa. Thêm vào bảng
+`PERFECT_REPS` dùng chung + test lệch bên riêng. 393 test backend xanh, ruff
+sạch.
+
+⚠️ Chưa deploy, chưa test qua app thật.
+
+**Kế hoạch 4 nhóm (I → C → F → H) coi như đã đi hết một lượt** — Nhóm I
+xong hoàn toàn, Nhóm C xong 33/55 (22 bài để dành, hình học chân lệch trọng
+tâm), Nhóm F+H xong 12/44 (32 bài có giới hạn kỹ thuật thật, không phải
+chưa làm). Checklist 412 bài: 192 → 262 (47% → 64%) qua 1 ngày làm việc
+(13/09/2026) — registry backend tăng từ 204 lên 274 khoá tên.
+
 ### 13/09/2026 (3)
 
 **Nhóm I dứt điểm — 3 analyzer MỚI, +15 bài (250/412 trong checklist, 61%).**

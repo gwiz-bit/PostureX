@@ -12,8 +12,10 @@ import pytest
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
+from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
+from app.ml.analyzers.face_pull import FacePullAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
@@ -172,6 +174,9 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Machine Lat Pullover", PulloverAnalyzer),
         ("Machine Leg Press", LegPressAnalyzer),
         ("Machine Horizontal Leg Press", LegPressAnalyzer),
+        ("Decline Sit Up", CrunchAnalyzer),
+        ("Hanging Knee Raises", CrunchAnalyzer),
+        ("Machine Face Pulls", FacePullAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

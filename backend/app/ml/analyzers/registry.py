@@ -24,8 +24,10 @@ from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
+from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
+from app.ml.analyzers.face_pull import FacePullAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
@@ -528,6 +530,29 @@ _LEG_PRESS_VARIANTS = [
     "machine leg press",
 ]
 
+_CRUNCH_VARIANTS = [
+    # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
+    # (CrunchAnalyzer, xem docstring class đó — gộp chung crunch/sit-up
+    # NẰM và knee raise TREO/TỰA vì cùng đọc góc vai-hông-gối giảm dần).
+    "decline crunch",
+    "decline sit up",
+    "dumbbell situp",
+    "machine crunch",
+    "kneeling cable crunch",
+    "captains chair knee raise",
+    "hanging knee raises",
+]
+
+_FACE_PULL_VARIANTS = [
+    # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
+    # (FacePullAnalyzer, xem docstring class đó).
+    "band high face pull",
+    "cable bar face pull",
+    "cable rope kneeling face pull",
+    "cable seated rope face pull",
+    "machine face pulls",
+]
+
 _TRICEP_EXTENSION_VARIANTS = [
     # Duỗi khuỷu tay hai bên đồng thời (đẩy xuống/ra sau đầu) —
     # TricepExtensionAnalyzer lấy avg() hai khuỷu tay, cùng rủi ro một tay.
@@ -573,6 +598,8 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (LegCurlAnalyzer, _LEG_CURL_VARIANTS),
     (PulloverAnalyzer, _PULLOVER_VARIANTS),
     (LegPressAnalyzer, _LEG_PRESS_VARIANTS),
+    (CrunchAnalyzer, _CRUNCH_VARIANTS),
+    (FacePullAnalyzer, _FACE_PULL_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ

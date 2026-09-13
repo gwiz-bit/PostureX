@@ -16,8 +16,10 @@ from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
+from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
+from app.ml.analyzers.face_pull import FacePullAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
 from app.ml.analyzers.leg_curl import LegCurlAnalyzer
@@ -137,6 +139,8 @@ PERFECT_REPS = [
     ("leg_curl", LegCurlAnalyzer, lambda a: squat_pose(a), 170, 45),
     ("pullover", PulloverAnalyzer, lambda a: shoulder_raise_pose(a), 158, 52),
     ("leg_press", LegPressAnalyzer, lambda a: squat_pose(a), 168, 78),
+    ("crunch", CrunchAnalyzer, lambda a: hinge_pose(a), 170, 100),
+    ("face_pull", FacePullAnalyzer, lambda a: arm_pose(a), 163, 60),
 ]
 
 
@@ -347,6 +351,18 @@ def test_pullover_bao_lech_ben() -> None:
 
 def test_leg_press_bao_lech_ben() -> None:
     result = LegPressAnalyzer().analyze(squat_pose(150.0, right_knee_angle=100.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_crunch_khong_bao_lech_ben() -> None:
+    """Cố tình không kiểm — khác Deadlift/HipThrust, xem docstring
+    crunch.py: gập bụng là chuyển động đối xứng theo bản chất."""
+    result = CrunchAnalyzer().analyze(hinge_pose(150.0, right_hip_angle=110.0))
+    assert not any("không đều" in e or "lệch" in e for e in result.errors)
+
+
+def test_face_pull_bao_lech_ben() -> None:
+    result = FacePullAnalyzer().analyze(arm_pose(150.0, right_elbow_angle=100.0))
     assert any("không đều" in e for e in result.errors)
 
 

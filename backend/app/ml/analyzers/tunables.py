@@ -227,6 +227,20 @@ TUNABLES: dict[str, list[Tunable]] = {
         Tunable("knee_asymmetry", "Lệch hai chân — chênh quá góc này là đẩy lệch bên",
                 20.0, 5.0, 60.0),
     ],
+    "CrunchAnalyzer": [
+        Tunable("hip_contracted", "Gập hết — góc vai-hông-gối dưới mức này mới tính một rep",
+                110.0, 60.0, 150.0, affects_rep_count=True),
+        Tunable("hip_extended", "Về vị trí bắt đầu — vượt góc này là thân/chân đã duỗi thẳng",
+                165.0, 130.0, 180.0, affects_rep_count=True),
+    ],
+    "FacePullAnalyzer": [
+        Tunable("elbow_contracted", "Kéo hết — khuỷu gập dưới góc này mới tính một rep",
+                70.0, 30.0, 110.0, affects_rep_count=True),
+        Tunable("elbow_extended", "Về vị trí bắt đầu — vượt góc này là tay đã duỗi gần thẳng",
+                155.0, 110.0, 180.0, affects_rep_count=True),
+        Tunable("elbow_asymmetry", "Lệch hai tay — chênh quá góc này là kéo lệch bên",
+                25.0, 5.0, 60.0),
+    ],
 }
 
 # Cặp ngưỡng buộc phải giữ đúng thứ tự (cận dưới, cận trên).
@@ -251,6 +265,7 @@ ORDERED_PAIRS: tuple[tuple[str, str], ...] = (
     ("knee_rest", "knee_extended"),
     ("elbow_bent", "elbow_extended"),
     ("knee_contracted", "knee_extended"),
+    ("hip_contracted", "hip_extended"),
 )
 
 # Khoảng cách tối thiểu giữa hai đầu của một rep.
