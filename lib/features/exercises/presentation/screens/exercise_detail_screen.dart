@@ -127,6 +127,13 @@ class ExerciseDetailScreen extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 28),
+            TextButton.icon(
+              onPressed: () => _uploadInstead(context),
+              style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+              icon: const Icon(Icons.upload_file_rounded, size: 18),
+              label: Text(AppLocale.t('exercise_detail_upload_video')),
+            ),
+            const SizedBox(height: 12),
             // Live analysis is only offered where the backend actually has an
             // analyzer for this exercise. For the rest it silently falls back
             // to squat analysis, so showing the button would mean counting
@@ -171,13 +178,6 @@ class ExerciseDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            const SizedBox(height: 12),
-            TextButton.icon(
-              onPressed: () => _uploadInstead(context),
-              style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-              icon: const Icon(Icons.upload_file_rounded, size: 18),
-              label: Text(AppLocale.t('exercise_detail_upload_video')),
-            ),
           ],
         ),
       ),
