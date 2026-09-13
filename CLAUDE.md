@@ -64,6 +64,60 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13/09/2026 (3)
+
+**Nhóm I dứt điểm — 3 analyzer MỚI, +15 bài (250/412 trong checklist, 61%).**
+Hoàn thành phần còn lại của Nhóm I (xem mục (1) cùng ngày): 14 bài cần
+analyzer chưa từng có + 1 bài (Cable Single Leg Laying Leg Curl, từ Nhóm C)
+dùng chung analyzer mới với single_side.
+
+- **`LegCurlAnalyzer`** (8 bài: Band/Dumbbell/Lying/Seated/Stability Ball/
+  Towel Slide Leg Curl, Hamstring Curl, Nordic Hamstring Curl) — hông-gối-
+  cổ chân, NGHỈ = duỗi thẳng (góc LỚN, máy kéo chân về thẳng khi không gồng)
+  — cùng chiều `CurlAnalyzer`, KHÁC `LegExtensionAnalyzer` (nghỉ = gập, góc
+  NHỎ). Có `SUPPORTS_SINGLE_SIDE = True` ngay từ đầu — chân nghỉ của Cable
+  Single Leg Laying Leg Curl vẫn nằm duỗi thẳng trên ghế, an toàn cho
+  `active_side()` (khác Single Leg Press bên dưới).
+- **`PulloverAnalyzer`** (4 bài: Band/Barbell/Cable Rope Pullover, Machine
+  Lat Pullover) — hông-vai-khuỷu tay, cùng khớp `LateralRaiseAnalyzer`/
+  `ChestFlyAnalyzer` nhưng khác MẶT PHẲNG chuyển động (tay từ sau đầu vòng
+  cung xuống trước ngực, không phải sang ngang hay khép hai bên).
+- **`LegPressAnalyzer`** (2 bài: Machine Horizontal/thường Leg Press) —
+  hông-gối-cổ chân giống `SquatAnalyzer`, nhưng KHÔNG kiểm gối vượt mũi chân
+  (giả định đứng nhìn từ bên, không áp dụng cho tư thế ngồi/nằm tựa máy) và
+  KHÔNG kiểm lưng (lưng tựa cố định vào đệm). **CỐ TÌNH CHƯA hỗ trợ
+  single_side** — vị trí chân "nghỉ" của Single Leg Press không rõ ràng như
+  bài tay (không có chỗ đặt cố định, có thể để tuỳ ý sang một bên), rủi ro
+  giống bẫy đã né ở `CalfRaiseAnalyzer` (mục (2) cùng ngày) nếu đoán sai —
+  để dành khi rà kỹ hơn.
+
+**Việc phát sinh ngoài dự kiến, đúng quy trình đã ghi ở CLAUDE.md nhưng dễ
+quên khi thêm analyzer mới:** `tests/test_tunables.py` bắt lỗi ngay lúc
+chạy — thiếu khai báo ở CẢ BA nơi cho khoá `knee_contracted` (khoá riêng của
+`LegCurlAnalyzer`, hai analyzer kia tái dùng khoá đã có sẵn):
+`app/ml/analyzers/tunables.py` (nhãn hiển thị cho admin), 
+`app/ml/analyzers/thresholds.py` (`VALUE_COLUMN`, khoá nào đọc cột DB nào),
+`app/crud/posture_rule.py` (`_JOINTS` bộ ba khớp bắt buộc NOT NULL,
+`_REP_TRIGGERS` đánh dấu khoá nào là mốc đếm rep). Thiếu một trong ba sẽ
+không lỗi ngay mà lỗi ÂM THẦM (ngưỡng ghi xuống DB rồi bị bỏ qua, hoặc
+admin lưu ngưỡng cho bài chưa từng có dòng thì ném `KeyError`) — đúng lý do
+ba test này tồn tại.
+
+Thêm test vào bảng dùng chung `PERFECT_REPS` (`tests/test_analyzers.py`,
+tái dùng máy kiểm "rep chuẩn đạt 100%" có sẵn thay vì viết lại) cộng test
+lệch bên riêng cho cả 3, và 1 test single_side cho LegCurl. 386 test backend
+xanh, ruff sạch.
+
+⚠️ Chưa deploy, chưa test qua app thật — ngưỡng của cả 3 analyzer mới hoàn
+toàn ước lượng theo hình học, y hệt tình trạng mọi analyzer khác lúc mới
+viết.
+
+**Còn lại của kế hoạch 4 nhóm (I → C → F → H):** Nhóm C còn 22 bài (hình học
+chân lệch trọng tâm, kickback hông), Nhóm F (~30 bài, core/xoay thân/plyo)
+và Nhóm H (~14 bài, xoay vai/háng) chưa bắt đầu — cả hai cần thiết kế
+analyzer HOÀN TOÀN MỚI, dự kiến làm chung một đợt vì cùng cơ chế đo (góc
+xoay/uốn theo thời gian) như đã bàn.
+
 ### 13/09/2026 (2)
 
 **Nhóm C — thêm chế độ `single_side` cho analyzer, +33 bài một tay/một chân

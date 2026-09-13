@@ -203,6 +203,30 @@ TUNABLES: dict[str, list[Tunable]] = {
         Tunable("elbow_asymmetry", "Lệch hai tay — chênh quá góc này là duỗi lệch bên",
                 25.0, 5.0, 60.0),
     ],
+    "LegCurlAnalyzer": [
+        Tunable("knee_contracted", "Co hết — góc gối dưới mức này mới tính một rep",
+                50.0, 20.0, 90.0, affects_rep_count=True),
+        Tunable("knee_extended", "Về vị trí bắt đầu — vượt góc này là chân đã duỗi gần thẳng",
+                165.0, 130.0, 180.0, affects_rep_count=True),
+        Tunable("knee_asymmetry", "Lệch hai chân — chênh quá góc này là co lệch bên",
+                20.0, 5.0, 60.0),
+    ],
+    "PulloverAnalyzer": [
+        Tunable("shoulder_contracted", "Kéo hết — góc vai dưới mức này mới tính một rep",
+                60.0, 20.0, 100.0, affects_rep_count=True),
+        Tunable("shoulder_extended", "Về vị trí bắt đầu — vượt góc này là tay đã duỗi qua đầu hết cỡ",
+                150.0, 110.0, 180.0, affects_rep_count=True),
+        Tunable("shoulder_asymmetry", "Lệch hai tay — chênh quá góc này là kéo lệch bên",
+                25.0, 5.0, 60.0),
+    ],
+    "LegPressAnalyzer": [
+        Tunable("knee_rest", "Vị trí nghỉ — góc gối dưới mức này là bàn đạp đang gần ngực",
+                85.0, 50.0, 120.0, affects_rep_count=True),
+        Tunable("knee_extended", "Đã duỗi đủ — vượt góc này là chân đã duỗi gần hết cỡ",
+                160.0, 130.0, 180.0, affects_rep_count=True),
+        Tunable("knee_asymmetry", "Lệch hai chân — chênh quá góc này là đẩy lệch bên",
+                20.0, 5.0, 60.0),
+    ],
 }
 
 # Cặp ngưỡng buộc phải giữ đúng thứ tự (cận dưới, cận trên).
@@ -226,6 +250,7 @@ ORDERED_PAIRS: tuple[tuple[str, str], ...] = (
     ("ankle_rest", "ankle_raised"),
     ("knee_rest", "knee_extended"),
     ("elbow_bent", "elbow_extended"),
+    ("knee_contracted", "knee_extended"),
 )
 
 # Khoảng cách tối thiểu giữa hai đầu của một rep.

@@ -28,11 +28,14 @@ from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
+from app.ml.analyzers.leg_curl import LegCurlAnalyzer
 from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
+from app.ml.analyzers.leg_press import LegPressAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.plank import PlankAnalyzer
 from app.ml.analyzers.pulldown import PulldownAnalyzer
+from app.ml.analyzers.pullover import PulloverAnalyzer
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
@@ -489,6 +492,42 @@ _LEG_EXTENSION_VARIANTS = [
     "machine plate loaded leg extension",
 ]
 
+_LEG_CURL_VARIANTS = [
+    # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI (LegCurlAnalyzer,
+    # xem docstring class đó). Gập gối hai bên đồng thời (hoặc một bên, xem
+    # single_side bên dưới) — KHÔNG liên quan CurlAnalyzer (khuỷu tay) dù
+    # tên trùng chữ "curl", đã tách bẫy này từ 06/09/2026.
+    "band leg curl",
+    "dumbbell leg curl",
+    "hamstring curl",
+    "lying leg curl",
+    "nordic hamstring curl",
+    "seated leg curl",
+    "stability ball leg curl",
+    "towel slide leg curl",
+    # Bài MỘT CHÂN, single_side=True (xem SINGLE_SIDE_EXERCISES cuối file)
+    # — chân nghỉ vẫn nằm duỗi thẳng trên ghế/máy (an toàn cho active_side(),
+    # khác Single Leg Press bên dưới).
+    "cable single leg laying leg curl",
+]
+
+_PULLOVER_VARIANTS = [
+    # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
+    # (PulloverAnalyzer, xem docstring class đó).
+    "band pullover",
+    "barbell pullover",
+    "cable rope pullover",
+    "machine lat pullover",
+]
+
+_LEG_PRESS_VARIANTS = [
+    # Thêm 13/09/2026, rà tay checklist 412 bài — analyzer MỚI
+    # (LegPressAnalyzer, xem docstring class đó — CỐ TÌNH CHƯA hỗ trợ
+    # single_side, nên "Single Leg Press" KHÔNG có trong danh sách này).
+    "machine horizontal leg press",
+    "machine leg press",
+]
+
 _TRICEP_EXTENSION_VARIANTS = [
     # Duỗi khuỷu tay hai bên đồng thời (đẩy xuống/ra sau đầu) —
     # TricepExtensionAnalyzer lấy avg() hai khuỷu tay, cùng rủi ro một tay.
@@ -531,6 +570,9 @@ _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (LegExtensionAnalyzer, _LEG_EXTENSION_VARIANTS),
     (TricepExtensionAnalyzer, _TRICEP_EXTENSION_VARIANTS),
     (PulldownAnalyzer, _PULLDOWN_VARIANTS),
+    (LegCurlAnalyzer, _LEG_CURL_VARIANTS),
+    (PulloverAnalyzer, _PULLOVER_VARIANTS),
+    (LegPressAnalyzer, _LEG_PRESS_VARIANTS),
 ]
 
 # Key luôn viết thường — `_get_analyzer` và `supports_analysis` đều hạ chữ
@@ -615,6 +657,8 @@ SINGLE_SIDE_EXERCISES: frozenset[str] = frozenset({
     "cable single arm rope pushdown",
     # Pulldown
     "single arm lat pulldown",
+    # Leg curl
+    "cable single leg laying leg curl",
 })
 
 # Tên trong SINGLE_SIDE_EXERCISES phải vừa có trong ANALYZER_REGISTRY, vừa

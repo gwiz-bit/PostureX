@@ -20,11 +20,14 @@ from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
+from app.ml.analyzers.leg_curl import LegCurlAnalyzer
 from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
+from app.ml.analyzers.leg_press import LegPressAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.plank import PlankAnalyzer
 from app.ml.analyzers.pulldown import PulldownAnalyzer
+from app.ml.analyzers.pullover import PulloverAnalyzer
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
@@ -131,6 +134,9 @@ PERFECT_REPS = [
     ("leg_extension", LegExtensionAnalyzer, lambda a: squat_pose(a), 173, 75),
     ("tricep_extension", TricepExtensionAnalyzer, lambda a: arm_pose(a), 168, 85),
     ("pulldown", PulldownAnalyzer, lambda a: arm_pose(a), 165, 55),
+    ("leg_curl", LegCurlAnalyzer, lambda a: squat_pose(a), 170, 45),
+    ("pullover", PulloverAnalyzer, lambda a: shoulder_raise_pose(a), 158, 52),
+    ("leg_press", LegPressAnalyzer, lambda a: squat_pose(a), 168, 78),
 ]
 
 
@@ -318,6 +324,38 @@ def test_tricep_extension_bao_lech_ben() -> None:
 def test_pulldown_bao_hai_tay_khong_deu() -> None:
     result = PulldownAnalyzer().analyze(arm_pose(150.0, right_elbow_angle=100.0))
     assert any("không đều" in e for e in result.errors)
+
+
+def test_leg_curl_bao_lech_ben() -> None:
+    result = LegCurlAnalyzer().analyze(squat_pose(150.0, right_knee_angle=90.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_leg_curl_single_side_dem_dung_khi_mot_chan_nghi() -> None:
+    """Cable Single Leg Laying Leg Curl — chân phải duỗi thẳng cố định
+    (170°), chân trái đi trọn một rep 170 -> 45 -> 170."""
+    analyzer = LegCurlAnalyzer(single_side=True)
+    for left in [170, 130, 90, 45, 90, 130, 170]:
+        analyzer.analyze(squat_pose(float(left), right_knee_angle=170.0))
+    assert analyzer.rep_counter.rep_count == 1
+
+
+def test_pullover_bao_lech_ben() -> None:
+    result = PulloverAnalyzer().analyze(shoulder_raise_pose(140.0, right_shoulder_angle=70.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_leg_press_bao_lech_ben() -> None:
+    result = LegPressAnalyzer().analyze(squat_pose(150.0, right_knee_angle=100.0))
+    assert any("không đều" in e for e in result.errors)
+
+
+def test_leg_press_khong_kiem_goi_vuot_mui_chan() -> None:
+    """Cố tình không kiểm — khác SquatAnalyzer, xem docstring leg_press.py:
+    tư thế ngồi/nằm tựa máy, kiểm tra gối vượt mũi chân giả định đứng nhìn
+    từ bên không áp dụng được."""
+    result = LegPressAnalyzer().analyze(squat_pose(120.0, 175.0, knee_past_toe=True))
+    assert not any("vượt quá mũi chân" in e for e in result.errors)
 
 
 def test_pulldown_khong_bao_lung_cong() -> None:

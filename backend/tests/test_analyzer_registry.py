@@ -16,10 +16,13 @@ from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
 from app.ml.analyzers.hip_thrust import HipThrustAnalyzer
 from app.ml.analyzers.lateral_raise import LateralRaiseAnalyzer
+from app.ml.analyzers.leg_curl import LegCurlAnalyzer
 from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
+from app.ml.analyzers.leg_press import LegPressAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.pulldown import PulldownAnalyzer
+from app.ml.analyzers.pullover import PulloverAnalyzer
 from app.ml.analyzers.registry import (
     ANALYZER_REGISTRY,
     SINGLE_SIDE_EXERCISES,
@@ -40,9 +43,9 @@ from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
         # Cardio máy chèo, không phải bài kéo tạ.
         "Rowing Machine Steady State",
         "Rowing Sprint",
-        # Chứa "curl" nhưng gập một khớp khác hẳn khuỷu tay.
-        "Lying Leg Curl",  # gối (hamstring)
-        "Nordic Hamstring Curl",  # gối (hamstring)
+        # Chứa "curl" nhưng gập một khớp khác hẳn khuỷu tay. Lying Leg Curl/
+        # Nordic Hamstring Curl (gối) thuộc LegCurlAnalyzer từ 13/09/2026 —
+        # không còn ở đây, xem test_bien_the_map_dung_analyzer.
         "Barbell Wrist Curl",  # cổ tay
         "Barbell Spinal Jefferson Curl",  # cột sống, không phải khuỷu tay
         "Neck Curl",  # cổ
@@ -160,6 +163,15 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Single Arm Overhead Cable Extension", TricepExtensionAnalyzer),
         ("Single Arm Tricep Extension", TricepExtensionAnalyzer),
         ("Single Arm Lat Pulldown", PulldownAnalyzer),
+        # Thêm 13/09/2026 — 3 analyzer MỚI (LegCurl/Pullover/LegPress), xem
+        # CHANGELOG cho lý do từng bài.
+        ("Lying Leg Curl", LegCurlAnalyzer),
+        ("Nordic Hamstring Curl", LegCurlAnalyzer),
+        ("Cable Single Leg Laying Leg Curl", LegCurlAnalyzer),
+        ("Band Pullover", PulloverAnalyzer),
+        ("Machine Lat Pullover", PulloverAnalyzer),
+        ("Machine Leg Press", LegPressAnalyzer),
+        ("Machine Horizontal Leg Press", LegPressAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:

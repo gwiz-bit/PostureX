@@ -93,6 +93,9 @@ VALUE_COLUMN: dict[str, str] = {
     "knee_rest": "max_angle",
     "knee_extended": "min_angle",
     "knee_asymmetry": "max_angle",
+    # Leg curl — chiều ngược leg extension (đỉnh rep là co hết, không phải
+    # duỗi hết), nhưng vẫn dùng chung cột max_angle cho khoá "down".
+    "knee_contracted": "max_angle",
     # Tricep extension/pushdown — "elbow_extended" dùng chung khoá với Curl
     # (cùng cột min_angle, cùng ý nghĩa "đã duỗi thẳng").
     "elbow_bent": "max_angle",
