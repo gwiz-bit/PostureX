@@ -16,6 +16,7 @@ from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
+from app.ml.analyzers.cossack_squat import CossackSquatAnalyzer
 from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
@@ -151,6 +152,7 @@ PERFECT_REPS = [
     # đúng cách lateral_raise đã làm ở trên dù raw đi ngược hướng thông thường.
     ("hip_adduction", HipAdductionAnalyzer, lambda a: hinge_pose(a), 132, 178),
     ("kickback", KickbackAnalyzer, lambda a: hinge_pose(a), 122, 172),
+    ("cossack_squat", CossackSquatAnalyzer, lambda a: squat_pose(a, 175.0), 170, 88),
 ]
 
 
@@ -370,6 +372,16 @@ def test_hip_abduction_dem_dung_khi_chan_tru_dung_yen() -> None:
     analyzer = HipAbductionAnalyzer()  # single_side=True mặc định
     for left in [175, 155, 140, 130, 140, 155, 175]:
         analyzer.analyze(hinge_pose(float(left), right_hip_angle=175.0))
+    assert analyzer.rep_counter.rep_count == 1
+
+
+def test_cossack_squat_dem_dung_khi_chan_kia_duoi_thang() -> None:
+    """Chân phải (không chịu lực) giữ nguyên góc gần duỗi thẳng 175°, chân
+    trái dồn trọng lượng đi trọn một rep 170 -> 88 -> 170 — min() phải luôn
+    chọn đúng chân trái đang chịu lực."""
+    analyzer = CossackSquatAnalyzer()
+    for left in [170, 150, 120, 88, 120, 150, 170]:
+        analyzer.analyze(squat_pose(float(left), 175.0, right_knee_angle=175.0))
     assert analyzer.rep_counter.rep_count == 1
 
 

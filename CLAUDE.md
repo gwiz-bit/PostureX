@@ -64,6 +64,80 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13/09/2026 (7)
+
+**Đợt 3 — `CossackSquatAnalyzer` mới (squat sang ngang) + Single Leg Step
+Down tái dùng LungeAnalyzer, +3 bài (277/412 trong checklist, 67,2%).** Đầu
+tư thiết kế riêng cho đúng 2 nhóm để dành từ mục (6): Cossack Squat và
+step-up. Kết quả: Cossack Squat khả thi (analyzer mới), step-up chỉ khả thi
+được 1/4 bài (Single Leg Step Down, không cần code mới), 3 bài còn lại vẫn
+để dành vì rủi ro cụ thể hơn được tìm ra khi suy luận sâu — không phải chưa
+có thời gian.
+
+**1) `CossackSquatAnalyzer` — analyzer MỚI, +2 bài** (Cossack Squat, Dumbbell
+Cossack Squat). Đây là squat ở MẶT PHẲNG TRÁN (sang ngang) chứ không phải mặt
+phẳng đứng dọc như Squat/Lunge chuẩn — tưởng cần thiết kế lại từ đầu, nhưng
+suy luận kỹ thì lõi cơ chế TÁI DÙNG ĐƯỢC gần như nguyên vẹn: `calculate_angle_3d`
+(hông-gối-cổ chân) dùng vector 3D thật nên không phụ thuộc người quay mặt hay
+quay ngang vào camera — đúng nguyên lý đã xác nhận qua `HipAbductionAnalyzer`
+hôm qua, áp dụng lại được ở đây. Cơ chế `min()` hai gối của `LungeAnalyzer`
+("gối nào gập sâu hơn là chân đang chịu lực") cũng đúng luôn cho Cossack
+Squat mà không cần sửa gì — không cần cờ single_side vì đây luôn là cơ chế
+hai chân luân phiên.
+
+**Điều KHÔNG tái dùng được, và tại sao phải viết class mới thay vì chỉ thêm
+tên vào `_LUNGE_VARIANTS`:** hai kiểm tra phụ của Squat/Lunge đều ngầm giả
+định camera nhìn NGHIÊNG — gối vượt mũi chân so toạ độ x 2D (trục x = trước-
+sau cơ thể khi nhìn nghiêng, nhưng thành trái-phải khi nhìn trực diện, đo
+nhầm sang ý nghĩa khác hẳn — gối đổ vào trong/valgus — mà chưa có ngưỡng nào
+kiểm chứng), và lưng thẳng (chưa có gì đối chiếu cho chuyển động sang ngang).
+`CossackSquatAnalyzer` bỏ HẲN cả hai, chỉ giữ phần đếm rep — đúng tinh thần
+"thà thiếu còn hơn chấm sai", và đúng cách `HipAbductionAnalyzer`/
+`CrunchAnalyzer` cũng tối giản ở lần viết đầu tiên cho một cơ chế mới. Tái
+dùng nguyên khoá `knee_depth`/`stand_up_min` đã có (cùng ý nghĩa vật lý),
+không cần khoá mới, không cần sửa `thresholds.py`/`posture_rule.py`.
+
+**2) Single Leg Step Down → tái dùng NGUYÊN `LungeAnalyzer`, +1 bài, không
+cần code mới.** Đây là bài đứng một chân trên bục cao, hạ thấp có kiểm soát
+(như single-leg squat) trong khi chân kia duỗi thẳng chạm nhẹ sàn rồi thu về
+— KHÔNG có pha "knee drive" (khác 2 bài Step Up Knee Drive bên dưới), nên
+chân rảnh giữ góc lớn ổn định suốt bài, an toàn cho `min()` có sẵn của
+Lunge — cùng hình học "chân rảnh giữ thẳng" đã xác nhận cho single-leg RDL/
+Kickback hôm qua. Góc hông-gối-cổ chân là góc CỤC BỘ của từng chân (3 điểm
+của CÙNG một chân) nên không phụ thuộc độ cao bục đứng — bục cao không phá
+công thức góc, chỉ đổi toạ độ tuyệt đối chứ không đổi góc tương đối.
+
+**3) Vẫn để dành, nhưng lý do giờ cụ thể hơn (đã suy luận sâu, không phải
+chưa có thời gian):**
+- **Barbell Front Rack/Barbell Step Up Knee Drive** (2 bài) — CÓ knee drive
+  thật: chân không chịu lực chủ động đá gối lên cao ở đỉnh, có thể GẬP SÂU
+  HƠN chân trụ đang đứng thẳng trên bục tại một số thời điểm — phá vỡ
+  `min()` theo đúng cách LungeAnalyzer dựa vào (chọn nhầm chân, hoặc không
+  nhận ra đỉnh rep, hoặc đếm khống rep từ chính cú đá gối).
+- **Dumbbell Step Up Low** (1 bài) — tên không gợi ý "knee drive" nên KHÔNG
+  chắc cùng rủi ro trên, nhưng cũng không có căn cứ nào để suy luận chân
+  rảnh giữ thẳng như Single Leg Step Down — không rõ trình tự chuyển động
+  chính xác nếu không xem video mẫu thật, không đoán suông.
+- **Curtsy lunge** (2 bài: Dumbbell Goblet/Kettlebell Alternating) — cùng
+  loại rủi ro với step-up có knee drive: chân bắt chéo ra sau có thể gập SÂU
+  HƠN chân trước đang chịu lực ở đáy động tác "curtsy". Khác Cossack Squat
+  (chân không chịu lực gần như duỗi thẳng chìa ra ngoài, không bắt chéo).
+
+3 test mới (`test_analyzers.py`): PERFECT_REPS cho Cossack Squat + test riêng
+xác nhận `min()` chọn đúng chân khi chân kia duỗi thẳng đứng yên. Cập nhật
+`test_analyzer_registry.py`: thêm 3 bài vào bảng khẳng định map đúng, chuyển
+2 bài curtsy + 2 bài step-up knee-drive + Dumbbell Step Up Low vào bảng loại
+trừ với lý do cụ thể (trước đó step-up hoàn toàn chưa có test khoá lại). 419
+test backend xanh (từ 411), ruff sạch.
+
+⚠️ Chưa deploy, chưa test qua app thật — ngưỡng `knee_depth=100.0`/
+`stand_up_min=160.0` của CossackSquatAnalyzer là ước lượng THEO GIẢ ĐỊNH
+"tương tự Lunge", độ tin cậy thấp hơn cả squat/lunge lúc mới viết vì đây là
+lần đầu tiên có analyzer đo squat ở mặt phẳng trán — chưa có gì để đối chiếu.
+Ưu tiên test thật cho bài này khi có người test, đặc biệt xác nhận `min()`
+thật sự chọn đúng chân trên người thật (test tự động chỉ dựng được tư thế lý
+tưởng, không có nhiễu pose estimation thật).
+
 ### 13/09/2026 (6)
 
 **Đợt 2 rà nốt Nhóm C + 2 analyzer mới (HipAdduction/Kickback), +7 bài

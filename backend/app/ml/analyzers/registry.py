@@ -24,6 +24,7 @@ from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.cat_cow import CatCowAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
+from app.ml.analyzers.cossack_squat import CossackSquatAnalyzer
 from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
@@ -109,7 +110,10 @@ _SQUAT_VARIANTS = [
     "pendulum squat v squat",
     # KHÔNG có: Jump Squats (có pha bay, ngưỡng gối-vượt-mũi-chân sai lúc
     # tiếp đất), Sissy Squat (cố ý đẩy gối vượt xa mũi chân — cảnh báo giả
-    # mọi rep), Cossack Squat (squat sang ngang).
+    # mọi rep). Cossack Squat KHÔNG còn ở đây — squat sang ngang (mặt phẳng
+    # trán), dùng `CossackSquatAnalyzer` riêng bên dưới (13/09/2026, đợt 3),
+    # không dùng chung SquatAnalyzer vì hai kiểm tra phụ của Squat (gối vượt
+    # mũi chân 2D, lưng thẳng) giả định camera nhìn nghiêng.
 ]
 
 _LUNGE_VARIANTS = [
@@ -133,8 +137,35 @@ _LUNGE_VARIANTS = [
     "dumbbell goblet split squat",
     "kettlebell assisted bulgarian split squat",
     "front foot elevated split squat",
+    # Thêm 13/09/2026 (đợt 3) — Single Leg Step Down: chân trụ đứng trên bục
+    # cao hạ thấp có kiểm soát (như single-leg squat), chân kia (bước xuống)
+    # duỗi thẳng chạm nhẹ sàn rồi thu về — CÙNG hình học "chân rảnh giữ thẳng"
+    # đã xác nhận an toàn cho single-leg RDL/Kickback: chân rảnh không có pha
+    # "knee drive" nên góc luôn giữ lớn, min() luôn chọn đúng chân trụ. Góc
+    # hông-gối-cổ chân là góc CỤC BỘ của từng chân nên không phụ thuộc độ cao
+    # bục — khác 3 bài step-up còn lại (xem _COSSACK_SQUAT_VARIANTS/comment
+    # loại trừ cuối file), những bài đó có "knee drive" thật sự khiến chân
+    # kia có thể gập SÂU HƠN chân trụ, phá vỡ giả định này.
+    "single leg step down",
     # KHÔNG có: lateral lunge và curtsy lunge (bước sang ngang / chéo ra sau),
     # Split Squat Isometric Hold (giữ tĩnh, không có rep để đếm).
+]
+
+_COSSACK_SQUAT_VARIANTS = [
+    # Thêm 13/09/2026 (đợt 3) — analyzer MỚI (CossackSquatAnalyzer, xem
+    # docstring class đó). Squat sang ngang (mặt phẳng trán) — KHÔNG dùng
+    # chung SquatAnalyzer/LungeAnalyzer vì hai kiểm tra phụ của chúng (gối
+    # vượt mũi chân 2D, lưng thẳng) giả định camera nhìn nghiêng, không áp
+    # được cho chuyển động sang ngang.
+    "cossack squat",
+    "dumbbell cossack squat",
+    # KHÔNG có (chưa đủ tự tin, để dành): step-up (Barbell Front Rack/Barbell
+    # Step Up Knee Drive có "knee drive" thật — chân kia có thể gập SÂU HƠN
+    # chân trụ ở đỉnh động tác, phá vỡ min(); Dumbbell Step Up Low không rõ
+    # trình tự chuyển động chính xác, không đủ căn cứ suy luận như Single Leg
+    # Step Down đã thêm vào _LUNGE_VARIANTS ở trên), curtsy lunge (Dumbbell
+    # Goblet/Kettlebell Alternating — cùng rủi ro "chân bắt chéo gập sâu hơn
+    # chân trước" như knee-drive step-up).
 ]
 
 _DEADLIFT_VARIANTS = [
@@ -627,6 +658,7 @@ _TRICEP_EXTENSION_VARIANTS = [
 _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
     (SquatAnalyzer, _SQUAT_VARIANTS),
     (LungeAnalyzer, _LUNGE_VARIANTS),
+    (CossackSquatAnalyzer, _COSSACK_SQUAT_VARIANTS),
     (DeadliftAnalyzer, _DEADLIFT_VARIANTS),
     (RowAnalyzer, _ROW_VARIANTS),
     (BenchPressAnalyzer, _BENCH_PRESS_VARIANTS),

@@ -95,6 +95,12 @@ TUNABLES: dict[str, list[Tunable]] = {
         Tunable("knee_overshoot", "Gối vượt mũi chân — tỉ lệ theo chiều rộng khung hình",
                 0.05, 0.0, 0.30, unit="", step=0.01),
     ],
+    "CossackSquatAnalyzer": [
+        Tunable("knee_depth", "Độ sâu gối chân chịu lực — gập dưới góc này mới tính đủ sâu",
+                100.0, 40.0, 140.0, affects_rep_count=True),
+        Tunable("stand_up_min", "Đứng thẳng lại — vượt góc này là kết thúc rep",
+                160.0, 120.0, 180.0, affects_rep_count=True),
+    ],
     "RowAnalyzer": [
         Tunable("elbow_contracted", "Kéo hết — khuỷu gập dưới góc này mới tính một rep",
                 70.0, 30.0, 120.0, affects_rep_count=True),

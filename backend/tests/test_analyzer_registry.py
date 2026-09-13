@@ -12,6 +12,7 @@ import pytest
 from app.ml.analyzers.bench_press import BenchPressAnalyzer
 from app.ml.analyzers.calf_raise import CalfRaiseAnalyzer
 from app.ml.analyzers.chest_fly import ChestFlyAnalyzer
+from app.ml.analyzers.cossack_squat import CossackSquatAnalyzer
 from app.ml.analyzers.crunch import CrunchAnalyzer
 from app.ml.analyzers.curl import CurlAnalyzer
 from app.ml.analyzers.deadlift import DeadliftAnalyzer
@@ -99,10 +100,24 @@ def test_bai_mot_ben_hinh_hoc_khac_van_bi_loai(exercise: str) -> None:
     "exercise",
     [
         "Bodyweight Alternating Lateral Lunge",  # bước sang ngang
-        "Dumbbell Goblet Alternating Curtsy Lunge",  # bước chéo ra sau
-        "Cossack Squat",  # squat sang ngang
+        # Curtsy lunge — chân bắt chéo ra sau có thể gập SÂU HƠN chân trước
+        # đang chịu lực ở đáy động tác, phá vỡ min() (cùng rủi ro knee-drive
+        # step-up bên dưới) — rà lại 13/09/2026 (đợt 3), chưa đủ tự tin.
+        "Dumbbell Goblet Alternating Curtsy Lunge",
+        "Kettlebell Alternating Curtsy Lunge",
         "Elbow Side Plank",  # nằm nghiêng
         "Sissy Squat",  # cố ý đẩy gối vượt xa mũi chân
+        # Step-up có "knee drive" thật (chân kia chủ động đá gối lên cao ở
+        # đỉnh, có thể gập SÂU HƠN chân trụ đang đứng thẳng trên bục) — phá
+        # vỡ min()/active_side(), khác Single Leg Step Down (đã thêm vào
+        # LungeAnalyzer, xem test_bien_the_map_dung_analyzer) vốn không có
+        # pha knee drive. Rà lại 13/09/2026 (đợt 3).
+        "Barbell Front Rack Step Up Knee Drive",
+        "Barbell Step Up Knee Drive",
+        # Không rõ trình tự chuyển động chính xác (không có tên "knee drive"
+        # để suy luận, cũng không rõ chân rảnh có giữ thẳng suốt bài như
+        # Single Leg Step Down hay không) — chưa đủ căn cứ, không đoán suông.
+        "Dumbbell Step Up Low",
     ],
 )
 def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
@@ -196,6 +211,12 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Cable Bench Straight Leg Kickback", KickbackAnalyzer),
         ("Cable Kickback", KickbackAnalyzer),
         ("Glute Kickback Machine", KickbackAnalyzer),
+        # Thêm 13/09/2026 (đợt 3) — CossackSquatAnalyzer mới, cộng Single Leg
+        # Step Down tái dùng nguyên LungeAnalyzer (chân rảnh giữ thẳng suốt
+        # bài, không có knee drive — an toàn cho min() có sẵn).
+        ("Cossack Squat", CossackSquatAnalyzer),
+        ("Dumbbell Cossack Squat", CossackSquatAnalyzer),
+        ("Single Leg Step Down", LungeAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:
