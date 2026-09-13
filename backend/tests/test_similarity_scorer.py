@@ -3,8 +3,68 @@
 import pytest
 
 from app.ml import reference_library
+from app.ml.analyzers.reference_joints import DEFAULT_JOINTS, PRIMARY_JOINTS, primary_joints_for
+from app.ml.analyzers.registry import ANALYZER_REGISTRY
 from app.ml.pose_estimator import Keypoint
 from app.ml.similarity_scorer import WINDOW, SimilarityScorer
+
+# Analyzer thật sự tính calculate_angle_3d(shoulder, elbow, wrist) — DEFAULT_JOINTS
+# đúng cho những cái này (đã xác nhận bằng cách đọc trực tiếp code từng file,
+# xem CHANGELOG 13/09/2026). Bất kỳ analyzer nào KHÔNG có trong tập này thì
+# BẮT BUỘC phải khai trong PRIMARY_JOINTS — rơi vào mặc định là chấm sai góc.
+_CORRECT_WITH_DEFAULT_JOINTS = frozenset({
+    "RowAnalyzer",
+    "CurlAnalyzer",
+    "BenchPressAnalyzer",
+    "OverheadPressAnalyzer",
+    "PulldownAnalyzer",
+    "TricepExtensionAnalyzer",
+    "FacePullAnalyzer",
+})
+
+
+def test_moi_analyzer_deu_co_khop_dung_hoac_nam_trong_danh_sach_mac_dinh_dung() -> None:
+    """Khoá lại đúng lỗ hổng đã tìm thấy 13/09/2026: `reference_joints.py`
+    khi viết chỉ liệt kê 6/16 analyzer lúc đó, khiến LateralRaise/ChestFly/
+    Pullover (tính góc ở VAI, không phải khuỷu tay) âm thầm rơi vào
+    DEFAULT_JOINTS sai suốt nhiều ngày, và các analyzer thêm sau đó
+    (HipAbduction/HipAdduction/Kickback/CossackSquat/LegCurl/LegPress/
+    Crunch/CatCow/Plank) cũng chưa từng được thêm vào. Test này buộc MỌI
+    analyzer trong ANALYZER_REGISTRY phải được xét tới một cách tường minh —
+    hoặc có trong PRIMARY_JOINTS, hoặc nằm trong danh sách đã xác nhận dùng
+    đúng DEFAULT_JOINTS — không được âm thầm rơi vào mặc định mà chưa ai
+    kiểm chứng."""
+    known_analyzer_names = {cls.__name__ for cls in ANALYZER_REGISTRY.values()}
+    unaccounted = known_analyzer_names - set(PRIMARY_JOINTS) - _CORRECT_WITH_DEFAULT_JOINTS
+    assert not unaccounted, (
+        f"Analyzer chưa xác nhận khớp nào đại diện đúng: {sorted(unaccounted)} — "
+        "thêm vào PRIMARY_JOINTS (đọc code analyzer để biết khớp đúng) hoặc "
+        "vào _CORRECT_WITH_DEFAULT_JOINTS nếu đã xác nhận nó tính "
+        "calculate_angle_3d(shoulder, elbow, wrist)."
+    )
+
+
+@pytest.mark.parametrize(
+    ("analyzer_name", "expected"),
+    [
+        ("HipAbductionAnalyzer", ("left_shoulder", "left_hip", "left_knee")),
+        ("HipAdductionAnalyzer", ("left_shoulder", "left_hip", "left_knee")),
+        ("KickbackAnalyzer", ("left_shoulder", "left_hip", "left_knee")),
+        ("CrunchAnalyzer", ("left_shoulder", "left_hip", "left_knee")),
+        ("CossackSquatAnalyzer", ("left_hip", "left_knee", "left_ankle")),
+        ("LegCurlAnalyzer", ("left_hip", "left_knee", "left_ankle")),
+        ("LegPressAnalyzer", ("left_hip", "left_knee", "left_ankle")),
+        ("LateralRaiseAnalyzer", ("left_hip", "left_shoulder", "left_elbow")),
+        ("ChestFlyAnalyzer", ("left_hip", "left_shoulder", "left_elbow")),
+        ("PulloverAnalyzer", ("left_hip", "left_shoulder", "left_elbow")),
+        # Vẫn đúng dùng DEFAULT_JOINTS — khoá lại để không ai "sửa nhầm" thêm
+        # entry thừa cho những cái này.
+        ("RowAnalyzer", DEFAULT_JOINTS),
+        ("CurlAnalyzer", DEFAULT_JOINTS),
+    ],
+)
+def test_primary_joints_dung_tung_analyzer(analyzer_name: str, expected: tuple[str, str, str]) -> None:
+    assert primary_joints_for(analyzer_name) == expected
 
 
 @pytest.fixture(autouse=True)
