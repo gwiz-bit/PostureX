@@ -20,7 +20,12 @@ from app.ml.analyzers.leg_extension import LegExtensionAnalyzer
 from app.ml.analyzers.lunge import LungeAnalyzer
 from app.ml.analyzers.overhead_press import OverheadPressAnalyzer
 from app.ml.analyzers.pulldown import PulldownAnalyzer
-from app.ml.analyzers.registry import ANALYZER_REGISTRY, supports_analysis
+from app.ml.analyzers.registry import (
+    ANALYZER_REGISTRY,
+    SINGLE_SIDE_EXERCISES,
+    build_analyzer,
+    supports_analysis,
+)
 from app.ml.analyzers.row import RowAnalyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.tricep_extension import TricepExtensionAnalyzer
@@ -57,42 +62,24 @@ def test_khop_chuoi_con_khong_duoc_lot_qua(exercise: str) -> None:
 @pytest.mark.parametrize(
     "exercise",
     [
-        # RowAnalyzer lấy avg() góc hai khuỷu tay: tay rảnh giữ ~170° kéo
-        # trung bình lên, không bao giờ chạm ngưỡng co 70° -> rep không đếm
-        # được và app báo "kéo tạ chưa hết" suốt buổi.
-        "Dumbbell Single Arm Row",
-        "Dumbbell Row Unilateral",
-        "Meadows Row",
-        # HipThrustAnalyzer báo lỗi khi hai hông lệch > 15°.
-        "Single Leg Hip Thrust",
-        "B Stance Hip Thrust",
-        # OverheadPressAnalyzer báo lỗi khi hai tay lệch > 25°.
-        "Single Arm Dumbbell Overhead Press",
-        # DeadliftAnalyzer đọc góc hông hai chân.
+        # DeadliftAnalyzer đọc góc hông theo TRỤC thân-chân sau khi đứng
+        # thẳng hàng — hình học khác hẳn kiểu đứng cả hai chân, không phải
+        # chỉ vấn đề avg() hai bên (xem SINGLE_SIDE_EXERCISES trong
+        # registry.py cho các bài đã CHUYỂN sang single_side=True thay vì
+        # loại hẳn — CHANGELOG 13/09/2026).
         "Single Leg Dumbbell Romanian Deadlift",
-        # CurlAnalyzer lấy avg() hai khuỷu tay giống RowAnalyzer.
-        "Dumbbell Standing Single Arm Curl",
-        "Dumbbell Concentration Curl",  # luôn một tay theo định nghĩa
-        "Bayesian Curl",  # cable sau lưng, gần như luôn một tay
-        # LateralRaiseAnalyzer/ChestFlyAnalyzer cũng lấy avg() hai vai.
-        "Band Single Arm Lateral Raise",
-        "Leaning Cable Lateral Raise",  # đứng nghiêng người, luôn một tay
-        "Single Arm Cable Fly",
-        # CalfRaiseAnalyzer cũng lấy avg() hai mắt cá.
+        # CalfRaiseAnalyzer quy ước NGƯỢC (chân nghỉ giữ góc NHỎ, không phải
+        # LỚN như mọi analyzer khác) — active_side() sẽ chọn nhầm chân đang
+        # nghỉ. Cần thiết kế riêng, chưa làm — xem comment loại trừ trong
+        # `_CALF_RAISE_VARIANTS`.
         "Dumbbell Single Leg Calf Raise",
         "Single Leg Standing Calf Raise",
-        # BenchPressAnalyzer cũng vậy (push-up/dip/chest press một tay).
-        "Dumbbell Single Arm Chest Press",
-        "Cable Standing Single Arm Chest Press",
-        # TricepExtensionAnalyzer cũng vậy.
-        "Single Arm Overhead Cable Extension",
-        "Single Arm Tricep Extension",
-        # PulldownAnalyzer cũng vậy.
-        "Single Arm Lat Pulldown",
     ],
 )
-def test_bai_mot_ben_bi_loai(exercise: str) -> None:
-    """Analyzer gộp hoặc so hai bên nên bài một bên luôn cho kết quả sai."""
+def test_bai_mot_ben_hinh_hoc_khac_van_bi_loai(exercise: str) -> None:
+    """Bài một bên có hình học/quy ước góc khác biệt thật sự (không chỉ vấn
+    đề avg() hai bên) vẫn bị loại — xem SINGLE_SIDE_EXERCISES cho các bài
+    một bên ĐÃ hỗ trợ được bằng active_side()."""
     assert not supports_analysis(exercise)
 
 
@@ -153,6 +140,26 @@ def test_bai_khac_mat_phang_chuyen_dong_bi_loai(exercise: str) -> None:
         ("Landmine Press", OverheadPressAnalyzer),
         ("Machine Front Military Press", OverheadPressAnalyzer),
         ("Z Press", OverheadPressAnalyzer),
+        # Thêm 13/09/2026 — bài một tay/một chân, single_side=True (xem
+        # SINGLE_SIDE_EXERCISES trong registry.py và test hành vi riêng ở
+        # test_single_side_dem_rep_dung.py).
+        ("Dumbbell Single Arm Row", RowAnalyzer),
+        ("Dumbbell Row Unilateral", RowAnalyzer),
+        ("Meadows Row", RowAnalyzer),
+        ("Single Leg Hip Thrust", HipThrustAnalyzer),
+        ("B Stance Hip Thrust", HipThrustAnalyzer),
+        ("Single Arm Dumbbell Overhead Press", OverheadPressAnalyzer),
+        ("Dumbbell Standing Single Arm Curl", CurlAnalyzer),
+        ("Dumbbell Concentration Curl", CurlAnalyzer),
+        ("Bayesian Curl", CurlAnalyzer),
+        ("Band Single Arm Lateral Raise", LateralRaiseAnalyzer),
+        ("Leaning Cable Lateral Raise", LateralRaiseAnalyzer),
+        ("Single Arm Cable Fly", ChestFlyAnalyzer),
+        ("Dumbbell Single Arm Chest Press", BenchPressAnalyzer),
+        ("Cable Standing Single Arm Chest Press", BenchPressAnalyzer),
+        ("Single Arm Overhead Cable Extension", TricepExtensionAnalyzer),
+        ("Single Arm Tricep Extension", TricepExtensionAnalyzer),
+        ("Single Arm Lat Pulldown", PulldownAnalyzer),
     ],
 )
 def test_bien_the_map_dung_analyzer(exercise: str, expected: type) -> None:
@@ -169,3 +176,23 @@ def test_tra_ten_khong_phan_biet_hoa_thuong() -> None:
 def test_key_deu_viet_thuong() -> None:
     """Key viết hoa sẽ không bao giờ tra tới được vì hàm tra đã hạ chữ."""
     assert all(k == k.lower() for k in ANALYZER_REGISTRY)
+
+
+def test_build_analyzer_bat_single_side_dung_bai() -> None:
+    """`build_analyzer()` chỉ bật single_side cho tên nằm trong
+    SINGLE_SIDE_EXERCISES, không ảnh hưởng bài thường cùng analyzer."""
+    single_side_analyzer = build_analyzer("Dumbbell Single Arm Row", RowAnalyzer)
+    assert single_side_analyzer._single_side is True  # noqa: SLF001
+
+    normal_analyzer = build_analyzer("Barbell Bent Over Row", RowAnalyzer)
+    assert normal_analyzer._single_side is False  # noqa: SLF001
+
+
+def test_single_side_exercises_deu_hop_le() -> None:
+    """Mọi tên trong SINGLE_SIDE_EXERCISES phải tra ra analyzer THẬT SỰ hỗ
+    trợ single_side — self-check này đã chạy lúc import registry.py, test ở
+    đây chỉ để lỗi (nếu có trong tương lai) hiện ra như một test đỏ rõ ràng
+    thay vì một AssertionError lúc import khó truy vết."""
+    for name in SINGLE_SIDE_EXERCISES:
+        cls = ANALYZER_REGISTRY[name]
+        assert getattr(cls, "SUPPORTS_SINGLE_SIDE", False) is True

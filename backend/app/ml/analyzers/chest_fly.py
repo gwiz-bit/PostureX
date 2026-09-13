@@ -9,7 +9,7 @@ xem docstring `lateral_raise.py`.
 """
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.analyzers.common import active_side, avg, is_visible, visible_points
 from app.ml.angle_utils import calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -27,10 +27,13 @@ SHOULDER_ASYMMETRY_THRESHOLD = 25.0
 class ChestFlyAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật chest/pec fly (khép tay ngực) và trả feedback tiếng Việt."""
 
+    SUPPORTS_SINGLE_SIDE = True
+
     def __init__(
         self,
         rep_counter: RepCounter | None = None,
         thresholds: dict[str, float] | None = None,
+        single_side: bool = False,
     ) -> None:
         t = thresholds or {}
         super().__init__(
@@ -41,6 +44,7 @@ class ChestFlyAnalyzer(ExerciseAnalyzer):
             ),
             thresholds,
         )
+        self._single_side = single_side
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -60,7 +64,11 @@ class ChestFlyAnalyzer(ExerciseAnalyzer):
         if is_visible(right_hip, right_shoulder, right_elbow):
             right_shoulder_angle = calculate_angle_3d(right_hip, right_shoulder, right_elbow)
 
-        shoulder_angle = avg(left_shoulder_angle, right_shoulder_angle)
+        shoulder_angle = (
+            active_side(left_shoulder_angle, right_shoulder_angle)
+            if self._single_side
+            else avg(left_shoulder_angle, right_shoulder_angle)
+        )
 
         phase = self.rep_counter.phase.value
         if shoulder_angle is not None:
@@ -72,7 +80,11 @@ class ChestFlyAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.shallow_reversal:
                 errors.append("Chưa khép tay đủ — kéo hai tay lại gần nhau hơn ở đỉnh.")
 
-        if left_shoulder_angle is not None and right_shoulder_angle is not None:
+        if (
+            not self._single_side
+            and left_shoulder_angle is not None
+            and right_shoulder_angle is not None
+        ):
             limit = self.threshold("shoulder_asymmetry", SHOULDER_ASYMMETRY_THRESHOLD)
             if abs(left_shoulder_angle - right_shoulder_angle) > limit:
                 errors.append("Hai tay khép không đều — giữ tốc độ và độ khép hai bên bằng nhau.")

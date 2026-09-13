@@ -34,7 +34,7 @@ import cv2
 from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
-from app.ml.analyzers.registry import ANALYZER_REGISTRY
+from app.ml.analyzers.registry import ANALYZER_REGISTRY, build_analyzer
 from app.ml.analyzers.thresholds import load_thresholds
 from app.ml.keypoint_smoother import KeypointSmoother
 from app.ml.pose_estimator import Keypoint
@@ -143,7 +143,7 @@ def _analyze_keypoint_sequence(
     một bài chắc chắn không phân tích được.
     """
     cls = ANALYZER_REGISTRY[exercise.lower()]
-    analyzer = cls(thresholds=thresholds)
+    analyzer = build_analyzer(exercise, cls, thresholds)
     session = SessionState(exercise)
     # Cùng bộ làm mượt dùng cho WebSocket live (xem routes/realtime.py và
     # docstring KeypointSmoother) — một instance RIÊNG cho video này.

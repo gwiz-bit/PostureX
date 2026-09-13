@@ -1,7 +1,7 @@
 """Phân tích kỹ thuật Bench Press: độ hạ tạ (khuỷu tay gập) và khoá tay đủ ở đỉnh."""
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.analyzers.common import active_side, avg, is_visible, visible_points
 from app.ml.angle_utils import calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -22,10 +22,13 @@ class BenchPressAnalyzer(ExerciseAnalyzer):
     thế nằm hay đứng, nên vẫn hoạt động dù camera nhìn người dùng từ góc
     nào (miễn thấy rõ vai-khuỷu-cổ tay)."""
 
+    SUPPORTS_SINGLE_SIDE = True
+
     def __init__(
         self,
         rep_counter: RepCounter | None = None,
         thresholds: dict[str, float] | None = None,
+        single_side: bool = False,
     ) -> None:
         t = thresholds or {}
         super().__init__(
@@ -36,6 +39,7 @@ class BenchPressAnalyzer(ExerciseAnalyzer):
             ),
             thresholds,
         )
+        self._single_side = single_side
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -55,7 +59,11 @@ class BenchPressAnalyzer(ExerciseAnalyzer):
         if is_visible(right_shoulder, right_elbow, right_wrist):
             right_elbow_angle = calculate_angle_3d(right_shoulder, right_elbow, right_wrist)
 
-        elbow_angle = avg(left_elbow_angle, right_elbow_angle)
+        elbow_angle = (
+            active_side(left_elbow_angle, right_elbow_angle)
+            if self._single_side
+            else avg(left_elbow_angle, right_elbow_angle)
+        )
 
         phase = self.rep_counter.phase.value
         if elbow_angle is not None:
@@ -72,7 +80,7 @@ class BenchPressAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.shallow_reversal:
                 errors.append("Hạ tạ chưa đủ sâu — hạ khuỷu tay gập thêm cho tạ gần chạm ngực.")
 
-        if left_elbow_angle is not None and right_elbow_angle is not None:
+        if not self._single_side and left_elbow_angle is not None and right_elbow_angle is not None:
             limit = self.threshold("elbow_asymmetry", ELBOW_ASYMMETRY_THRESHOLD)
             if abs(left_elbow_angle - right_elbow_angle) > limit:
                 errors.append("Hai tay đẩy tạ không đều — giữ tốc độ và độ cao hai bên bằng nhau.")

@@ -64,6 +64,108 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 13/09/2026 (2)
+
+**Nhóm C — thêm chế độ `single_side` cho analyzer, +33 bài một tay/một chân
+(202/412 -> 235/412 trong checklist).** Đổi thứ tự ưu tiên đã bàn (I → C →
+F → H) sang **C trước** vì đòn bẩy cao nhất: một lần sửa kiến trúc, tái dùng
+nguyên analyzer đã có sẵn và đã qua kiểm chứng, không cần nghiên cứu cơ sinh
+học mới — khác hẳn F/H (cần thiết kế analyzer HOÀN TOÀN MỚI cho core/xoay
+thân/xoay vai).
+
+**Vấn đề gốc:** mọi analyzer đọc góc hai bên (trái/phải) rồi lấy `avg()` để
+đếm rep. Với bài MỘT tay/chân, bên rảnh đứng yên ở góc "nghỉ" (duỗi thẳng)
+kéo trung bình lên, không bao giờ chạm ngưỡng "đang làm việc" — rep không
+đếm được (đã có tiền lệ: `LungeAnalyzer` dùng `min()` hai gối đúng để giải
+quyết vấn đề tương tự, xem docstring class đó).
+
+**Giải pháp:** `active_side()` (mới, `common.py`) — chọn góc NHỎ HƠN giữa
+hai bên, dựa trên quy ước chung của MỌI analyzer trong dự án:
+`down_threshold` (đang làm việc) luôn nhỏ hơn `up_threshold` (nghỉ). Mỗi
+analyzer liên quan thêm cờ `single_side: bool = False` (đọc được qua
+`SUPPORTS_SINGLE_SIDE = True` ở cấp class) — khi bật: dùng `active_side()`
+thay `avg()`, VÀ tắt hẳn kiểm tra "lệch hai bên" (vốn có ở hầu hết analyzer,
+trừ Row) vì bài một bên lệch có chủ đích, không phải lỗi kỹ thuật.
+
+`registry.py` thêm `SINGLE_SIDE_EXERCISES` (33 tên) + `build_analyzer()` —
+hàm dựng dùng CHUNG cho cả `routes/realtime.py` và
+`video_analysis_service.py` (trước đó mỗi nơi tự `cls(thresholds=...)`,
+tránh hai nơi tự suy luận lại logic single_side rồi lệch nhau dần). Tự kiểm
+lúc import: mọi tên trong `SINGLE_SIDE_EXERCISES` phải tồn tại trong
+`ANALYZER_REGISTRY` VÀ class đó phải khai `SUPPORTS_SINGLE_SIDE = True` —
+cùng kiểu tự kiểm đã có cho trùng khoá.
+
+Áp dụng cho 9 analyzer: Row (8 bài, không có kiểm lệch bên nên chỉ cần đổi
+`avg()`→`active_side()`), Curl (7), LateralRaise (3), ChestFly (1),
+TricepExtension (4), OverheadPress (2), Pulldown (1), HipThrust (5),
+BenchPress (2).
+
+**Hai cái bẫy phát hiện lúc làm, suýt lọt:**
+
+1. `LateralRaiseAnalyzer` có quy ước NGƯỢC (nghỉ = góc thô NHỎ, làm việc =
+   góc thô LỚN, bù bằng `180-raw` — xem BẪY GÓC trong file đó). Không thể
+   áp `active_side()` (chọn góc nhỏ hơn) lên góc THÔ — sẽ chọn nhầm bên
+   đang nghỉ. Sửa bằng cách bù `180-x` TỪNG BÊN trước, rồi mới
+   `active_side()`/`avg()` trên giá trị đã bù — về toán học tương đương
+   hành vi cũ khi không phải single_side (`avg(180-a,180-b) == 180-avg(a,b)`
+   vì phép bù tuyến tính giao hoán với trung bình).
+
+2. **`CalfRaiseAnalyzer` CỐ TÌNH KHÔNG được thêm single_side** dù ban đầu
+   tưởng cùng công thức. Đây là quy ước NGƯỢC LẠI kiểu #1 theo cách khác:
+   chân NGHỈ giữ góc NHỎ (~90°, bàn chân áp sàn — CÙNG PHÍA với
+   `down_threshold`), chân đang tập tăng dần lên góc LỚN. `active_side()`
+   (chọn góc nhỏ hơn) sẽ LUÔN chọn nhầm chân đang nghỉ — không đếm được rep
+   nào mà KHÔNG có lỗi nào báo, kiểu lỗi âm thầm nguy hiểm nhất. Khác Row/
+   Curl/OverheadPress/HipThrust: ở các bài đó bên "nghỉ" luôn hạ cánh ở phía
+   góc LỚN (khớp đúng giả định `active_side()`), calf raise thì không —
+   phát hiện được nhờ đọc kỹ docstring gốc của `calf_raise.py` trước khi
+   sửa, không đoán suông. Để dành thiết kế riêng (chọn theo góc LỚN hơn).
+
+**Một nhận định cần lưu ý (chưa kiểm chứng bằng người thật):** với
+`HipThrustAnalyzer`, lý do `active_side()` an toàn KHÁC với lý do ở
+Row/Curl — không phải vì bên nghỉ giữ góc lớn cố định, mà vì góc hông được
+tính qua MỘT khung chậu chung (vai-hông-gối dùng chung điểm hông của một cơ
+thể), nên hai bên di chuyển TƯƠNG QUAN nhau (cùng lên cùng xuống theo độ cao
+hông chung) chứ không độc lập như mắt cá calf raise. Suy luận hợp lý nhưng
+chưa đo trên người thật — nếu single-leg hip thrust thật tế đếm rep sai,
+đây là chỗ đầu tiên cần xem lại.
+
+Sửa 2 test đã khoá QUYẾT ĐỊNH LOẠI TRỪ cũ (`test_analyzer_registry.py`):
+`test_bai_mot_ben_bi_loai` đổi tên thành `test_bai_mot_ben_hinh_hoc_khac_van_bi_loai`,
+rút gọn chỉ còn 3 bài THẬT SỰ có vấn đề hình học (không phải chỉ vấn đề
+`avg()`): Single Leg Dumbbell Romanian Deadlift (thân-chân sau thẳng hàng,
+góc hông đọc khác hẳn), Dumbbell/Single Leg Standing Calf Raise (bẫy #2 ở
+trên). 17 bài còn lại chuyển sang bảng khẳng định map đúng analyzer.
+
+7 test mới (`tests/test_single_side_analyzers.py`) dựng chuỗi góc thật bằng
+`pose_builders.py`, khoá đúng hành vi: (a) KHÔNG bật single_side thì rep
+không đếm được (chứng minh lại lỗi gốc), (b) CÓ bật thì đếm đúng dù một bên
+đứng yên, (c) kiểm tra lệch bên bị tắt đúng lúc bật, (d) `active_side()` vẫn
+chọn đúng bên đang làm việc dù bên "nghỉ" dao động nhẹ (không chỉ khi đứng
+yên tuyệt đối). Cộng 2 test cho `build_analyzer()`/`SINGLE_SIDE_EXERCISES`.
+
+373 test backend xanh, ruff sạch.
+
+**22 bài còn lại của Nhóm C (55 gốc − 33 vừa xong):** chia làm 4 nhóm nhỏ,
+để dành đợt sau —
+- **Hình học chân lệch trọng tâm thật sự khác** (không chỉ `avg()`): họ
+  Cossack Squat, step-up (Barbell Front Rack/Barbell/Dumbbell Step Up,
+  Single Leg Step Down), họ single-leg RDL (Kickstand/Cross Body/Single Leg
+  Dumbbell/Single Leg Kettlebell/Single Legged), Single Leg Back Extension,
+  curtsy lunge (Dumbbell Goblet/Kettlebell Alternating).
+- **Cơ chế kickback hông** (chưa có analyzer phù hợp): Cable Bench Straight
+  Leg Kickback, Cable Kickback, Glute Kickback Machine.
+- **Thuộc nhóm cần analyzer MỚI** (đã ghi từ đợt Nhóm I 13/09/2026 (1)):
+  Single Leg Press (họ Leg Press), Cable Single Leg Laying Leg Curl (họ Leg
+  Curl).
+- Hammer Strength Iso Lateral Row: chưa rõ người dùng thực tế tập một hay
+  hai bên, cần xác nhận trước khi gán.
+
+⚠️ **Chưa deploy lên VPS, chưa test qua app thật.** Mọi ngưỡng góc gốc của
+9 analyzer (đã ước lượng từ trước, chưa đo người thật) nay áp dụng thêm cho
+33 biến thể một bên — rủi ro sai số CỘNG DỒN với rủi ro ngưỡng ước lượng đã
+có sẵn, cần ưu tiên test thật cho nhóm này khi có người test.
+
 ### 13/09/2026
 
 **Checklist 412 bài (do thành viên khác lập) — đối chiếu với `ANALYZER_REGISTRY` thật, rồi mở

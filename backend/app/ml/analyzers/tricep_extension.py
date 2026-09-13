@@ -10,7 +10,7 @@ giống nhau không có nghĩa lời nhắc giống nhau.
 """
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.analyzers.common import active_side, avg, is_visible, visible_points
 from app.ml.angle_utils import calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -27,10 +27,13 @@ ELBOW_ASYMMETRY_THRESHOLD = 25.0
 class TricepExtensionAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật tricep extension/pushdown và trả feedback tiếng Việt."""
 
+    SUPPORTS_SINGLE_SIDE = True
+
     def __init__(
         self,
         rep_counter: RepCounter | None = None,
         thresholds: dict[str, float] | None = None,
+        single_side: bool = False,
     ) -> None:
         t = thresholds or {}
         super().__init__(
@@ -41,6 +44,7 @@ class TricepExtensionAnalyzer(ExerciseAnalyzer):
             ),
             thresholds,
         )
+        self._single_side = single_side
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -60,7 +64,11 @@ class TricepExtensionAnalyzer(ExerciseAnalyzer):
         if is_visible(right_shoulder, right_elbow, right_wrist):
             right_elbow_angle = calculate_angle_3d(right_shoulder, right_elbow, right_wrist)
 
-        elbow_angle = avg(left_elbow_angle, right_elbow_angle)
+        elbow_angle = (
+            active_side(left_elbow_angle, right_elbow_angle)
+            if self._single_side
+            else avg(left_elbow_angle, right_elbow_angle)
+        )
 
         phase = self.rep_counter.phase.value
         if elbow_angle is not None:
@@ -70,7 +78,7 @@ class TricepExtensionAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.incomplete_lockout:
                 errors.append("Chưa duỗi thẳng tay hoàn toàn — duỗi hết cỡ ở mỗi rep.")
 
-        if left_elbow_angle is not None and right_elbow_angle is not None:
+        if not self._single_side and left_elbow_angle is not None and right_elbow_angle is not None:
             limit = self.threshold("elbow_asymmetry", ELBOW_ASYMMETRY_THRESHOLD)
             if abs(left_elbow_angle - right_elbow_angle) > limit:
                 errors.append("Hai tay duỗi không đều — giữ tốc độ và độ duỗi hai bên bằng nhau.")

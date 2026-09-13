@@ -1,7 +1,7 @@
 """Phân tích kỹ thuật Hip Thrust: nâng/hạ hông (duỗi hông), hai bên đều nhau."""
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.analyzers.common import active_side, avg, is_visible, visible_points
 from app.ml.angle_utils import calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -18,10 +18,13 @@ HIP_ASYMMETRY_THRESHOLD = 15.0   # Chênh lệch góc hông hai bên quá mức 
 class HipThrustAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật hip thrust và trả feedback tiếng Việt."""
 
+    SUPPORTS_SINGLE_SIDE = True
+
     def __init__(
         self,
         rep_counter: RepCounter | None = None,
         thresholds: dict[str, float] | None = None,
+        single_side: bool = False,
     ) -> None:
         t = thresholds or {}
         super().__init__(
@@ -32,6 +35,11 @@ class HipThrustAnalyzer(ExerciseAnalyzer):
             ),
             thresholds,
         )
+        # Bài một chân (vd Single Leg Hip Thrust) — xem docstring tham số
+        # cùng tên ở RowAnalyzer. Tắt kiểm tra lệch hông bên dưới: bài một
+        # chân vốn dĩ lệch hông có chủ đích (một chân nhấc khỏi sàn), không
+        # phải lỗi kỹ thuật.
+        self._single_side = single_side
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -51,7 +59,11 @@ class HipThrustAnalyzer(ExerciseAnalyzer):
         if is_visible(right_shoulder, right_hip, right_knee):
             right_hip_angle = calculate_angle_3d(right_shoulder, right_hip, right_knee)
 
-        hip_angle = avg(left_hip_angle, right_hip_angle)
+        hip_angle = (
+            active_side(left_hip_angle, right_hip_angle)
+            if self._single_side
+            else avg(left_hip_angle, right_hip_angle)
+        )
 
         phase = self.rep_counter.phase.value
         if hip_angle is not None:
@@ -61,7 +73,7 @@ class HipThrustAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.incomplete_lockout:
                 errors.append("Chưa đẩy hông lên hết — siết mông, duỗi hông thẳng hàng vai-hông-gối.")
 
-        if left_hip_angle is not None and right_hip_angle is not None:
+        if not self._single_side and left_hip_angle is not None and right_hip_angle is not None:
             limit = self.threshold("hip_asymmetry", HIP_ASYMMETRY_THRESHOLD)
             if abs(left_hip_angle - right_hip_angle) > limit:
                 errors.append("Hông đang lệch một bên — đẩy đều lực cả hai bên mông.")

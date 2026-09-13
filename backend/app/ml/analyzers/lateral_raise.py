@@ -29,7 +29,7 @@ nội bộ cho `RepCounter`.
 """
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.analyzers.common import active_side, avg, is_visible, visible_points
 from app.ml.angle_utils import calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -51,10 +51,13 @@ SHOULDER_ASYMMETRY_THRESHOLD = 25.0
 class LateralRaiseAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật raise (nâng tay dạng vai) và trả feedback tiếng Việt."""
 
+    SUPPORTS_SINGLE_SIDE = True
+
     def __init__(
         self,
         rep_counter: RepCounter | None = None,
         thresholds: dict[str, float] | None = None,
+        single_side: bool = False,
     ) -> None:
         t = thresholds or {}
         raised_raw = t.get("shoulder_raised", SHOULDER_RAISED_RAW)
@@ -68,6 +71,12 @@ class LateralRaiseAnalyzer(ExerciseAnalyzer):
             ),
             thresholds,
         )
+        # Bài một tay (vd Band Single Arm Lateral Raise) — xem docstring tham
+        # số cùng tên ở RowAnalyzer. active_side() phải nhận GÓC ĐÃ BÙ (xem
+        # analyze() bên dưới), không phải góc thô — góc thô của bài này quy
+        # ước ngược (nghỉ = nhỏ, làm việc = lớn), min() trên góc thô sẽ chọn
+        # nhầm đúng bên đang nghỉ.
+        self._single_side = single_side
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -87,11 +96,22 @@ class LateralRaiseAnalyzer(ExerciseAnalyzer):
         if is_visible(right_hip, right_shoulder, right_elbow):
             right_shoulder_angle = calculate_angle_3d(right_hip, right_shoulder, right_elbow)
 
-        raw_angle = avg(left_shoulder_angle, right_shoulder_angle)
+        # Bù 180° TỪNG BÊN trước rồi mới gộp — về mặt toán học tương đương
+        # avg(180-left, 180-right) == 180-avg(left, right) khi không phải
+        # single_side (phép bù tuyến tính giao hoán với trung bình), nên
+        # hành vi hai tay giữ nguyên y hệt trước; nhưng active_side() (single
+        # tay) BẮT BUỘC nhận góc đã bù mới chọn đúng bên đang làm việc.
+        left_compensated = 180.0 - left_shoulder_angle if left_shoulder_angle is not None else None
+        right_compensated = 180.0 - right_shoulder_angle if right_shoulder_angle is not None else None
+        compensated_angle = (
+            active_side(left_compensated, right_compensated)
+            if self._single_side
+            else avg(left_compensated, right_compensated)
+        )
 
         phase = self.rep_counter.phase.value
-        if raw_angle is not None:
-            self.rep_counter.update(180.0 - raw_angle)
+        if compensated_angle is not None:
+            self.rep_counter.update(compensated_angle)
             phase = self.rep_counter.phase.value
 
             # Đỉnh rep (tay nâng cao nhất) ứng với góc BÙ nhỏ nhất — cùng cơ
@@ -101,7 +121,11 @@ class LateralRaiseAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.shallow_reversal:
                 errors.append("Chưa nâng tay đủ cao — nâng lên ít nhất ngang vai.")
 
-        if left_shoulder_angle is not None and right_shoulder_angle is not None:
+        if (
+            not self._single_side
+            and left_shoulder_angle is not None
+            and right_shoulder_angle is not None
+        ):
             limit = self.threshold("shoulder_asymmetry", SHOULDER_ASYMMETRY_THRESHOLD)
             if abs(left_shoulder_angle - right_shoulder_angle) > limit:
                 errors.append("Hai tay nâng không đều — giữ tốc độ và độ cao hai bên bằng nhau.")

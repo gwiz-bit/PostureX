@@ -191,10 +191,21 @@ _ROW_VARIANTS = [
     "seal row",
     "inverted row",
     "hammer strength high row",
-    # KHÔNG có: mọi biến thể một tay (quy tắc 1), Upright Row (kéo dọc, bài
-    # vai), Kettlebell Gorilla Row và Hammer Strength Iso Lateral Row (luân
-    # phiên từng bên), và ba bài cardio máy chèo (Rowing Intervals / Machine
-    # Steady State / Sprint).
+    # Thêm 13/09/2026 — bài MỘT TAY, dùng cùng RowAnalyzer nhưng bật
+    # single_side=True (xem SINGLE_SIDE_EXERCISES cuối file): tay rảnh giữ
+    # nguyên góc duỗi, active_side() chọn đúng tay đang kéo thay vì avg().
+    "cable single arm neutral grip row",
+    "cable single arm underhand grip row",
+    "dumbbell row unilateral",
+    "dumbbell single arm row",
+    "kettlebell gorilla row",
+    "kettlebell row single",
+    "kettlebell single arm row",
+    "meadows row",
+    # KHÔNG có: Upright Row (kéo dọc, bài vai, không phải kéo ngang) và ba
+    # bài cardio máy chèo (Rowing Intervals / Machine Steady State / Sprint).
+    # KHÔNG có (chưa đủ tự tin — máy tay đòn độc lập, không rõ tập một hay
+    # hai bên trong thực tế): Hammer Strength Iso Lateral Row.
 ]
 
 _BENCH_PRESS_VARIANTS = [
@@ -244,8 +255,10 @@ _BENCH_PRESS_VARIANTS = [
     "bench dips",
     "machine dips",
     "parralel bar dips",
-    # KHÔNG có (một tay): Dumbbell Single Arm Chest Press, Cable Standing
-    # Single Arm Chest Press.
+    # Thêm 13/09/2026 — bài MỘT TAY, single_side=True (xem
+    # SINGLE_SIDE_EXERCISES cuối file).
+    "dumbbell single arm chest press",
+    "cable standing single arm chest press",
 ]
 
 _OVERHEAD_PRESS_VARIANTS = [
@@ -266,10 +279,12 @@ _OVERHEAD_PRESS_VARIANTS = [
     "behind the neck press",
     "dumbbell push press",
     "kettlebell push press",
-    "landmine press",  # hai tay trên đòn landmine — khác "single arm landmine press" (quy tắc 1, vẫn loại)
+    "landmine press",  # hai tay trên đòn landmine — khác biến thể một tay bên dưới
     "machine front military press",
     "z press",
-    # KHÔNG có: Single Arm Dumbbell Overhead Press (quy tắc 1).
+    # Bài MỘT TAY, single_side=True (xem SINGLE_SIDE_EXERCISES cuối file).
+    "single arm dumbbell overhead press",
+    "single arm landmine press",
 ]
 
 _HIP_THRUST_VARIANTS = [
@@ -286,8 +301,20 @@ _HIP_THRUST_VARIANTS = [
     "dumbbell feet elevated glute bridge",
     "frog pump",  # glute bridge hai bàn chân chụm, gối mở rộng — vẫn cùng
                   # trục góc hông.
-    # KHÔNG có: Single Leg / B Stance / Figure Four / Single Leg Glute
-    # Bridge — ngưỡng lệch hai hông 15° sẽ báo lỗi ở mọi rep (quy tắc 1).
+    # Thêm 13/09/2026 — bài MỘT CHÂN, single_side=True (xem
+    # SINGLE_SIDE_EXERCISES cuối file). Trước đây loại hẳn vì ngưỡng lệch
+    # hai hông 15° báo lỗi ở mọi rep — nhưng đó là do KIỂM TRA lệch bên tự nó
+    # không phù hợp bài một chân (lệch có chủ đích), không phải do phép tính
+    # góc sai; bật single_side vừa tắt kiểm tra đó vừa chuyển sang
+    # active_side(). Khác calc_raise: đây đo góc hông (vai-hông-gối) qua MỘT
+    # khung xương chậu chung, hai bên di chuyển tương quan nhau chứ không
+    # độc lập như mắt cá — nên không dính bẫy "bên nghỉ giữ góc nhỏ" đã loại
+    # CalfRaiseAnalyzer khỏi đợt này.
+    "b stance hip thrust",
+    "dumbbell figure four heels elevated hip thrust",
+    "dumbbell single leg hip thrust",
+    "single leg hip thrust",
+    "single leg glute bridge",
 ]
 
 _PLANK_VARIANTS = [
@@ -329,6 +356,18 @@ _CURL_VARIANTS = [
     "kettlebell goblet curl",  # một tạ, hai tay cùng nắm — đối xứng như goblet squat
     "spider curl",
     "zottman curl",
+    # Thêm 13/09/2026 — bài MỘT TAY, single_side=True (xem
+    # SINGLE_SIDE_EXERCISES cuối file). Dumbbell Preacher Curl/Machine
+    # Preacher Curl: ghế preacher dạng tạ đơn/máy thường tập một tay một
+    # lượt — khác Ez Bar Preacher Curl (thanh đòn, bắt buộc hai tay đồng
+    # thời, giữ nguyên ở trên).
+    "dumbbell standing single arm curl",
+    "dumbbell standing single arm hammer curl",
+    "dumbbell concentration curl",
+    "cross body hammer curl",
+    "bayesian curl",
+    "dumbbell preacher curl",
+    "machine preacher curl",
     # KHÔNG có (khớp SAI hoàn toàn dù tên có chữ "curl"):
     #   - *Leg Curl* (Band/Dumbbell/Cable Single Leg Laying/Lying/Seated/
     #     Stability Ball/Towel Slide) + Hamstring Curl + Nordic Hamstring
@@ -338,15 +377,6 @@ _CURL_VARIANTS = [
     #   - *Spinal Jefferson Curl* (Barbell/Bodyweight/Dumbbell/Kettlebell) —
     #     cúi gập CỘT SỐNG có tải, không liên quan khuỷu tay dù tên trùng.
     #   - Neck Curl — gập CỔ, khớp khác.
-    # KHÔNG có (một tay / lệch bên — quy tắc 1):
-    #   - Dumbbell Standing Single Arm (Hammer) Curl — tên đã ghi rõ một tay.
-    #   - Dumbbell Concentration Curl — luôn tập một tay theo định nghĩa
-    #     (khuỷu tựa đùi trong).
-    #   - Cross Body Hammer Curl — luân phiên chéo thân, không đồng thời.
-    #   - Bayesian Curl — cable sau lưng, gần như luôn tập một tay.
-    #   - Dumbbell Preacher Curl, Machine Preacher Curl — ghế preacher dạng
-    #     tạ đơn/máy thường tập một tay một lượt, khác Ez Bar Preacher Curl
-    #     (thanh đòn nên bắt buộc hai tay đồng thời).
 ]
 
 _LATERAL_RAISE_VARIANTS = [
@@ -365,9 +395,11 @@ _LATERAL_RAISE_VARIANTS = [
     "plate front raise",
     "reverse pec deck",  # máy ép ngực dùng ngược — thực chất là rear delt
                           # fly trên máy, không phải bài ngực dù tên có "pec".
-    # KHÔNG có (một tay — quy tắc 1): Band Single Arm Lateral Raise, Cable
-    # Low Single Arm Lateral Raise, Leaning Cable Lateral Raise (đứng
-    # nghiêng người, luôn tập một tay để đủ biên độ), Single Arm Cable Fly.
+    # Thêm 13/09/2026 — bài MỘT TAY, single_side=True (xem
+    # SINGLE_SIDE_EXERCISES cuối file).
+    "band single arm lateral raise",
+    "cable low single arm lateral raise",
+    "leaning cable lateral raise",  # đứng nghiêng người, luôn tập một tay
 ]
 
 _CHEST_FLY_VARIANTS = [
@@ -381,6 +413,11 @@ _CHEST_FLY_VARIANTS = [
     "dumbbell decline chest fly",
     "dumbbell incline chest fly",
     "machine pec fly",
+    # Thêm 13/09/2026 — bài MỘT TAY, single_side=True. Trước đó bị liệt kê
+    # nhầm vào ghi chú loại trừ của LateralRaiseAnalyzer — đây là động tác
+    # KHÉP tay (chiều fly), không phải nâng (chiều raise), nên thuộc
+    # ChestFlyAnalyzer.
+    "single arm cable fly",
 ]
 
 _CALF_RAISE_VARIANTS = [
@@ -395,8 +432,14 @@ _CALF_RAISE_VARIANTS = [
                                        # press không phụ thuộc nằm/đứng).
     "smith machine calf raise",
     "standing calf raise machine",
-    # KHÔNG có (một chân — quy tắc 1): Dumbbell Single Leg Calf Raise, Single
-    # Leg Standing Calf Raise.
+    # KHÔNG có (một chân — CỐ TÌNH KHÔNG dùng cơ chế single_side chung đã
+    # thêm 13/09/2026 cho row/curl/raise/...): Dumbbell Single Leg Calf
+    # Raise, Single Leg Standing Calf Raise. Khác các bài tay ở chỗ chân
+    # NGHỈ giữ nguyên góc NHỎ (~90°, bàn chân áp sàn — cùng phía với
+    # down_threshold), trong khi chân TAY nghỉ ở các bài row/curl luôn giữ
+    # góc LỚN (duỗi thẳng). active_side() chọn góc nhỏ hơn sẽ luôn đọc nhầm
+    # thành chân đang nghỉ, không đếm được rep nào mà KHÔNG có lỗi nào báo —
+    # cần thiết kế riêng (chọn theo góc LỚN hơn), chưa làm.
     # KHÔNG có (khác chiều động tác dù tên gần giống): Tibialis Raise — đây
     # là GẬP MU BÀN CHÂN (dorsiflexion, kéo mũi chân lên), ngược hẳn calf
     # raise (gập LÒNG bàn chân, đẩy gót lên) — dùng chung analyzer sẽ chấm
@@ -427,7 +470,9 @@ _PULLDOWN_VARIANTS = [
     # chuỗi ký tự "row" trong "Nar-row"), chưa từng thực sự thêm vào danh
     # sách — rà tay checklist 412 bài mới lộ ra thiếu sót này.
     "narrow pulldown",
-    # KHÔNG có (một tay — quy tắc 1): Single Arm Lat Pulldown.
+    # Thêm 13/09/2026 — bài MỘT TAY, single_side=True (xem
+    # SINGLE_SIDE_EXERCISES cuối file).
+    "single arm lat pulldown",
     # KHÔNG có (khác khớp chính dù tên gần giống): Straight Arm Lat Pulldown
     # — khuỷu tay gần như khoá thẳng suốt động tác (chuyển động ở VAI, không
     # phải khuỷu tay), góc khuỷu tay gần như không đổi nên không đếm được
@@ -459,8 +504,14 @@ _TRICEP_EXTENSION_VARIANTS = [
     # Thêm 13/09/2026 — cùng động tác với "cable bar pushdown", chỉ khác
     # tay cầm (dây thừng thay vì thanh), không đổi cơ chế góc khuỷu tay.
     "cable rope pushdown",
-    # KHÔNG có (một tay — quy tắc 1): Single Arm Overhead Cable Extension,
-    # Single Arm Tricep Extension.
+    # Thêm 13/09/2026 — bài MỘT TAY, single_side=True (xem
+    # SINGLE_SIDE_EXERCISES cuối file). Dumbbell Tricep Kickback: khuỷu tay
+    # vẫn gập→duỗi cùng cơ chế, chỉ khác hướng thân (cúi người, duỗi ra sau
+    # thay vì lên trên/ra trước) — công thức góc không quan tâm hướng.
+    "single arm overhead cable extension",
+    "single arm tricep extension",
+    "dumbbell tricep kickback",
+    "cable single arm rope pushdown",
 ]
 
 _VARIANTS_BY_ANALYZER: list[tuple[type[ExerciseAnalyzer], list[str]]] = [
@@ -507,3 +558,95 @@ def supports_analysis(exercise_name: str) -> bool:
     viết hoa đầu từ ("Bench Press") còn key ở đây viết thường.
     """
     return exercise_name.lower() in ANALYZER_REGISTRY
+
+
+# Tên bài (viết thường) cần dựng analyzer ở chế độ MỘT BÊN (single_side) —
+# xem docstring `active_side()` trong `common.py`. Thêm 13/09/2026, rà tay
+# checklist 412 bài: bài một tay/một chân trước đây bị loại HẲN vì avg() hai
+# bên không bao giờ chạm ngưỡng "đang làm việc" (bên rảnh/nghỉ kéo trung
+# bình lên) — nay chỉ cần đúng tên nằm trong tập này VÀ class analyzer đó
+# khai `SUPPORTS_SINGLE_SIDE = True` (xem `build_analyzer()` bên dưới).
+#
+# CỐ TÌNH CHƯA có: các bài một chân ở CalfRaiseAnalyzer (xem comment loại
+# trừ trong `_CALF_RAISE_VARIANTS` — quy ước góc ngược chiều, active_side()
+# sẽ chọn sai), và các bài một chân/lệch trọng tâm hình học khác hẳn
+# (single-leg Romanian Deadlift, step-up, Cossack squat...) — để dành đợt
+# rà riêng, xem CHANGELOG 13/09/2026.
+SINGLE_SIDE_EXERCISES: frozenset[str] = frozenset({
+    # Row
+    "cable single arm neutral grip row",
+    "cable single arm underhand grip row",
+    "dumbbell row unilateral",
+    "dumbbell single arm row",
+    "kettlebell gorilla row",
+    "kettlebell row single",
+    "kettlebell single arm row",
+    "meadows row",
+    # Bench press
+    "dumbbell single arm chest press",
+    "cable standing single arm chest press",
+    # Overhead press
+    "single arm dumbbell overhead press",
+    "single arm landmine press",
+    # Hip thrust
+    "b stance hip thrust",
+    "dumbbell figure four heels elevated hip thrust",
+    "dumbbell single leg hip thrust",
+    "single leg hip thrust",
+    "single leg glute bridge",
+    # Curl
+    "dumbbell standing single arm curl",
+    "dumbbell standing single arm hammer curl",
+    "dumbbell concentration curl",
+    "cross body hammer curl",
+    "bayesian curl",
+    "dumbbell preacher curl",
+    "machine preacher curl",
+    # Lateral raise
+    "band single arm lateral raise",
+    "cable low single arm lateral raise",
+    "leaning cable lateral raise",
+    # Chest fly
+    "single arm cable fly",
+    # Tricep extension
+    "single arm overhead cable extension",
+    "single arm tricep extension",
+    "dumbbell tricep kickback",
+    "cable single arm rope pushdown",
+    # Pulldown
+    "single arm lat pulldown",
+})
+
+# Tên trong SINGLE_SIDE_EXERCISES phải vừa có trong ANALYZER_REGISTRY, vừa
+# trỏ tới analyzer THẬT SỰ hỗ trợ single_side — lỡ gõ sai tên hay quên thêm
+# `SUPPORTS_SINGLE_SIDE = True` vào class sẽ bị bỏ qua trong im lặng
+# (build_analyzer() chỉ bật cờ khi cả hai điều kiện đúng), giống hệt kiểu
+# lỗi mà self-check trùng khoá ở trên đã ngăn — kiểm ngay lúc import.
+_bad_single_side = [
+    name
+    for name in SINGLE_SIDE_EXERCISES
+    if name not in ANALYZER_REGISTRY
+    or not getattr(ANALYZER_REGISTRY[name], "SUPPORTS_SINGLE_SIDE", False)
+]
+if _bad_single_side:
+    raise AssertionError(
+        f"SINGLE_SIDE_EXERCISES có tên không hợp lệ (thiếu trong "
+        f"ANALYZER_REGISTRY hoặc class chưa hỗ trợ single_side): {sorted(_bad_single_side)}"
+    )
+
+
+def build_analyzer(
+    exercise: str,
+    cls: type[ExerciseAnalyzer],
+    thresholds: dict[str, float] | None = None,
+) -> ExerciseAnalyzer:
+    """Dựng analyzer cho `exercise`, tự bật `single_side=True` nếu tên bài
+    nằm trong `SINGLE_SIDE_EXERCISES`. Dùng chung cho cả `routes/realtime.py`
+    và `video_analysis_service.py` để hai nơi không tự suy luận lại logic
+    này (và lệch nhau dần) — `cls` do caller tự tra/fallback riêng (WebSocket
+    rơi về `SquatAnalyzer` cho tên lạ, video upload thì không, xem CHANGELOG
+    06/09/2026), hàm này không quyết định việc đó.
+    """
+    if exercise.lower() in SINGLE_SIDE_EXERCISES:
+        return cls(thresholds=thresholds, single_side=True)
+    return cls(thresholds=thresholds)

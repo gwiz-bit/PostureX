@@ -11,7 +11,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.security import decode_token
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.common import visible_points
-from app.ml.analyzers.registry import ANALYZER_REGISTRY
+from app.ml.analyzers.registry import ANALYZER_REGISTRY, build_analyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.thresholds import load_thresholds
 from app.ml.keypoint_smoother import KeypointSmoother
@@ -56,7 +56,7 @@ def _get_analyzer(
         # Mặc định dùng squat nếu chưa hỗ trợ bài tập đó
         logger.warning("Bài tập '%s' chưa được hỗ trợ, dùng squat mặc định.", exercise)
         cls = SquatAnalyzer
-    analyzer = cls(thresholds=thresholds)
+    analyzer = build_analyzer(exercise, cls, thresholds)
     session.rep_counter = analyzer.rep_counter
     return analyzer
 

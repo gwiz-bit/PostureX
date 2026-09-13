@@ -1,7 +1,7 @@
 """Phân tích kỹ thuật Row (kéo tạ về thân): độ co khuỷu tay, lưng thẳng."""
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import avg, is_visible, visible_points
+from app.ml.analyzers.common import active_side, avg, is_visible, visible_points
 from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
@@ -18,10 +18,15 @@ BACK_STRAIGHT_MIN = 100.0
 class RowAnalyzer(ExerciseAnalyzer):
     """Phân tích kỹ thuật row (kéo tạ) và trả feedback tiếng Việt."""
 
+    # Đọc được bởi registry.py — đánh dấu class này chấp nhận tham số
+    # `single_side` (xem docstring tham số đó bên dưới).
+    SUPPORTS_SINGLE_SIDE = True
+
     def __init__(
         self,
         rep_counter: RepCounter | None = None,
         thresholds: dict[str, float] | None = None,
+        single_side: bool = False,
     ) -> None:
         t = thresholds or {}
         super().__init__(
@@ -32,6 +37,10 @@ class RowAnalyzer(ExerciseAnalyzer):
             ),
             thresholds,
         )
+        # Bài một tay (vd Dumbbell Single Arm Row) — tay rảnh giữ nguyên góc
+        # duỗi ~150°, lấy avg() hai tay sẽ không bao giờ chạm ngưỡng co 70°.
+        # Dùng active_side() (góc NHỎ hơn = tay đang thực sự kéo) thay avg().
+        self._single_side = single_side
 
     def analyze(self, keypoints: list[Keypoint]) -> FrameAnalysisResult:
         errors: list[str] = []
@@ -55,7 +64,11 @@ class RowAnalyzer(ExerciseAnalyzer):
         if is_visible(right_shoulder, right_elbow, right_wrist):
             right_elbow_angle = calculate_angle_3d(right_shoulder, right_elbow, right_wrist)
 
-        elbow_angle = avg(left_elbow_angle, right_elbow_angle)
+        elbow_angle = (
+            active_side(left_elbow_angle, right_elbow_angle)
+            if self._single_side
+            else avg(left_elbow_angle, right_elbow_angle)
+        )
 
         phase = self.rep_counter.phase.value
         if elbow_angle is not None:
