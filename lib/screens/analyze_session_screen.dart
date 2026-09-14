@@ -114,6 +114,16 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   Map<String, Point>? _keypoints;
   final List<bool> _correctnessSamples = [];
 
+  /// Raw joint angles from the most recent frame — shown in a small debug
+  /// overlay (see [_buildDebugAngleOverlay]) so a tester can read back exact
+  /// numbers ("tôi kéo tới 95° là hết cỡ") instead of only describing the
+  /// symptom in words. Added 15/09/2026: every threshold bug found so far
+  /// (calf raise, pulldown) needed a script simulation to pin down because
+  /// no one could report the actual angle reached during a failed rep —
+  /// this puts that number on screen directly, no simulation needed to
+  /// interpret the next report.
+  KeyAngles? _keyAngles;
+
   /// "Độ giống bài mẫu" (0-100) của frame gần nhất — `null` khi bài chưa có
   /// chuẩn tham chiếu hoặc cửa sổ live chưa đủ dữ liệu để tính (xem
   /// [FrameAnalysisResult.similarityScore]); `null` ẩn hẳn thanh điểm thay
@@ -375,6 +385,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         // backend that hasn't deployed all_keypoints yet.
         _keypoints = frame.allKeypoints ?? frame.keypoints;
         _similarityScore = frame.similarityScore;
+        _keyAngles = frame.keyAngles;
       });
       return;
     }
@@ -474,6 +485,58 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       _latencyTotalMs = 0;
       _latencyMaxMs = 0;
     }
+  }
+
+  /// Small on-screen readout of the raw joint angles the backend is
+  /// currently computing — see [_keyAngles] doc comment for why. Lists only
+  /// the angles that are actually present for the active exercise (a squat
+  /// session has no elbow angle, a curl session has no knee angle), each
+  /// rounded to the nearest degree.
+  Widget _buildDebugAngleOverlay() {
+    final angles = _keyAngles;
+    if (angles == null) return const SizedBox.shrink();
+    final entries = <String, double?>{
+      'L Vai': angles.leftShoulder,
+      'P Vai': angles.rightShoulder,
+      'L Khuỷu': angles.leftElbow,
+      'P Khuỷu': angles.rightElbow,
+      'L Hông': angles.leftHip,
+      'P Hông': angles.rightHip,
+      'L Gối': angles.leftKnee,
+      'P Gối': angles.rightKnee,
+      'L Cổ chân': angles.leftAnkle,
+      'P Cổ chân': angles.rightAnkle,
+      'Lưng': angles.backAngle,
+    }..removeWhere((_, value) => value == null);
+    if (entries.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 90,
+      left: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: entries.entries
+              .map(
+                (e) => Text(
+                  '${e.key}: ${e.value!.round()}°',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
   }
 
   void _togglePause() => setState(() => _isPaused = !_isPaused);
@@ -854,6 +917,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                 ),
               ),
             ),
+            _buildDebugAngleOverlay(),
             // "Độ giống bài mẫu" — chỉ hiện khi backend trả điểm thật (bài
             // có chuẩn tham chiếu VÀ cửa sổ live đã đủ frame để tính, xem
             // FrameAnalysisResult.similarityScore); `null` ẩn hẳn thay vì

@@ -9,6 +9,10 @@ class KeyAngles {
     this.rightHip,
     this.leftElbow,
     this.rightElbow,
+    this.leftShoulder,
+    this.rightShoulder,
+    this.leftAnkle,
+    this.rightAnkle,
     this.backAngle,
   });
 
@@ -18,6 +22,15 @@ class KeyAngles {
   final double? rightHip;
   final double? leftElbow;
   final double? rightElbow;
+  // Backend has always sent these (see `KeyAngles` in `app/schemas/analysis.py`)
+  // but this model never parsed them, so LateralRaise/ChestFly/Pullover
+  // (shoulder angle) and CalfRaise (ankle angle) sessions silently had no
+  // usable debug angle — added 15/09/2026 alongside the debug overlay that
+  // needs them (see CHANGELOG: "phải đếm được rep, độ chính xác cao").
+  final double? leftShoulder;
+  final double? rightShoulder;
+  final double? leftAnkle;
+  final double? rightAnkle;
   final double? backAngle;
 
   factory KeyAngles.fromJson(Map<String, dynamic> json) => KeyAngles(
@@ -27,6 +40,10 @@ class KeyAngles {
         rightHip: (json['right_hip'] as num?)?.toDouble(),
         leftElbow: (json['left_elbow'] as num?)?.toDouble(),
         rightElbow: (json['right_elbow'] as num?)?.toDouble(),
+        leftShoulder: (json['left_shoulder'] as num?)?.toDouble(),
+        rightShoulder: (json['right_shoulder'] as num?)?.toDouble(),
+        leftAnkle: (json['left_ankle'] as num?)?.toDouble(),
+        rightAnkle: (json['right_ankle'] as num?)?.toDouble(),
         backAngle: (json['back_angle'] as num?)?.toDouble(),
       );
 }

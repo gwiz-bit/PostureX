@@ -64,6 +64,53 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 15/09/2026 (2)
+
+**Quyết định chiến lược sau khi user hỏi lại "so khớp video mẫu để đếm rep"
+— GIỮ hệ ngưỡng góc làm lõi đếm rep, KHÔNG chuyển sang DTW.** Yêu cầu gốc
+("app thay thế PT, đếm rep phải chính xác") thực ra chỉ ra kết luận NGƯỢC
+với hướng "dùng video mẫu làm lõi" đã bàn tới hôm qua: DTW/so khớp chưa từng
+được dùng để đếm rep ở đâu trong dự án (chỉ là điểm số phụ), còn tồn tại lỗi
+đã biết từ 11/09 chưa giải (đứng yên giữa bài vẫn điểm không thấp — nếu dùng
+để đếm rep sẽ thành đếm khống khi đứng yên), và chỉ 173/412 bài có chuẩn đủ
+tốt. Hệ ngưỡng góc dù còn cần hiệu chỉnh (như Pulldown hôm qua) vẫn là hệ
+DUY NHẤT đã qua kiểm chứng thật (435 test, mô phỏng tìm ra bug thật). Quyết
+định: **củng cố hệ ngưỡng hiện có, KHÔNG đại tu sang DTW** — video mẫu giữ
+vai trò phụ (điểm số + có thể làm cảnh báo bổ trợ sau này), không phải lõi
+đếm rep.
+
+**Vấn đề gốc rễ cản trở việc hiệu chỉnh ngưỡng: không có số liệu thật.** Từ
+đầu dự án, mọi lần sửa ngưỡng (kể cả bug Pulldown hôm qua) đều phải MÔ PHỎNG
+để đoán con số thật đang xảy ra, vì người test chỉ mô tả được triệu chứng
+("không đếm được") chứ không có con số góc thật để đối chiếu. Thêm **debug
+overlay hiển thị góc khớp trực tiếp lên màn hình** (`_buildDebugAngleOverlay()`
+trong `analyze_session_screen.dart`, góc trên-trái, đối xứng với badge "độ
+giống bài mẫu" ở trên-phải) — đọc thẳng `FrameAnalysisResult.keyAngles` vốn
+ĐÃ được backend gửi kèm mỗi frame từ trước, chỉ chưa hiển thị. Lần test thật
+tiếp theo, người test đọc thẳng con số trên màn hình ("tôi kéo tới 95° là
+hết cỡ") thay vì mô tả mơ hồ — biến mọi lần test sau thành dữ liệu thật.
+
+**Bug tiềm ẩn phát hiện lúc làm, không liên quan overlay nhưng đáng sửa
+cùng lúc:** `KeyAngles` (Dart, `frame_analysis_result.dart`) chưa từng parse
+`left_shoulder`/`right_shoulder`/`left_ankle`/`right_ankle` dù backend ĐÃ
+gửi các trường này từ đầu (`app/schemas/analysis.py`) — nghĩa là mọi phiên
+tập `LateralRaiseAnalyzer`/`ChestFlyAnalyzer`/`PulloverAnalyzer` (góc vai)
+và `CalfRaiseAnalyzer` (góc mắt cá) trước giờ không có góc debug nào để hiện
+dù có làm overlay hay không. Bổ sung đủ 4 trường còn thiếu.
+
+**Rà hệ thống tìm thêm bài giống lỗi Pulldown** (biến thể "hỗ trợ" dùng
+chung ngưỡng với bản không hỗ trợ) — lọc theo từ khoá "assisted" trong toàn
+bộ 291 khoá tên registry: chỉ 3 kết quả, 2 đã sửa hôm qua (Pulldown), 1
+(Kettlebell Assisted Bulgarian Split Squat) là hỗ trợ THĂNG BẰNG chứ không
+giảm biên độ cần đạt — không cùng loại rủi ro, không sửa. Không tìm thêm
+được ca nào khác có bằng chứng cụ thể — không đoán suông thêm, để dành cho
+debug overlay thu thập dữ liệu thật ở các lần test tiếp theo.
+
+75 test Flutter xanh, `flutter analyze` sạch (2 info cũ không liên quan).
+
+⚠️ Chưa build APK mới/test thật — overlay debug chỉ mới xác nhận bằng
+`flutter analyze`/test tự động, chưa ai nhìn thấy nó chạy trên máy thật.
+
 ### 15/09/2026
 
 **Test thật sau khi merge bản sửa lật gương (14/09 (2)(3)) — hết ngược nhưng
