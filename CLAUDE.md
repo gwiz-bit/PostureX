@@ -64,6 +64,47 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 14/09/2026 (3)
+
+**Sửa tiếp lỗi thứ hai phát hiện CÙNG một ảnh chụp báo lỗi ở mục (2) ngay
+dưới đây: `rotationDegreesFor` dùng công thức bù sai cho camera trước, khiến
+khung xương lệch 180° (khớp mặt hiện ở ngang thắt lưng thay vì gần đầu).**
+Đây là lỗi thứ hai, ĐỘC LẬP với lỗi lệch trái/phải đã sửa ở mục (2) — cả hai
+cùng góp phần vào cùng một ảnh chụp báo lỗi ban đầu.
+
+**Nguyên nhân:** `rotationDegreesFor` (dùng để xoay ảnh JPEG thô gửi lên
+backend phân tích tư thế — KHÔNG ảnh hưởng gì tới `CameraPreview` hiển thị,
+platform tự lo phần đó) trước đây dùng công thức bù riêng cho camera trước:
+`(360 - sensorOrientation) % 360`, với lý do ghi trong docstring cũ "cảm
+biến camera trước gắn ngược chiều vật lý nên cần bù". Lý do đó **lẫn lộn
+hai việc khác nhau**: xoay ảnh (hàm này lo) và lật gương trái/phải (việc
+riêng, đã tách hẳn ra `Transform` bọc chung ở mục (2) dưới đây). Công thức
+chuẩn của Android (đúng theo code mẫu chính thức `camera_view.dart` trong
+`google_ml_kit_flutter`, một cách làm rất phổ biến cho đúng bài toán "xoay
+ảnh thô từ `CameraImage` để chạy ML/pose detection"):
+- Camera trước: `(sensorOrientation + bùThiếtBị) % 360`
+- Camera sau: `(sensorOrientation - bùThiếtBị + 360) % 360`
+
+Với thiết bị khoá chiều dọc tự nhiên (duy nhất app này hỗ trợ), `bùThiếtBị = 0`
+— CẢ HAI công thức rút gọn về đúng `sensorOrientation`, không bù, không đảo.
+Công thức bù cũ cho ra 90° cho camera trước (điển hình `sensorOrientation=270`),
+trong khi giá trị đúng là 270° — lệch đúng 180°, khớp chính xác với triệu
+chứng thật: ảnh bị xoay ngược đầu-chân trước khi gửi lên backend, nên khớp
+mặt (đáng lẽ gần đỉnh khung hình) bị MediaPipe nhận diện ở vị trí tương ứng
+với đáy khung hình — hiện lên màn hình đúng chỗ ngang thắt lưng.
+
+**Sửa:** `rotationDegreesFor` giờ chỉ trả về `camera.sensorOrientation`, y
+hệt nhau cho cả hai camera — không còn nhánh riêng, không còn công thức bù.
+Viết lại toàn bộ docstring giải thích công thức chuẩn ở trên và lý do công
+thức cũ sai (lẫn lộn xoay với lật gương). Viết lại `test/screens/rotation_degrees_test.dart`
+khớp công thức mới (trước đó khoá đúng công thức SAI). 75 test Flutter xanh,
+`flutter analyze` sạch (39 info có từ trước, không liên quan).
+
+⚠️ **Chưa xác nhận lại trên điện thoại thật.** Cần cài lại APK lên đúng máy
+đã báo lỗi, mở camera trước và xác nhận khớp mặt hiện đúng gần đầu (không
+còn ở thắt lưng), đồng thời test lại camera sau cho chắc dù nhánh đó về lý
+thuyết không đổi (`sensorOrientation` dùng thẳng, y hệt trước khi sửa).
+
 ### 14/09/2026 (2)
 
 **Khung xương camera trước bị lệch bên so với video — biến thể MỚI, chiều

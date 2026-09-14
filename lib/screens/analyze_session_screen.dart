@@ -69,23 +69,33 @@ class AnalyzeSessionScreen extends StatefulWidget {
 /// How many degrees to rotate a raw sensor frame so it comes out upright,
 /// for a device held in natural (locked) portrait orientation.
 ///
-/// The naive answer is "just use `sensorOrientation`" — true for the BACK
-/// camera, but wrong for the FRONT one. A phone's front sensor is mounted
-/// mirrored relative to the back sensor (so the two produce consistent
-/// handedness once each is corrected for its own mounting), which means the
-/// correction angle for the front camera is the complement of its
-/// `sensorOrientation`, not the value itself. Typical real numbers:
-/// `sensorOrientation` is 90° on the back camera and 270° on the front of
-/// most Android phones — using 270° directly (as this code did before) spins
-/// the image the wrong way, on top of the separate left/right mirroring
-/// handled below (see the `Transform`/`Matrix4.rotationY` wrapping the
-/// camera+skeleton stack in `build()`). Two bugs living in the same symptom:
-/// "no skeleton visible on the front camera" was actually rotation AND
-/// mirroring both wrong at once.
-int rotationDegreesFor(CameraDescription camera) =>
-    camera.lensDirection == CameraLensDirection.front
-        ? (360 - camera.sensorOrientation) % 360
-        : camera.sensorOrientation;
+/// Just use `sensorOrientation` directly — for BOTH cameras. This is the
+/// standard Android rotation-compensation formula (as used in Google's own
+/// reference `camera_view.dart` from `google_ml_kit_flutter`, and in the
+/// wider Android Camera2 ecosystem): the general formula is
+/// `(sensorOrientation + deviceOrientationDegrees) % 360` for the front
+/// camera and `(sensorOrientation - deviceOrientationDegrees + 360) % 360`
+/// for the back camera, where `deviceOrientationDegrees` compensates for the
+/// device being rotated away from its natural orientation. For a device
+/// locked to natural portrait (this app's only supported orientation),
+/// `deviceOrientationDegrees` is 0, so BOTH formulas collapse to plain
+/// `sensorOrientation` — no complement, no negation.
+///
+/// A previous version of this function used `(360 - sensorOrientation) % 360`
+/// for the front camera specifically, reasoning that the front sensor's
+/// physical mounting needed a "complement" correction. That reasoning
+/// conflated two orthogonal concerns: rotation (this function) and
+/// left/right mirroring (a separate concern, now handled entirely by the
+/// `Transform`/`Matrix4.rotationY` wrapping the camera+skeleton stack in
+/// `build()` — see that code and its own history for why mirroring must
+/// never be smuggled into a rotation angle). The complement formula happened
+/// to produce a value that looked plausible (90° for both cameras, given the
+/// common 90°/270° sensorOrientation split on most phones) but was off by
+/// 180° for the front camera specifically — confirmed via a real bug report
+/// (14/09/2026, see CHANGELOG) where front-camera face keypoints consistently
+/// rendered near the WAIST instead of near the head, exactly the symptom of
+/// a 180°-rotated frame being sent to the backend for pose detection.
+int rotationDegreesFor(CameraDescription camera) => camera.sensorOrientation;
 
 class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     with WidgetsBindingObserver, AppLocaleMixin {
