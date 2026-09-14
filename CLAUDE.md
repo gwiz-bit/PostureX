@@ -64,6 +64,61 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 15/09/2026
+
+**Test thật sau khi merge bản sửa lật gương (14/09 (2)(3)) — hết ngược nhưng
+báo "lag, kéo mỏi tay vẫn không đếm".** Thành viên nhóm test Band Assisted
+Pull Up. Trước khi sửa bất kỳ số nào, mô phỏng lại bằng script (đúng kỷ luật
+đã rút ra từ bug calf raise 13/09/2026 đợt 4: suy luận đúng hướng không đồng
+nghĩa an toàn) để tách hai giả thuyết: (a) lấy mẫu thưa do độ trễ mạng khiến
+bỏ lỡ đáy rep, hay (b) ngưỡng góc tự nó sai.
+
+**Kết quả mô phỏng loại bỏ giả thuyết (a):** cho `PulldownAnalyzer` chạy qua
+chuỗi góc chỉ 2-3 mẫu (mô phỏng lấy mẫu cực thưa) — vẫn đếm đúng 1 rep MIỄN
+LÀ góc thực sự chạm ngưỡng tại một mẫu nào đó. `RepCounter` không nhạy cảm
+với việc lấy mẫu thưa như lo ngại ban đầu. **Xác nhận giả thuyết (b):** cùng
+chuỗi góc đó nhưng chỉ dừng ở 95° (không chạm ngưỡng `ELBOW_CONTRACTED_THRESHOLD`
+cũ = 65°) — dù lấy mẫu DÀY (14 bước/chiều, mô phỏng đúng nhịp app 12fps) vẫn
+0 rep tuyệt đối. Đây chính là bug thật: 65° đòi hỏi cùi chỏ gập gần bằng một
+pull-up KHÔNG hỗ trợ hoàn chỉnh — nhưng "Band Assisted Pull Up"/"Machine
+Assisted Pull Up" đúng đối tượng người mới tập cần hỗ trợ, nhiều khả năng
+không bao giờ đạt độ sâu đó dù cố hết sức. Sửa `ELBOW_CONTRACTED_THRESHOLD`
+65°→90° trong `pulldown.py` + `tunables.py` (đồng bộ default). **CỐ TÌNH
+KHÔNG đổi** `RowAnalyzer`/`FacePullAnalyzer` (cùng ngưỡng 70°) trong đợt này —
+cả hai dùng tạ/cáp có thể tự kiểm soát độ sâu (khác pull-up chống lại trọng
+lượng cơ thể), chưa có bằng chứng cụ thể chúng cũng gặp vấn đề tương tự,
+không đoán suông theo kiểu "chắc cũng sai luôn" mà đợi phản hồi test thật.
+
+Sửa 1 test cũ bị vỡ do đổi ngưỡng (`test_pulldown_nhac_chua_keo_het_dung_MOT_lan`
+— dãy góc mẫu cũ tình cờ dừng đúng ngay ngưỡng mới, biến bài test "báo lỗi
+đúng 1 lần" thành "đếm được rep" qua cơ chế dự phòng FPS thấp; đổi số dừng
+sâu hơn để giữ đúng ý test gốc). Thêm 1 test mới khoá lại chính bug đã báo:
+mô phỏng một rep KHÔNG hoàn hảo (chỉ gập tới ~88°) phải đếm đúng 1 rep với
+ngưỡng mới. 435 test backend xanh (từ 434), ruff sạch.
+
+**Phần "lag" — chưa sửa được vì chưa có số liệu thật, chỉ thêm công cụ đo.**
+Phát hiện đáng chú ý lúc đọc code: pipeline gửi frame hiện tại đã có sẵn một
+timeout an toàn 500ms (`_responseTimeoutTimer` trong `analyze_session_screen.dart`)
+— nếu round-trip thật thường xuyên gần/vượt mốc đó (rất có thể xảy ra với
+VPS ở xa + MediaPipe xử lý ~30-60ms/frame + JSON qua lại), app sẽ tụt xuống
+hiệu năng thực tế thấp hơn hẳn giả định 12fps, đúng cảm giác "lag" dù không
+gây mất rep (theo mô phỏng ở trên). Thay vì đoán số rồi vá mù, thêm
+`_recordLatencySample()` — ghi `debugPrint` mỗi 30 frame: round-trip trung
+bình/tối đa, fps hiệu dụng ước tính, và tổng số frame bị rớt do timeout. Lần
+test thật tiếp theo sẽ cho số liệu cụ thể qua `flutter logs`/Android Studio
+console thay vì tiếp tục suy đoán — CHƯA đổi gì về cơ chế pipeline (không nới
+lỏng khoá đồng bộ `_awaitingResponse`, không đổi độ phân giải/chất lượng
+JPEG) vì chưa có bằng chứng cụ thể để biết sửa gì mới đúng chỗ.
+
+⚠️ **Còn nợ:** (1) chưa build APK mới/test thật lại trên máy — cả bug
+Pulldown lẫn công cụ đo latency đều chỉ mới xác nhận bằng test tự động +
+mô phỏng, chưa qua camera thật. (2) `RowAnalyzer`/`FacePullAnalyzer` (ngưỡng
+70°) chưa được xác nhận có cùng vấn đề hay không — cần phản hồi test thật
+riêng cho từng bài, không suy rộng từ 1 ca Pulldown. (3) Phần "lag" cần số
+liệu thật từ `_recordLatencySample()` trước khi quyết định hướng sửa tiếp
+theo (nới pipeline, giảm chất lượng ảnh, hay chấp nhận đây là giới hạn mạng
+tới VPS 2 vCPU dùng chung).
+
 ### 14/09/2026 (3)
 
 **Sửa tiếp lỗi thứ hai phát hiện CÙNG một ảnh chụp báo lỗi ở mục (2) ngay

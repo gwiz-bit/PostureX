@@ -127,6 +127,24 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   Timer? _responseTimeoutTimer;
   DateTime? _lastFrameSentAt;
   DateTime? _sessionStart;
+
+  /// Round-trip diagnostics (send → response), logged every
+  /// [_latencyLogBatchSize] frames instead of per-frame to avoid flooding
+  /// `flutter logs` — added 15/09/2026 after a report of "lag" with no
+  /// concrete numbers to act on. Simulating `RepCounter` directly showed it
+  /// tolerates sparse sampling fine as long as the true angle is reached
+  /// (see `pulldown.py` CHANGELOG entry same day, the actual rep-counting
+  /// bug found that day was a threshold too strict, not this) — so this
+  /// exists to answer a DIFFERENT, still-open question: how slow is the
+  /// round trip in practice, and how often does the 500ms safety-net timeout
+  /// below actually fire (a fired timeout means a frame's response was
+  /// discarded, not just slow). Both matter for the "feels laggy" complaint
+  /// even where they don't explain missed reps.
+  static const _latencyLogBatchSize = 30;
+  int _latencySampleCount = 0;
+  int _latencyTotalMs = 0;
+  int _latencyMaxMs = 0;
+  int _timeoutDropCount = 0;
   bool _isEnding = false;
   bool _isPaused = false;
   String? _transientError;
@@ -328,6 +346,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       final frame = event.frame!;
       _responseTimeoutTimer?.cancel();
       _awaitingResponse = false;
+      _recordLatencySample();
       // "top" = đang đứng nghỉ/chưa vào tư thế (giữa các rep, hoặc trước khi
       // bắt đầu) — không tính vào độ chính xác, nếu không đứng yên trước
       // camera mà chưa tập gì cũng bị chấm gần 100% (không đúng động tác thì
@@ -422,8 +441,39 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     _responseTimeoutTimer?.cancel();
     _responseTimeoutTimer = Timer(const Duration(milliseconds: 500), () {
       _awaitingResponse = false;
+      _timeoutDropCount++;
+      debugPrint(
+        '[analyze-latency] frame dropped: no response within 500ms '
+        '(dropped $_timeoutDropCount so far this session)',
+      );
     });
     _encodeAndSend(image);
+  }
+
+  /// Accumulates one round-trip sample (send → this response) and flushes a
+  /// summary to `debugPrint` every [_latencyLogBatchSize] frames. See the
+  /// field doc comment above for why this exists.
+  void _recordLatencySample() {
+    final sentAt = _lastFrameSentAt;
+    if (sentAt == null) return;
+    final elapsedMs = DateTime.now().difference(sentAt).inMilliseconds;
+    _latencySampleCount++;
+    _latencyTotalMs += elapsedMs;
+    if (elapsedMs > _latencyMaxMs) _latencyMaxMs = elapsedMs;
+
+    if (_latencySampleCount >= _latencyLogBatchSize) {
+      final avgMs = _latencyTotalMs / _latencySampleCount;
+      final effectiveFps = avgMs > 0 ? 1000 / avgMs : 0;
+      debugPrint(
+        '[analyze-latency] last $_latencySampleCount frames: '
+        'avg ${avgMs.toStringAsFixed(0)}ms, max ${_latencyMaxMs}ms, '
+        '~${effectiveFps.toStringAsFixed(1)} fps effective '
+        '(dropped $_timeoutDropCount total this session)',
+      );
+      _latencySampleCount = 0;
+      _latencyTotalMs = 0;
+      _latencyMaxMs = 0;
+    }
   }
 
   void _togglePause() => setState(() => _isPaused = !_isPaused);

@@ -10,6 +10,23 @@ chân gập ra trước (không phải đứng cúi người như row), nên gó
 tự nhiên chỉ còn ~90-100° dù ngồi đúng tư thế — sát ngay ngưỡng 100° của Row,
 dễ báo nhầm "lưng cong" cho người ngồi bình thường. Không có kiểm lưng nào ở
 đây, chỉ góc khuỷu tay + lệch hai bên.
+
+⚠️ `ELBOW_CONTRACTED_THRESHOLD` sửa 65°→90° ngày 15/09/2026 — thành viên báo
+test thật "kéo mỏi tay vẫn không đếm" trên Band Assisted Pull Up. Mô phỏng
+lại bằng script (không đoán suông) loại trừ được giả thuyết ban đầu (lấy mẫu
+thưa do độ trễ mạng): `RepCounter` vẫn đếm đúng dù chỉ 2-3 mẫu/rep, MIỄN LÀ
+góc thực sự chạm ngưỡng tại một thời điểm nào đó — xem test riêng trong
+`tests/test_analyzers.py` mô phỏng cả hai kịch bản (thưa mẫu + đủ ROM: vẫn
+đếm đúng; đủ mẫu + ROM một phần: không đếm được, đúng bug thật). Vấn đề THẬT
+là ngưỡng 65° tự nó — biên độ đó đòi
+hỏi cùi chỏ gập gần bằng một pull-up không hỗ trợ hoàn chỉnh, trong khi biến
+thể CÓ HỖ TRỢ (band/machine assisted) — đúng đối tượng người mới tập cần hỗ
+trợ — nhiều khả năng KHÔNG BAO GIỜ đạt được độ sâu đó dù đã cố hết sức, nên
+0 rep không phải lỗi hệ thống mà là ngưỡng đặt sai biên độ thực tế. Không đổi
+`RowAnalyzer`/`FacePullAnalyzer` (cùng có ngưỡng 70°) trong đợt này — cả hai
+dùng tạ/cáp có thể tự kiểm soát độ sâu (khác pull-up chống lại trọng lượng cơ
+thể), chưa có bằng chứng cụ thể nào cho thấy chúng cũng gặp vấn đề tương tự;
+để dành, chỉnh nếu test thật xác nhận cũng sai.
 """
 
 from app.ml.analyzers.base import ExerciseAnalyzer
@@ -20,7 +37,8 @@ from app.ml.rep_counter import RepCounter
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 
 # Khuỷu tay gập ≤ ngưỡng này mới coi là đã kéo hết (tạ chạm ngực / cằm qua xà).
-ELBOW_CONTRACTED_THRESHOLD = 65.0
+# ƯỚC LƯỢNG lại 15/09/2026 (từ 65.0) — xem cảnh báo ở docstring module.
+ELBOW_CONTRACTED_THRESHOLD = 90.0
 # Khuỷu tay duỗi ≥ ngưỡng này mới coi là đã về vị trí bắt đầu (tay gần thẳng,
 # treo người hoặc với tay lên xà/thanh kéo).
 ELBOW_EXTENDED_THRESHOLD = 160.0

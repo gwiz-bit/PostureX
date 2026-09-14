@@ -454,6 +454,22 @@ def test_leg_press_khong_kiem_goi_vuot_mui_chan() -> None:
     assert not any("vượt quá mũi chân" in e for e in result.errors)
 
 
+def test_pulldown_dem_dung_rep_ho_tro_khong_dat_do_sau_toi_da() -> None:
+    """Khoá lại bug thật báo 15/09/2026: "kéo mỏi tay vẫn không đếm" trên
+    Band Assisted Pull Up. Mô phỏng bằng script (không đoán suông) trước khi
+    sửa cho thấy đây KHÔNG phải do lấy mẫu thưa (RepCounter vẫn đếm đúng dù
+    chỉ vài mẫu/rep, miễn góc thực sự chạm ngưỡng) — mà do ngưỡng 65° cũ đòi
+    hỏi độ sâu ngang một pull-up không hỗ trợ hoàn chỉnh, trong khi biến thể
+    CÓ HỖ TRỢ (đối tượng người mới tập) khó đạt được. Dãy góc dưới đây mô
+    phỏng một rep thật nhưng KHÔNG hoàn hảo (chỉ gập tới ~88°, không tới
+    65°) — với ngưỡng cũ sẽ là 0 rep dù đã cố hết sức; với ngưỡng mới phải
+    đếm đúng 1 rep."""
+    analyzer = PulldownAnalyzer()
+    for angle in [165, 140, 115, 100, 88, 100, 115, 140, 165]:
+        analyzer.analyze(arm_pose(float(angle)))
+    assert analyzer.rep_counter.rep_count == 1
+
+
 def test_pulldown_khong_bao_lung_cong() -> None:
     """Cố tình không kiểm lưng — khác RowAnalyzer, xem docstring pulldown.py.
     Tư thế "lưng cong" theo tiêu chuẩn Row (80°) vẫn không được báo ở đây."""
@@ -462,12 +478,16 @@ def test_pulldown_khong_bao_lung_cong() -> None:
 
 
 def test_pulldown_nhac_chua_keo_het_dung_MOT_lan() -> None:
+    """Dãy góc chỉ dừng ở 130° (ngưỡng đủ sâu là 90°, xem CHANGELOG
+    15/09/2026 — ELBOW_CONTRACTED_THRESHOLD sửa 65°→90°) — chưa chạm đủ sâu,
+    phải nhắc đúng một lần, không đếm rep khống qua cơ chế dự phòng."""
     analyzer = PulldownAnalyzer()
     warnings = 0
-    for angle in [165, 120, 90, 100, 165, 165]:
+    for angle in [165, 145, 130, 145, 165, 165]:
         if any("Chưa kéo hết" in e for e in analyzer.analyze(arm_pose(angle)).errors):
             warnings += 1
     assert warnings == 1
+    assert analyzer.rep_counter.rep_count == 0
 
 
 def test_deadlift_bao_goi_vuot_mui_chan() -> None:

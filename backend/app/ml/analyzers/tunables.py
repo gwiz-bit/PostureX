@@ -195,7 +195,7 @@ TUNABLES: dict[str, list[Tunable]] = {
     ],
     "PulldownAnalyzer": [
         Tunable("elbow_contracted", "Kéo hết — khuỷu gập dưới góc này mới tính một rep",
-                65.0, 30.0, 110.0, affects_rep_count=True),
+                90.0, 30.0, 130.0, affects_rep_count=True),
         Tunable("elbow_extended", "Về vị trí bắt đầu — vượt góc này là tay đã duỗi gần thẳng",
                 160.0, 110.0, 180.0, affects_rep_count=True),
         Tunable("elbow_asymmetry", "Lệch hai tay — chênh quá góc này là kéo lệch bên",
