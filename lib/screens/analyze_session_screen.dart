@@ -78,7 +78,8 @@ class AnalyzeSessionScreen extends StatefulWidget {
 /// `sensorOrientation` is 90° on the back camera and 270° on the front of
 /// most Android phones — using 270° directly (as this code did before) spins
 /// the image the wrong way, on top of the separate left/right mirroring
-/// `SkeletonPainter.mirror` handles. Two bugs living in the same symptom:
+/// handled below (see the `Transform`/`Matrix4.rotationY` wrapping the
+/// camera+skeleton stack in `build()`). Two bugs living in the same symptom:
 /// "no skeleton visible on the front camera" was actually rotation AND
 /// mirroring both wrong at once.
 int rotationDegreesFor(CameraDescription camera) =>
@@ -624,52 +625,69 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                     final double displayAspect = sensorIsPortrait
                         ? 1.0 / controller.value.aspectRatio
                         : controller.value.aspectRatio;
+                    // The camera preview and the skeleton overlay are grouped
+                    // into one Stack and mirrored TOGETHER, as a single unit,
+                    // for the front camera — not mirrored independently by
+                    // two separate, hardcoded decisions (one Transform on
+                    // CameraPreview, one flip flag inside SkeletonPainter).
+                    //
+                    // History: the two-independent-flags version (written
+                    // 11/09/2026, see CHANGELOG) assumed CameraPreview does
+                    // NOT auto-mirror the front camera on its own — true on
+                    // some camera_android_camerax/rendering-backend
+                    // combinations, false on others (flutter/flutter#156974
+                    // is a known, per-device-inconsistent regression). On a
+                    // device where the plugin DOES auto-mirror correctly, the
+                    // old code's own Transform mirrored the preview a SECOND
+                    // time (net: displayed "like a recording", un-mirrored),
+                    // while SkeletonPainter's flag still mirrored the
+                    // skeleton exactly once — so the skeleton and the video
+                    // ended up disagreeing about which side is which
+                    // (confirmed via a real bug-report screenshot,
+                    // 14/09/2026: skeleton clearly on the wrong side of the
+                    // body during a live session). It's the same underlying
+                    // plugin inconsistency as 11/09/2026, just manifesting in
+                    // the opposite direction.
+                    //
+                    // Fixing it by wrapping BOTH children in the same
+                    // Transform (instead of just CameraPreview) makes this
+                    // whole class of bug structurally impossible: whatever
+                    // the plugin does on a given device, the video and the
+                    // skeleton are always flipped (or not) together, as one
+                    // rigid unit, so they can never disagree. The only
+                    // remaining question — whether the front preview visually
+                    // looks like "a real mirror" or "like a recording" on any
+                    // given device — is now purely cosmetic and still
+                    // unknowable from Dart, but it is no longer a
+                    // skeleton/video misalignment bug either way.
+                    final cameraAndSkeleton = Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CameraPreview(controller),
+                        // Coordinates come from the same rotated (never
+                        // mirrored) JPEG sent to the backend (see
+                        // _encodeCameraImage) — SkeletonPainter always draws
+                        // them raw/un-flipped now; mirroring for the front
+                        // camera, if any, happens exactly once, geometrically,
+                        // via the Transform wrapping this whole Stack.
+                        CustomPaint(
+                          painter: SkeletonPainter(
+                            keypoints: _keypoints,
+                            correct: _correct,
+                          ),
+                        ),
+                      ],
+                    );
                     return SizedBox(
                       width: constraints.maxWidth,
                       height: constraints.maxWidth / displayAspect,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          // Mirror the FRONT camera's preview OURSELVES — do
-                          // not rely on CameraPreview to do it. It used to
-                          // (older camera_android_camerax), which is what the
-                          // SkeletonPainter.mirror flag below was written
-                          // against, but that mirroring behavior regressed in
-                          // some CameraX/rendering-backend combinations
-                          // (flutter/flutter#156974 — front preview shown
-                          // un-mirrored "like it is recorded" instead of like
-                          // a real mirror) and isn't guaranteed fixed on every
-                          // device/Flutter engine combo. Confirmed on a real
-                          // phone 11/09/2026: front-camera joints tracked on
-                          // the wrong side of the body — this is why. Doing
-                          // the flip explicitly here means correctness never
-                          // again depends on which way the plugin happens to
-                          // behave on a given device.
-                          if (_lensDirection == CameraLensDirection.front)
-                            Transform(
+                      child: _lensDirection == CameraLensDirection.front
+                          ? Transform(
                               alignment: Alignment.center,
                               transform: Matrix4.rotationY(pi),
-                              child: CameraPreview(controller),
+                              child: cameraAndSkeleton,
                             )
-                          else
-                            CameraPreview(controller),
-                          // Coordinates come from the same rotated JPEG sent to
-                          // the backend (see _encodeCameraImage), so they line
-                          // up with CameraPreview as long as both are scaled
-                          // together by the same FittedBox above.
-                          CustomPaint(
-                            painter: SkeletonPainter(
-                              keypoints: _keypoints,
-                              correct: _correct,
-                              // We now mirror the front camera's PREVIEW
-                              // ourselves (see above), so the coordinates —
-                              // still computed from the un-mirrored sensor
-                              // JPEG — need the exact same flip to line up.
-                              mirror: _lensDirection == CameraLensDirection.front,
-                            ),
-                          ),
-                        ],
-                      ),
+                          : cameraAndSkeleton,
                     );
                   },
                 ),

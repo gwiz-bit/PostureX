@@ -64,6 +64,59 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 14/09/2026 (2)
+
+**Khung xương camera trước bị lệch bên so với video — biến thể MỚI, chiều
+NGƯỢC LẠI, của đúng lỗi plugin đã ghi 11/09/2026.** Phát hiện từ ảnh chụp
+thật gửi bởi người dùng: đang tập "Band Assisted Pull Up", khung xương xanh
+vẽ đè lên camera trước rõ ràng nằm sai bên so với người thật trong hình.
+
+**Nguyên nhân:** `AnalyzeSessionScreen` có HAI quyết định lật gương tách rời
+nhau, chỉ tình cờ khớp nhau: (1) `CameraPreview` được bọc `Transform(rotationY(pi))`
+khi dùng camera trước — bản vá 11/09 cho lỗi hồi quy của
+`camera_android_camerax` (flutter/flutter#156974), viết dựa trên giả định
+"plugin KHÔNG tự lật gương camera trước"; (2) `SkeletonPainter.mirror` (đã
+xoá — xem dưới) độc lập lật toạ độ x của khớp theo đúng điều kiện camera
+trước/sau. Hai cờ này chỉ đúng nếu giả định ở (1) đúng trên máy đang chạy.
+Trên máy trong ảnh chụp, plugin **có** tự lật gương preview đúng — nên
+preview bị app tự lật thêm 1 lần nữa (triệt tiêu, hiển thị "như quay phim"),
+trong khi khung xương vẫn bị lật đúng 1 lần → khung xương và video lệch bên
+nhau. Backend không lật gì cả (`_encodeCameraImage` chỉ xoay theo cảm biến,
+không mirror), nên toạ độ khớp luôn ở "không gian gốc" — đúng như giả định
+cũ, chỉ có preview là biến động theo từng máy.
+
+**Sửa bằng cách gộp lật gương của video + khung xương thành MỘT `Transform`
+duy nhất, thay vì hai cờ tính riêng rẽ.** `CameraPreview` và
+`CustomPaint(SkeletonPainter)` nay gộp chung một `Stack` con, rồi CHÍNH
+`Stack` đó (không phải chỉ `CameraPreview`) mới bị bọc `Transform(rotationY(pi))`
+khi dùng camera trước. `SkeletonPainter` bỏ hẳn tham số `mirror` — luôn vẽ
+toạ độ gốc, không biết và không cần biết đang dùng camera nào. `Transform`
+là phép biến đổi ở tầng compositing, tác động như nhau lên texture
+(`CameraPreview`) lẫn canvas vẽ tay (`CustomPaint`) — không có khác biệt kỹ
+thuật nào giữa việc lật một texture và lật các lệnh vẽ đường thẳng/hình
+tròn của `SkeletonPainter` (không có text/hình bất đối xứng nào trong đó).
+
+Nhờ vậy, dù plugin camera cư xử thế nào trên bất kỳ máy nào, video và khung
+xương LUÔN được lật (hoặc không lật) cùng nhau như một khối cứng — không
+còn khả năng lệch bên nhau nữa. Câu hỏi còn lại — preview camera trước
+trông "như gương thật" hay "như quay phim" trên một máy cụ thể — giờ chỉ là
+vấn đề thẩm mỹ, không kiểm chứng được từ Dart (như trước), nhưng KHÔNG còn
+là lỗi lệch khung xương/video nữa dù rơi vào trường hợp nào.
+
+Viết lại `test/widgets/skeleton_painter_test.dart` — bài test cũ khoá đúng
+công thức lật `1 - x` và tham số `mirror` đã bị xoá, nên phải viết lại toàn
+bộ theo hợp đồng mới (constructor không nhận `mirror`, `shouldRepaint` chỉ
+còn phản ứng theo `keypoints`/`correct`). 75 test Flutter xanh (không đổi
+số lượng — chỉ thay 4 test trong file này), `flutter analyze` sạch (39 info
+còn lại đều có từ trước, không liên quan).
+
+⚠️ **Chưa xác nhận lại trên điện thoại thật, đặc biệt chưa test lại đúng
+trên chiếc máy đã chụp ảnh báo lỗi.** Việc preview camera trước trên máy đó
+giờ trông "như gương thật" hay "như quay phim" vẫn chưa biết — chỉ biết
+khung xương sẽ khớp đúng bên với bất kỳ hình nào máy đó hiển thị. Cần build
+lại APK, cài lên đúng máy đó, mở lại "Band Assisted Pull Up" (hoặc bài
+tương tự dùng camera trước) và xác nhận khớp xương không còn lệch bên.
+
 ### 13-14/09/2026 (9)
 
 **Đợt 5 — hai việc không đổi số bài nhưng đáng ghi: (a) sửa `reference_joints.py`

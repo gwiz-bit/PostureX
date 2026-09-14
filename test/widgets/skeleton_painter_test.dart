@@ -3,61 +3,69 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:posturex/models/frame_analysis_result.dart';
 import 'package:posturex/widgets/skeleton_painter.dart';
 
-/// Khoá lại lỗi phát hiện khi tập squat thật trên điện thoại: camera trước
-/// hoàn toàn không hiện khung xương, dù server vẫn nhận diện được người
-/// (nhãn phase "GOING DOWN" vẫn đổi bình thường).
+/// `SkeletonPainter` từng có tham số `mirror` riêng, độc lập lật toạ độ
+/// khớp (`x = mirror ? 1 - p.x : p.x`) theo camera đang dùng (trước/sau).
+/// Đó là MỘT trong hai quyết định lật gương tách rời nhau (cái kia là
+/// `Transform` bọc `CameraPreview` trong `AnalyzeSessionScreen`) — chỉ khớp
+/// nhau khi giả định "plugin camera không tự lật gương camera trước" đúng
+/// trên máy đang chạy. Máy nào rơi vào trường hợp ngược lại (plugin tự lật
+/// đúng) thì video và khung xương bị lệch bên nhau — xác nhận qua ảnh chụp
+/// thật 14/09/2026 (xem CHANGELOG).
 ///
-/// Nguyên nhân: `CameraPreview` của Flutter tự lật gương ảnh xem trước cho
-/// camera trước, nhưng toạ độ khớp server trả về được tính từ ảnh JPEG GỐC
-/// (chỉ xoay, không lật) gửi lên lúc `_encodeCameraImage`. Vẽ thẳng toạ độ
-/// gốc lên preview đã lật khiến khớp trái/phải đảo ngược — không phải lệch
-/// nhẹ mà lệch hẳn sang phía đối diện, nên nhìn như "không có khung xương".
-///
-/// Test này không dựng được `CustomPainter.paint()` (cần `Canvas` thật), nên
-/// chỉ khoá đúng phép toán lật toạ độ — phần dễ chép sai nhất khi có ai đó
-/// sau này sửa lại đường này.
+/// Sửa bằng cách bỏ hẳn tham số `mirror` khỏi class này: painter giờ LUÔN
+/// vẽ toạ độ gốc (chưa lật), và việc lật gương (nếu có) do một `Transform`
+/// DUY NHẤT bọc chung cả `CameraPreview` lẫn `CustomPaint` này lo — nên
+/// video và khung xương không bao giờ có thể lệch nhau nữa, bất kể plugin
+/// làm gì trên từng máy. Vì vậy file test này không còn khoá công thức lật
+/// nào nữa (không có gì để lật trong chính class này) — chỉ khoá lại hợp
+/// đồng đơn giản hơn: constructor không nhận `mirror`, và `shouldRepaint`
+/// vẫn phản ứng đúng với phần dữ liệu còn lại (`keypoints`/`correct`).
 void main() {
-  group('SkeletonPainter — lật toạ độ cho camera trước', () {
-    // Sao chép nguyên công thức trong SkeletonPainter.paint() để test không
-    // phụ thuộc Canvas thật.
-    double mirroredX(double x) => 1 - x;
-
-    test('camera sau: không lật', () {
-      const painter = SkeletonPainter(keypoints: {}, correct: true, mirror: false);
-      expect(painter.mirror, isFalse);
+  group('SkeletonPainter — không còn tự lật toạ độ', () {
+    test('constructor không có tham số mirror', () {
+      // Chỉ cần biên dịch được là đã khoá đúng: field `mirror` không được
+      // quay lại class này trong tương lai.
+      const painter = SkeletonPainter(keypoints: {}, correct: true);
+      expect(painter.correct, isTrue);
     });
 
-    test('camera trước: có lật', () {
-      const painter = SkeletonPainter(keypoints: {}, correct: true, mirror: true);
-      expect(painter.mirror, isTrue);
-    });
-
-    test('công thức lật đúng — điểm giữa đứng yên, hai biên đảo chỗ', () {
-      expect(mirroredX(0.5), closeTo(0.5, 1e-9));
-      expect(mirroredX(0.0), 1.0);
-      expect(mirroredX(1.0), 0.0);
-      // Khớp lệch trái (x nhỏ) phải chuyển sang lệch phải (x lớn) và ngược
-      // lại — đây chính là hiệu ứng "trái/phải đảo ngược" gây ra lỗi.
-      expect(mirroredX(0.2), closeTo(0.8, 1e-9));
-      expect(mirroredX(0.8), closeTo(0.2, 1e-9));
-    });
-
-    test('shouldRepaint tính cả khi mirror đổi', () {
+    test('shouldRepaint: true khi keypoints đổi', () {
       const cu = SkeletonPainter(
         keypoints: {'left_knee': Point(x: 0.3, y: 0.5, visibility: 1.0)},
         correct: true,
-        mirror: false,
+      );
+      const moi = SkeletonPainter(
+        keypoints: {'left_knee': Point(x: 0.4, y: 0.5, visibility: 1.0)},
+        correct: true,
+      );
+
+      expect(moi.shouldRepaint(cu), isTrue);
+    });
+
+    test('shouldRepaint: true khi correct đổi', () {
+      const cu = SkeletonPainter(
+        keypoints: {'left_knee': Point(x: 0.3, y: 0.5, visibility: 1.0)},
+        correct: true,
+      );
+      const moi = SkeletonPainter(
+        keypoints: {'left_knee': Point(x: 0.3, y: 0.5, visibility: 1.0)},
+        correct: false,
+      );
+
+      expect(moi.shouldRepaint(cu), isTrue);
+    });
+
+    test('shouldRepaint: false khi keypoints/correct giống hệt nhau', () {
+      const cu = SkeletonPainter(
+        keypoints: {'left_knee': Point(x: 0.3, y: 0.5, visibility: 1.0)},
+        correct: true,
       );
       const moi = SkeletonPainter(
         keypoints: {'left_knee': Point(x: 0.3, y: 0.5, visibility: 1.0)},
         correct: true,
-        mirror: true,
       );
 
-      // `mirror` đổi nhưng keypoints/correct giữ nguyên — nếu shouldRepaint
-      // không kiểm mirror thì đổi camera trước/sau giữa chừng phiên tập sẽ
-      // không vẽ lại, giữ nguyên khung xương lật sai của camera cũ.
-      expect(moi.shouldRepaint(cu), isTrue);
+      expect(moi.shouldRepaint(cu), isFalse);
     });
   });
 }

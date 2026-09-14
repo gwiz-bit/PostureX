@@ -43,11 +43,34 @@ const _faceLandmarks = {
 /// Green while [correct] is true, red otherwise — the backend only
 /// reports a binary correct/incorrect per frame today, not per-joint
 /// severity, so that's the full color vocabulary available here.
+///
+/// Always draws the RAW, un-mirrored coordinates the backend returns
+/// (`_encodeCameraImage` in `AnalyzeSessionScreen` only rotates the sensor
+/// JPEG, never mirrors it, so this is the space the backend's pose
+/// coordinates are already in). This class deliberately knows nothing about
+/// which camera (front/back) is active — mirroring the front camera's view,
+/// when needed, is done exactly once, geometrically, by wrapping BOTH the
+/// `CameraPreview` and this `CustomPaint` together in a single `Transform`
+/// in `AnalyzeSessionScreen.build()`. A `Transform` flips a canvas's draw
+/// calls the same way it flips a texture, so grouping them under one
+/// transform keeps the skeleton and the video always in agreement about
+/// which side is which — regardless of whether the camera plugin happens to
+/// auto-mirror the front preview on a given device.
+///
+/// This used to carry its own `mirror` flag, independently toggled from the
+/// same `CameraLensDirection` check that wrapped `CameraPreview` in a
+/// `Transform` — two separately-hardcoded mirror decisions that only agreed
+/// as long as an unverifiable assumption about the camera plugin's behavior
+/// held. On a real device where that assumption didn't hold (confirmed via a
+/// bug-report screenshot, 14/09/2026 — see CHANGELOG), the video ended up
+/// mirrored twice (net: not mirrored) while this class still mirrored the
+/// skeleton once, so they disagreed about which side of the body was which.
+/// Removing this flag and folding mirroring into the parent `Transform`
+/// makes that whole class of bug structurally impossible.
 class SkeletonPainter extends CustomPainter {
   const SkeletonPainter({
     required this.keypoints,
     required this.correct,
-    this.mirror = false,
   });
 
   /// Pass [FrameAnalysisResult.allKeypoints] here, not `.keypoints` — the
@@ -58,24 +81,6 @@ class SkeletonPainter extends CustomPainter {
   /// exercise (see CHANGELOG 09/09/2026).
   final Map<String, Point>? keypoints;
   final bool correct;
-
-  /// True when the frames came from the FRONT camera.
-  ///
-  /// `_encodeCameraImage` sends the backend the raw sensor JPEG (only
-  /// rotated, never mirrored) — the pose coordinates it returns are in that
-  /// same un-mirrored space. `AnalyzeSessionScreen` mirrors the front
-  /// camera's on-screen preview itself (via `Transform` + `Matrix4.rotationY`,
-  /// so it behaves like a real mirror the user is used to) — it does NOT
-  /// rely on `CameraPreview` to do this anymore, because whether the plugin
-  /// mirrors the front camera on its own has proven inconsistent across
-  /// `camera_android_camerax`/rendering-backend versions (confirmed broken
-  /// on a real device 11/09/2026 — see CHANGELOG). Without this flag here
-  /// matching that same manual flip, the two disagree on which side is
-  /// which, so every joint lands nowhere near the body it's meant to trace —
-  /// the skeleton looks simply absent (or every joint on the wrong side)
-  /// rather than "slightly off". Back camera isn't mirrored either way, so
-  /// no such mismatch there.
-  final bool mirror;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -92,8 +97,7 @@ class SkeletonPainter extends CustomPainter {
     Offset? offsetFor(String name) {
       final p = points[name];
       if (p == null) return null;
-      final x = mirror ? 1 - p.x : p.x;
-      return Offset(x * size.width, p.y * size.height);
+      return Offset(p.x * size.width, p.y * size.height);
     }
 
     for (final (a, b) in _bones) {
@@ -113,7 +117,5 @@ class SkeletonPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SkeletonPainter oldDelegate) =>
-      oldDelegate.keypoints != keypoints ||
-      oldDelegate.correct != correct ||
-      oldDelegate.mirror != mirror;
+      oldDelegate.keypoints != keypoints || oldDelegate.correct != correct;
 }
