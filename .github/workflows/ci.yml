@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (pytest + ruff)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Test (pytest)
+        run: pytest
+        env:
+          # Tests run against an in-memory SQLite DB (see tests/conftest.py) —
+          # no real MySQL/.env needed. SECRET_KEY only has to be non-empty for
+          # Settings() to construct.
+          SECRET_KEY: ci-test-secret-key
+
+  flutter:
+    name: Flutter (analyze + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.4"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        # --no-fatal-infos: this repo has ~39 pre-existing info-level lints
+        # (documented in CLAUDE.md as known/non-blocking); errors and
+        # warnings still fail the build.
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test
