@@ -121,36 +121,83 @@ chiếu bằng số liệu thật, không chỉ theo tên biến. `reference_joi
 phủ đủ 25/25 analyzer hiện có (đã đúng từ 13/09/2026(5), không bị lệch thêm
 dù registry đã phát triển thêm sau đó).
 
-**Ba việc CHƯA sửa, để dành — có bằng chứng cụ thể nhưng cần thiết kế lớn
-hơn một bug-fix đơn thuần:**
-1. `routes/realtime.py` có MỘT khối `try/except` bao trọn toàn bộ vòng lặp
-   xử lý frame — lỗi ở đúng MỘT frame (không chỉ lỗi hạ tầng kiểu vụ
-   `libGLESv2` 06/09) làm sập toàn bộ phiên WebSocket, trả về cùng một câu
-   lỗi chung chung, người dùng thấy "sập phiên tập" cho một lỗi đáng lẽ chỉ
-   cần bỏ qua 1 frame. Cần tách try/except riêng cho từng bước xử lý một
-   frame (theo đúng mẫu `_decode_frame` đã làm — log rồi `continue`), không
-   phải sửa một dòng.
-2. `similarity_scorer.py`: bản sửa 11/09/2026(4) cho lỗi "đứng yên vẫn điểm
-   không thấp" (guard `MIN_LIVE_RANGE_DEGREES=8.0`) chỉ chặn được trường hợp
-   đứng yên tuyệt đối — DTW vẫn không giới hạn số bước "dính" cùng một cột
-   liên tiếp, nên đung đưa nhẹ ≥8° (hoàn toàn có thể xảy ra thật khi "đứng
-   yên" có lắc lư) vẫn lách qua guard và cho điểm cao giả tạo. Guard hiện tại
-   là chặn thô, không phải sửa gốc rễ đã ghi nhận từ 11/09.
-3. `_recordLatencySample()` (Flutter, thêm 15/09 — chính công cụ đã dùng để
-   đo lag suốt buổi test tối nay) dùng chung một biến `_lastFrameSentAt` cho
-   mọi frame đang bay — nếu một frame bị đánh dấu "rớt" (quá 500ms) nhưng
-   backend vẫn xử lý xong và trả lời TRỄ, phản hồi trễ đó vẫn được tính vào
-   latency nhưng đối chiếu nhầm với mốc gửi của FRAME MỚI HƠN đã gửi sau đó
-   — số latency hiển thị có thể sai lệch so với round-trip thật. Cần thêm cơ
-   chế đánh số thứ tự frame (sequence number) để đối chiếu đúng cặp gửi/nhận,
-   không phải sửa nhanh một dòng.
+**Cập nhật cùng ngày — cả 3 việc "để dành" ở trên đều đã sửa xong, sau khi
+user hỏi lại "các lỗi này có sửa được không":**
 
-⚠️ **Debug instrumentation thêm hôm nay** (`[analyze-geometry]`,
-`[rep-count]`, cộng `[analyze-latency]` có từ 15/09) **đều chưa được gate
-sau `kDebugMode`** — đang chạy cho mọi người dùng thật trên bản build hiện
-tại, in log liên tục vào thiết bị. Cần bọc lại trước khi tính tới một đợt
-build phát hành, nhưng CỐ TÌNH chưa làm ngay vì vẫn đang cần dữ liệu thật từ
-tester cho các mục còn nợ ở trên.
+1. **`routes/realtime.py` — lỗi ở một frame không còn làm sập cả phiên.**
+   Tách riêng một khối `try/except` bọc đúng phần xử lý MỘT frame (pose
+   estimation → analyze → gửi kết quả), lồng bên trong khối `try/except`
+   lớn cũ. Bắt `Exception` (trừ `WebSocketDisconnect`, re-raise để giữ
+   nguyên luồng ngắt kết nối bình thường), log kèm nhãn "một frame" để phân
+   biệt với log lỗi cấp phiên, báo lỗi ngắn cho client rồi `continue` —
+   đúng mẫu `_decode_frame` đã làm cho lỗi giải mã ảnh. Thêm
+   `test_loi_o_dung_1_frame_khong_lam_sap_ca_phien` (mô phỏng pose
+   estimation ném lỗi ở đúng 1 lần gọi, xác nhận frame kế tiếp trên CÙNG
+   kết nối vẫn chạy bình thường).
+
+2. **`similarity_scorer.py` — thêm ràng buộc step-pattern thật vào chính đệ
+   quy DTW**, không chỉ chặn thô "đứng yên tuyệt đối" như bản 11/09. Thêm
+   hằng số `MAX_CONSECUTIVE_STALL = 3` (ƯỚC LƯỢNG, chưa đo người thật): giới
+   hạn số lần liên tiếp đường `prev[j]` (đứng yên tại một chỉ số chuẩn, giữ
+   nguyên j trong khi chỉ số live tăng — đúng cơ chế gây bug) được chọn làm
+   đường đi tối ưu, trước khi buộc phải chuyển sang đường tiến chỉ số chuẩn
+   (`cur[j-1]`/`prev[j-1]`) dù tốn chi phí hơn. Cần thêm một mảng
+   `stall[j]` song song với mảng chi phí DTW để theo dõi độ dài chuỗi
+   "dính" hiện tại — đúng như dự đoán ban đầu "tốn thêm một chiều trạng
+   thái" trong docstring cũ, nhưng chi phí thực tế chỉ là một mảng int thêm
+   vào, không đổi độ phức tạp thuật toán. Test mới
+   `test_dung_dua_nhe_trong_pham_vi_khong_duoc_diem_cao_gia_tao` xác nhận
+   ĐÚNG khác biệt bản sửa tạo ra (so sánh cùng một chuỗi lắc lư qua cap lỏng
+   mô phỏng hành vi cũ vs cap thật) thay vì chỉ kiểm một ngưỡng tuyệt đối dễ
+   vỡ: 91.4 điểm (cap lỏng) so với 76.9 điểm (cap thật) cho cùng một chuỗi
+   26/30 frame đứng gần như im tại một góc nằm giữa vùng chuyển động của
+   bài. Không đổi hành vi khi so khớp đúng chuẩn (`test_perfect_match_scores_near_100`
+   vẫn xanh nguyên — đường chéo tối ưu không cần dựa vào "dính" nên không bị
+   ảnh hưởng) hay đứng yên tuyệt đối (`test_standing_still_in_range_scores_zero`
+   vẫn xanh — chặn thô cũ vẫn chạy trước, chưa tới lượt DTW).
+
+3. **Bug đo latency của chính công cụ `[analyze-latency]`** — thay biến đơn
+   `_lastFrameSentAt` bằng hàng đợi FIFO `_pendingRequestTimestamps`, đẩy
+   vào đúng lúc `_socket.sendFrame()` thật sự chạy (không phải lúc bắt đầu
+   encode). Đúng vì backend LUÔN trả lời theo đúng thứ tự nhận frame (xác
+   nhận lại khi đọc code — kể cả 3 nhánh lỗi cũng luôn gửi đúng 1 phản hồi),
+   nên không cần backend echo số thứ tự, chỉ cần client tự xếp hàng đúng.
+   `_recordLatencySample()` giờ rút phần tử ĐẦU hàng đợi thay vì đọc biến
+   dùng chung — phản hồi trễ của một frame từng bị đánh dấu "rớt" giờ đối
+   chiếu đúng với mốc gửi thật của chính nó. Thêm chốt an toàn (giới hạn
+   hàng đợi 50 phần tử) phòng trường hợp server mất kết nối hẳn không phản
+   hồi gì nữa. Tiện thể sửa luôn lỗi nhỏ đi kèm: `_encodeAndSend` khi lỗi
+   encode cục bộ (không phải server/mạng chậm) giờ huỷ luôn
+   `_responseTimeoutTimer`, tránh cộng nhầm vào `_timeoutDropCount` cho một
+   nguyên nhân khác hẳn.
+
+439 test backend xanh (từ 437, +1 test realtime +1 test similarity_scorer),
+75 test Flutter xanh, `ruff check`/`flutter analyze` sạch. **Đã commit
+(`a79f20a` cho bug RepCounter, commit tiếp theo cho 3 việc này) và deploy
+lên VPS** (`git pull` + `sudo systemctl restart posturex`, xác nhận đúng
+commit qua `git log -1`, `curl /health` OK, chạy lại `pytest -q` NGAY TRÊN
+SERVER xác nhận 437+ test xanh trên chính production).
+
+⚠️ **Debug instrumentation thêm 17/09** (`[analyze-geometry]`, `[rep-count]`,
+cộng `[analyze-latency]` có từ 15/09) **đều chưa được gate sau `kDebugMode`**
+— đang chạy cho mọi người dùng thật trên bản build hiện tại, in log liên
+tục vào thiết bị. Cần bọc lại trước khi tính tới một đợt build phát hành,
+nhưng CỐ TÌNH chưa làm ngay vì vẫn đang cần dữ liệu thật từ tester.
+
+⚠️ **`MAX_CONSECUTIVE_STALL=3` chưa đo trên người thật** — cùng tình trạng
+với `SCALE_DEGREES`/`MIN_LIVE_RANGE_DEGREES` lúc mới viết 11/09. Quá nhỏ có
+thể chấm oan cho một lần khoá khớp/giữ tư thế ngắn ở đỉnh rep (hợp lệ về kỹ
+thuật) thành "đứng yên gian lận"; quá lớn thì quay lại đúng lỗ hổng vừa vá.
+Cần phản hồi thật trước khi tinh chỉnh tiếp — tính năng "độ giống bài mẫu"
+vẫn là điểm PHỤ, không ảnh hưởng đếm rep, nên rủi ro thấp hơn nhiều so với
+bug `RepCounter` đã sửa cùng ngày.
+
+⚠️ **Sự cố bảo mật cùng buổi deploy: mật khẩu `sudo` của VPS bị lộ ra màn
+hình do gõ trước khi prompt kịp hiện** trong lúc user tự chạy lệnh deploy
+qua SSH, vô tình dán lại nguyên văn vào hội thoại với Claude Code. Đã nhắc
+user đổi mật khẩu ngay. Không phải lỗi trong repo, ghi lại để nhớ: không
+bao giờ dán lại output chứa prompt nhập mật khẩu, kể cả khi có vẻ đã gõ
+sai/thất bại.
 
 ### 15/09/2026 (2)
 

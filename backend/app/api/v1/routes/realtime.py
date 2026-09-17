@@ -182,37 +182,65 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
                 await websocket.send_json({"error": "Không đọc được frame."})
                 continue
 
-            # Chạy pose estimation, rồi làm mượt so với frame trước trong
-            # CÙNG phiên này — xem docstring KeypointSmoother. Mất người thì
-            # smoother tự xoá trạng thái cũ (không nội suy nhầm).
-            keypoints = smoother.smooth(await _pose_estimator_pool.estimate(jpeg_bytes))
-            if keypoints is None:
-                await websocket.send_json({
-                    "rep_count": session.rep_counter.rep_count,
-                    "errors": ["Không phát hiện được người trong frame."],
-                    "correct": False,
-                    "key_angles": KeyAngles().model_dump(),
-                    "phase": session.rep_counter.phase.value,
-                    "keypoints": None,
-                    "all_keypoints": None,
-                    "similarity_score": None,
-                })
+            # Xử lý MỘT frame trong try/except RIÊNG, tách khỏi khối try lớn
+            # bọc cả vòng lặp (xem except Exception cuối hàm) — sửa
+            # 17/09/2026: trước đây một lỗi ở đúng MỘT frame (vd bug trong
+            # angle math của một analyzer với tư thế biên, hoặc NaN/Inf từ
+            # `calculate_angle_3d`) rơi thẳng vào except ngoài cùng, làm
+            # SẬP TOÀN BỘ phiên WebSocket — người tập thấy "mất kết nối"
+            # giữa buổi tập chỉ vì một frame lỗi đáng lẽ có thể bỏ qua, y hệt
+            # triệu chứng của sự cố hạ tầng libGLESv2 (06/09/2026) dù nguyên
+            # nhân hoàn toàn khác (lỗi code cho MỘT frame, không phải server
+            # hỏng toàn bộ) — cả hai trả về cùng một câu lỗi chung chung nên
+            # không phân biệt được từ phía client. Bắt riêng ở đây: log kèm
+            # nhãn "một frame" để phân biệt với log lỗi phiên ở except ngoài,
+            # báo lỗi cho client rồi `continue` — theo đúng mẫu `_decode_frame`
+            # đã làm cho lỗi giải mã ảnh.
+            try:
+                # Chạy pose estimation, rồi làm mượt so với frame trước trong
+                # CÙNG phiên này — xem docstring KeypointSmoother. Mất người
+                # thì smoother tự xoá trạng thái cũ (không nội suy nhầm).
+                keypoints = smoother.smooth(await _pose_estimator_pool.estimate(jpeg_bytes))
+                if keypoints is None:
+                    await websocket.send_json({
+                        "rep_count": session.rep_counter.rep_count,
+                        "errors": ["Không phát hiện được người trong frame."],
+                        "correct": False,
+                        "key_angles": KeyAngles().model_dump(),
+                        "phase": session.rep_counter.phase.value,
+                        "keypoints": None,
+                        "all_keypoints": None,
+                        "similarity_score": None,
+                    })
+                    continue
+
+                # Phân tích kỹ thuật
+                result: FrameAnalysisResult = analyzer.analyze(keypoints)
+                session.record_frame(result.errors)
+
+                # Khung xương ĐẦY ĐỦ cho client vẽ (mặt, khuỷu tay, cổ tay...),
+                # tách khỏi `result.keypoints` (chỉ những khớp analyzer này
+                # thực sự dùng để tính góc) — gán SAU khi analyzer trả về,
+                # không analyzer nào cần biết hay sửa gì cho trường này.
+                named = named_keypoints(keypoints)
+                result.all_keypoints = visible_points(named)
+                if scorer is not None:
+                    result.similarity_score = scorer.update(named)
+
+                await websocket.send_json(result.model_dump())
+            except WebSocketDisconnect:
+                raise
+            except Exception as exc:
+                logger.exception(
+                    "Lỗi xử lý MỘT frame (bài '%s') — bỏ qua frame này, phiên vẫn tiếp tục: %s",
+                    session.exercise,
+                    exc,
+                )
+                try:
+                    await websocket.send_json({"error": "Lỗi xử lý frame này, đã bỏ qua."})
+                except Exception:
+                    pass
                 continue
-
-            # Phân tích kỹ thuật
-            result: FrameAnalysisResult = analyzer.analyze(keypoints)
-            session.record_frame(result.errors)
-
-            # Khung xương ĐẦY ĐỦ cho client vẽ (mặt, khuỷu tay, cổ tay...),
-            # tách khỏi `result.keypoints` (chỉ những khớp analyzer này thực
-            # sự dùng để tính góc) — gán SAU khi analyzer trả về, không
-            # analyzer nào cần biết hay sửa gì cho trường này.
-            named = named_keypoints(keypoints)
-            result.all_keypoints = visible_points(named)
-            if scorer is not None:
-                result.similarity_score = scorer.update(named)
-
-            await websocket.send_json(result.model_dump())
 
     except WebSocketDisconnect:
         acc = session.accuracy if session else 0.0

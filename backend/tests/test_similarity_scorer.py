@@ -149,6 +149,58 @@ def test_standing_still_in_range_scores_zero(monkeypatch):
     assert scores[-1] == 0.0
 
 
+def test_dung_dua_nhe_trong_pham_vi_khong_duoc_diem_cao_gia_tao(monkeypatch):
+    """Lỗ hổng phát hiện lúc audit 17/09/2026: chặn "đứng yên tuyệt đối" ở
+    test ngay trên (biên độ live = 0) không bắt được người tập LẮC LƯ NHẸ
+    (biên độ ≥ `MIN_LIVE_RANGE_DEGREES`, qua được chặn đó) quanh một góc nằm
+    trong vùng chuyển động của bài — DTW không giới hạn số bước "dính" cùng
+    một điểm chuẩn thì vẫn tìm được vài điểm chuẩn gần giá trị đang lắc lư
+    rồi lặp lại gần như miễn phí, ra điểm cao giả tạo dù không hề đi hết
+    biên độ như chuẩn yêu cầu.
+
+    Xác nhận bằng cách so sánh CHÍNH chuỗi live đó qua hai giá trị
+    `MAX_CONSECUTIVE_STALL`: chặn lỏng (mô phỏng lại đúng hành vi CŨ trước
+    khi sửa) phải ra điểm cao giả tạo, chặn thật (giá trị đang dùng trong
+    code) phải ra điểm thấp hơn hẳn — không chỉ kiểm một ngưỡng tuyệt đối
+    (dễ vỡ nếu đổi SCALE_DEGREES sau này) mà kiểm ĐÚNG SỰ KHÁC BIỆT mà bản
+    sửa này tạo ra."""
+    import app.ml.similarity_scorer as similarity_scorer_module
+
+    ref_series = tuple(90.0 + 80.0 * abs(((i / 30.0) % 2.0) - 1.0) for i in range(60))
+    _install_fake_reference(monkeypatch, ref_series)
+
+    # Phần lớn cửa sổ (26/30 frame) đứng gần như im tại 130° — chỉ 4 frame
+    # lệch ra 110°/150° để biên độ tổng đạt 40° (> MIN_LIVE_RANGE_DEGREES=8,
+    # qua được chặn đứng-yên-tuyệt-đối). Mốc 130° chỉ xuất hiện ở đúng 2 chỉ
+    # số của chuẩn (i=15, i=45, xem công thức reference ở trên) — DTW không
+    # giới hạn "dính" sẽ ghim gần hết 26 frame đó vào 1-2 chỉ số rẻ nhất rồi
+    # gần như bỏ qua toàn bộ phần chuẩn còn lại, đúng kiểu lỗi đã ghi nhận.
+    live_series = [130.0] * 13 + [110.0, 150.0] + [130.0] * 13 + [110.0, 150.0]
+
+    def score_with_stall_cap(cap: int) -> float:
+        monkeypatch.setattr(similarity_scorer_module, "MAX_CONSECUTIVE_STALL", cap)
+        scorer = SimilarityScorer("fake", window=WINDOW)
+        scores = [scorer.update(_named_keypoints_for_angle(a)) for a in live_series]
+        assert scores[-1] is not None
+        return scores[-1]
+
+    # Chặn lỏng gần như không giới hạn — mô phỏng lại hành vi CŨ (bug thật).
+    score_khong_chan = score_with_stall_cap(cap=WINDOW)
+    # Chặn thật, khớp giá trị mặc định của code hiện tại.
+    score_co_chan = score_with_stall_cap(cap=3)
+
+    assert score_khong_chan > 90.0, (
+        f"score_khong_chan={score_khong_chan} — nếu số này KHÔNG cao thì "
+        "chuỗi live/reference dựng trong test không thật sự tái hiện được "
+        "bug gốc, cần dựng lại kịch bản."
+    )
+    assert score_co_chan < score_khong_chan - 10.0, (
+        f"score_co_chan={score_co_chan} so với score_khong_chan={score_khong_chan} "
+        "— ràng buộc step-pattern không tạo ra khác biệt đáng kể, chưa sửa "
+        "được lỗ hổng đung đưa nhẹ."
+    )
+
+
 def test_uses_projection_stored_in_reference_not_a_fixed_choice(monkeypatch):
     """Bẫy suýt lọt lúc viết code: từng có lỗi luôn dùng 2D bất kể
     `projection` là gì (điều kiện `if self._reference.analyzer` luôn đúng

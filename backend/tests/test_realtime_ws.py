@@ -176,6 +176,42 @@ def test_frame_hong_khong_lam_dut_phien(ws_client: TestClient, monkeypatch) -> N
         assert "rep_count" in ws.receive_json()
 
 
+def test_loi_o_dung_1_frame_khong_lam_sap_ca_phien(ws_client: TestClient, monkeypatch) -> None:
+    """Sửa 17/09/2026: lỗi ở MỘT frame trước đây rơi vào except ngoài cùng,
+    làm sập toàn bộ phiên WebSocket — client thấy mất kết nối giữa buổi tập
+    chỉ vì một frame lỗi. Mô phỏng bằng cách cho pose estimation ném lỗi ở
+    ĐÚNG một lần gọi (như một bug ngẫu nhiên trong một tư thế biên), rồi xác
+    nhận: (1) client nhận được lỗi cho frame đó thay vì bị ngắt kết nối,
+    (2) frame kế tiếp vẫn được phân tích bình thường trên CÙNG kết nối.
+    """
+    _set_thresholds(monkeypatch, {})
+    calls = {"n": 0}
+
+    async def loi_dung_lan_thu_hai(_frame_bytes):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("Lỗi giả lập chỉ ở một frame")
+        return squat_pose(170.0, 175.0)
+
+    monkeypatch.setattr(realtime._pose_estimator_pool, "estimate", loi_dung_lan_thu_hai)
+
+    with ws_client.websocket_connect(f"{WS_URL}?token={_token()}") as ws:
+        ws.send_text(json.dumps({"exercise": "squat"}))
+        ws.receive_json()
+
+        ws.send_bytes(b"frame 1")
+        assert "rep_count" in ws.receive_json()
+
+        ws.send_bytes(b"frame 2 - loi")
+        assert "error" in ws.receive_json()
+
+        # Vẫn CÙNG kết nối, CÙNG phiên — frame kế tiếp phải chạy bình thường.
+        ws.send_bytes(b"frame 3")
+        result = ws.receive_json()
+        assert "rep_count" in result
+        assert result["errors"] == []
+
+
 def test_khong_thay_nguoi_thi_bao_nhung_van_giu_phien(ws_client: TestClient, monkeypatch) -> None:
     """Người ra khỏi khung hình: báo cho client, không đóng kết nối."""
     _set_thresholds(monkeypatch, {})

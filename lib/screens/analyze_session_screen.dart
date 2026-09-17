@@ -138,6 +138,24 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   DateTime? _lastFrameSentAt;
   DateTime? _sessionStart;
 
+  /// Hàng đợi FIFO các mốc thời gian gửi frame THẬT SỰ đã đưa xuống socket
+  /// (đẩy vào trong `_encodeAndSend`, ngay tại lệnh `_socket.sendFrame`) —
+  /// dùng để đo round-trip đúng cặp gửi/nhận, thay cho biến đơn
+  /// `_lastFrameSentAt` trước đây. Sửa 17/09/2026: backend xử lý frame theo
+  /// đúng thứ tự nhận được và LUÔN trả về đúng một phản hồi cho mỗi frame
+  /// (kể cả các nhánh lỗi — xem `routes/realtime.py`), nên phản hồi luôn về
+  /// theo đúng thứ tự đã gửi — không cần backend echo số thứ tự, chỉ cần
+  /// client tự xếp hàng đúng. Trước đây `_lastFrameSentAt` là MỘT biến dùng
+  /// chung cho mọi frame đang bay: nếu timer 500ms coi một frame là "rớt"
+  /// rồi cho frame kế tiếp gửi đi, nhưng backend vẫn xử lý xong và trả lời
+  /// TRỄ cho frame đã "rớt" đó, `_recordLatencySample()` khi nhận phản hồi
+  /// trễ ấy lại đối chiếu nhầm với mốc gửi của frame MỚI HƠN — số liệu
+  /// latency sai lệch, đúng lúc cần đo chính xác nhất (buổi test 17/09/2026
+  /// đã dùng số liệu từ cơ chế cũ này để kết luận "máy quá tải cục bộ" —
+  /// kết luận đó vẫn đúng vì dựa trên xu hướng chung, nhưng từng con số cụ
+  /// thể có thể hơi lệch).
+  final List<DateTime> _pendingRequestTimestamps = [];
+
   /// Ghi log MỘT LẦN, ở frame đầu tiên của phiên, so sánh kích thước ảnh
   /// thật gửi lên backend (`CameraImage` từ `startImageStream`) với kích
   /// thước preview đang hiển thị (`controller.value.previewSize`). Hai
@@ -498,8 +516,12 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   /// summary to `debugPrint` every [_latencyLogBatchSize] frames. See the
   /// field doc comment above for why this exists.
   void _recordLatencySample() {
-    final sentAt = _lastFrameSentAt;
-    if (sentAt == null) return;
+    if (_pendingRequestTimestamps.isEmpty) return;
+    // FIFO: phản hồi này khớp với frame ĐƯỢC GỬI SỚM NHẤT còn chưa có phản
+    // hồi — đúng vì backend luôn trả lời theo đúng thứ tự nhận frame (xem
+    // doc comment của `_pendingRequestTimestamps`), kể cả khi frame đó từng
+    // bị timer 500ms đánh dấu "rớt" trước khi phản hồi thật sự tới.
+    final sentAt = _pendingRequestTimestamps.removeAt(0);
     final elapsedMs = DateTime.now().difference(sentAt).inMilliseconds;
     _latencySampleCount++;
     _latencyTotalMs += elapsedMs;
@@ -601,9 +623,27 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         _encodeCameraImage,
         _EncodeArgs(image, _rotationDegrees),
       );
+      // Ghi mốc gửi NGAY TẠI ĐÂY (không phải lúc bắt đầu encode) — đây là
+      // điểm gần nhất với thời điểm byte thật sự rời máy, và đúng thứ tự
+      // hàng đợi FIFO khớp với thứ tự backend sẽ trả lời (xem doc comment
+      // của `_pendingRequestTimestamps`).
+      // Chốt an toàn: nếu server mất kết nối hẳn, không phản hồi nào tới
+      // để `_recordLatencySample` rút bớt hàng đợi — timer 500ms vẫn liên
+      // tục cho phép gửi frame mới, hàng đợi sẽ phình vô hạn suốt phiên nếu
+      // không giới hạn. 50 là dư dả so với thực tế (bình thường chỉ 1-2 phần
+      // tử tại một thời điểm).
+      if (_pendingRequestTimestamps.length >= 50) {
+        _pendingRequestTimestamps.removeAt(0);
+      }
+      _pendingRequestTimestamps.add(DateTime.now());
       _socket.sendFrame(jpeg);
     } catch (_) {
       _awaitingResponse = false;
+      // Lỗi cục bộ lúc encode/gửi (không phải server/mạng chậm) — huỷ luôn
+      // timer 500ms, nếu không nó vẫn bắn sau đó và cộng nhầm vào
+      // `_timeoutDropCount` cho một nguyên nhân khác hẳn (sửa cùng đợt
+      // 17/09/2026 với bug đo latency sai cặp gửi/nhận).
+      _responseTimeoutTimer?.cancel();
     }
   }
 
