@@ -115,19 +115,33 @@ class RepCounter:
                 # và báo lỗi oan cho một rep hoàn hảo.
                 descended = self._min_angle_seen < self.up_threshold
                 if reversed_upward and descended:
-                    if self._min_angle_seen < self.down_threshold + self._NEAR_BOTTOM_MARGIN:
-                        self._phase = Phase.GOING_UP
+                    near_bottom = (
+                        self._min_angle_seen < self.down_threshold + self._NEAR_BOTTOM_MARGIN
+                    )
+                    # LUÔN chuyển sang GOING_UP + xoá cả đáy lẫn đỉnh vừa ghi
+                    # nhận, dù là rep hoàn thành hay chỉ nhịp hụt — sửa bug
+                    # phát hiện 17/09/2026: trước đây nhánh nhịp hụt (else)
+                    # KHÔNG đổi phase (vẫn nằm trong (TOP, GOING_DOWN)), nên
+                    # `_min_angle_seen` vừa reset về 180 lại LẬP TỨC bị gán
+                    # lại đúng bằng góc frame kế tiếp ở dòng 91 phía trên —
+                    # hễ còn đang đi lên (chưa vượt up_threshold) thì
+                    # `descended` luôn đúng lại ngay, khiến `shallow_reversal`
+                    # bắn lại mỗi frame cho tới khi vượt hẳn up_threshold
+                    # (nhắc TTS lặp lại nhiều lần cho đúng một nhịp hụt), và
+                    # `incomplete_lockout` (chỉ xét ở phase GOING_UP) bị vô
+                    # hiệu hoá suốt quãng bị kẹt đó. Chuyển hẳn sang GOING_UP
+                    # ngay cả khi hụt để mọi frame đi lên tiếp theo được xử lý
+                    # đúng bởi nhánh GOING_UP bên dưới.
+                    self._phase = Phase.GOING_UP
+                    self._max_angle_seen = angle
+                    self._min_angle_seen = 180.0
+                    if near_bottom:
                         self._rep_count += 1
-                        self._max_angle_seen = angle
                         completed = True
                     else:
                         # Đi lên mà chưa từng xuống gần đáy → nhịp hụt: không
                         # tính rep, chỉ báo cho analyzer nhắc người tập.
                         self._shallow_reversal = True
-                    # Xoá đáy của nhịp vừa kết thúc trong cả hai trường hợp,
-                    # nếu không những frame đi lên tiếp theo sẽ lặp lại chính
-                    # kết luận đó (rep đếm thêm, hoặc nhắc lại nhiều lần).
-                    self._min_angle_seen = 180.0
 
         elif self._phase == Phase.BOTTOM:
             if angle > self.down_threshold:
@@ -151,6 +165,17 @@ class RepCounter:
                 # tế, vừa để những frame hạ tiếp theo không lặp lại cùng một
                 # lời nhắc.
                 self._phase = Phase.GOING_DOWN
+                # Bug phát hiện 17/09/2026: THIẾU dòng này trước đây khiến
+                # `_min_angle_seen` của LẦN ĐI LÊN TRƯỚC (có thể đã gần chạm
+                # `down_threshold + _NEAR_BOTTOM_MARGIN`) còn sống sót qua cú
+                # khựng này. Nhánh (TOP, GOING_DOWN) phía trên xử lý frame kế
+                # tiếp sẽ đọc nhầm giá trị cũ đó, tưởng cú khựng (chỉ hạ nhẹ
+                # rồi đi lên tiếp) là một lần CHẠM ĐÁY MỚI — đếm thêm 1 rep ảo
+                # cho đúng một rep thật có khựng nhẹ giữa chừng lúc duỗi lên
+                # (rất dễ xảy ra thật, không phải tình huống hiếm). Cùng họ
+                # lỗi "rep đếm gấp đôi" đã sửa 01/09/2026, tái phát qua nhánh
+                # incomplete_lockout thêm sau đó cùng ngày.
+                self._min_angle_seen = 180.0
 
             # Phải đứng thẳng lại đến up_threshold mới sẵn sàng cho rep mới
             if angle > self.up_threshold:

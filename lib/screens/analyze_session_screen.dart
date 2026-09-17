@@ -138,6 +138,19 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   DateTime? _lastFrameSentAt;
   DateTime? _sessionStart;
 
+  /// Ghi log MỘT LẦN, ở frame đầu tiên của phiên, so sánh kích thước ảnh
+  /// thật gửi lên backend (`CameraImage` từ `startImageStream`) với kích
+  /// thước preview đang hiển thị (`controller.value.previewSize`). Hai
+  /// luồng này trên Android là hai output surface riêng của cùng camera
+  /// session (preview texture vs ImageReader phân tích) — plugin thường cho
+  /// cùng tỉ lệ khung hình, nhưng chưa có gì xác nhận điều đó đúng trên MỌI
+  /// thiết bị. Nếu tỉ lệ khác nhau, toạ độ khớp (0..1 theo khung ảnh phân
+  /// tích) sẽ không khớp hình học với khung preview hiển thị — đúng kiểu
+  /// "khung xương lệch sang một bên" (không phải lật gương) đang cần xác
+  /// nhận, xem báo lỗi test thật 17/09/2026. Không suy đoán rồi vá — log
+  /// trước để biết chắc có đúng nguyên nhân này không.
+  bool _loggedFrameGeometry = false;
+
   /// Round-trip diagnostics (send → response), logged every
   /// [_latencyLogBatchSize] frames instead of per-frame to avoid flooding
   /// `flutter logs` — added 15/09/2026 after a report of "lag" with no
@@ -366,6 +379,16 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       if (!frame.errors.contains(_noPersonMessage) && frame.phase != 'top') {
         _correctnessSamples.add(frame.correct);
       }
+      if (frame.repCount != _repCount) {
+        // Log mọi lần rep_count đổi (không chỉ lúc tăng) kèm góc thật tại
+        // đúng thời điểm đó — để đối chiếu qua log thay vì chỉ đọc số trên
+        // màn hình, đúng cách debug overlay góc đã làm cho việc hiệu chỉnh
+        // ngưỡng (xem CHANGELOG 15/09/2026).
+        debugPrint(
+          '[rep-count] $_repCount -> ${frame.repCount} | phase=${frame.phase} | '
+          'correct=${frame.correct} | ${_formatAngles(frame.keyAngles)}',
+        );
+      }
       if (frame.repCount > _repCount && frame.correct) {
         // Only beep for a rep that closed out clean — matches the spec's
         // "không tính rep nếu có lỗi nghiêm trọng" intent as closely as
@@ -440,6 +463,16 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   void _onCameraFrame(CameraImage image) {
     if (_status != _SessionStatus.running || _awaitingResponse || _isPaused)
       return;
+    if (!_loggedFrameGeometry) {
+      _loggedFrameGeometry = true;
+      final previewSize = _controller?.value.previewSize;
+      debugPrint(
+        '[analyze-geometry] anh phan tich (CameraImage): '
+        '${image.width}x${image.height} (ti le ${(image.width / image.height).toStringAsFixed(3)}) — '
+        'preview hien thi (controller.value.previewSize): $previewSize'
+        '${previewSize != null ? " (ti le ${(previewSize.width / previewSize.height).toStringAsFixed(3)})" : ""}',
+      );
+    }
     final now = DateTime.now();
     if (_lastFrameSentAt != null &&
         now.difference(_lastFrameSentAt!) < _frameInterval)
@@ -487,14 +520,11 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     }
   }
 
-  /// Small on-screen readout of the raw joint angles the backend is
-  /// currently computing — see [_keyAngles] doc comment for why. Lists only
-  /// the angles that are actually present for the active exercise (a squat
-  /// session has no elbow angle, a curl session has no knee angle), each
-  /// rounded to the nearest degree.
-  Widget _buildDebugAngleOverlay() {
-    final angles = _keyAngles;
-    if (angles == null) return const SizedBox.shrink();
+  /// Nhãn tiếng Việt cho từng góc, dùng chung giữa overlay hiển thị trên
+  /// màn hình ([_buildDebugAngleOverlay]) và dòng log `[rep-count]`
+  /// ([_formatAngles]) — chỉ giữ các góc thực sự có giá trị (bài squat
+  /// không có góc khuỷu tay, bài curl không có góc gối).
+  Map<String, double> _nonNullAngleEntries(KeyAngles angles) {
     final entries = <String, double?>{
       'L Vai': angles.leftShoulder,
       'P Vai': angles.rightShoulder,
@@ -508,6 +538,30 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       'P Cổ chân': angles.rightAnkle,
       'Lưng': angles.backAngle,
     }..removeWhere((_, value) => value == null);
+    return entries.map((key, value) => MapEntry(key, value!));
+  }
+
+  /// Nén các góc hiện có thành một dòng ngắn cho `debugPrint`, vd
+  /// "L Khuỷu=68°, P Khuỷu=70°" — dùng trong log `[rep-count]` để đối chiếu
+  /// góc thật tại đúng thời điểm rep được đếm, thay vì chỉ đọc số trên màn
+  /// hình (xem CHANGELOG 15/09/2026 về lý do overlay góc tồn tại).
+  String _formatAngles(KeyAngles angles) {
+    final entries = _nonNullAngleEntries(angles);
+    if (entries.isEmpty) return '(không có góc nào)';
+    return entries.entries
+        .map((e) => '${e.key}=${e.value.round()}°')
+        .join(', ');
+  }
+
+  /// Small on-screen readout of the raw joint angles the backend is
+  /// currently computing — see [_keyAngles] doc comment for why. Lists only
+  /// the angles that are actually present for the active exercise (a squat
+  /// session has no elbow angle, a curl session has no knee angle), each
+  /// rounded to the nearest degree.
+  Widget _buildDebugAngleOverlay() {
+    final angles = _keyAngles;
+    if (angles == null) return const SizedBox.shrink();
+    final entries = _nonNullAngleEntries(angles);
     if (entries.isEmpty) return const SizedBox.shrink();
 
     return Positioned(
@@ -525,7 +579,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
           children: entries.entries
               .map(
                 (e) => Text(
-                  '${e.key}: ${e.value!.round()}°',
+                  '${e.key}: ${e.value.round()}°',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,

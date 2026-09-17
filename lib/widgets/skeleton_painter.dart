@@ -88,17 +88,55 @@ class SkeletonPainter extends CustomPainter {
     if (points == null || points.isEmpty) return;
 
     final color = correct ? const Color(0xFF4CD964) : const Color(0xFFFF3B30);
-    final bonePaint = Paint()
-      ..color = color
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-    final jointPaint = Paint()..color = color;
 
     Offset? offsetFor(String name) {
       final p = points[name];
       if (p == null) return null;
       return Offset(p.x * size.width, p.y * size.height);
     }
+
+    // Lớp glow vẽ TRƯỚC (nằm dưới): nét dày + mờ (MaskFilter.blur) dọc theo
+    // từng xương, cộng một mảng mờ phủ thân người (vai-hông) — mô phỏng cảm
+    // giác "ôm sát cơ thể" kiểu overlay segmentation-mask trong các demo AI
+    // thể hình phổ biến, nhưng không cần model phân đoạn/dữ liệu thêm nào từ
+    // backend: chỉ dùng lại đúng các điểm khớp đã có sẵn, vẽ thêm ở tầng
+    // client. Khung xương nét mảnh gốc vẫn vẽ đè lên trên để giữ độ chính
+    // xác dễ đọc — glow chỉ là lớp trang trí phía dưới.
+    final glowBonePaint = Paint()
+      ..color = color.withValues(alpha: 0.35)
+      ..strokeWidth = 26
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+
+    for (final (a, b) in _bones) {
+      final start = offsetFor(a);
+      final end = offsetFor(b);
+      if (start != null && end != null) {
+        canvas.drawLine(start, end, glowBonePaint);
+      }
+    }
+
+    final torsoCorners = [
+      offsetFor('left_shoulder'),
+      offsetFor('right_shoulder'),
+      offsetFor('right_hip'),
+      offsetFor('left_hip'),
+    ];
+    if (torsoCorners.every((p) => p != null)) {
+      final torsoPath = Path()..addPolygon(torsoCorners.cast<Offset>(), true);
+      final torsoGlowPaint = Paint()
+        ..color = color.withValues(alpha: 0.22)
+        ..style = PaintingStyle.fill
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+      canvas.drawPath(torsoPath, torsoGlowPaint);
+    }
+
+    // Khung xương nét mảnh gốc — không đổi so với trước.
+    final bonePaint = Paint()
+      ..color = color
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    final jointPaint = Paint()..color = color;
 
     for (final (a, b) in _bones) {
       final start = offsetFor(a);
