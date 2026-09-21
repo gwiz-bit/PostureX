@@ -64,6 +64,56 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 21/09/2026
+
+**Nhận diện tư thế chạy NGAY TRÊN ĐIỆN THOẠI (ML Kit, chỉ Android) — server chỉ còn
+nhận toạ độ khớp.** Nguyên nhân gốc của "lag" (số đo 17/09): mỗi frame phải đổi
+màu YUV→RGB bằng vòng lặp Dart, nén JPEG, đi mạng tới VPS 2 vCPU, xếp hàng chờ
+MediaPipe rồi mới về — và chỉ một frame được bay tại một lúc nên độ trễ cộng
+dồn. Đo thật trên emulator với backend local: vòng gửi-nhận trung bình
+217 ms → 28 ms, rớt frame 28 → 0.
+
+- **Giao thức.** Client gửi `{"exercise": ..., "input": "keypoints"}`; server LUÔN
+  echo `input` thật sự dùng trong `ready` (server cũ không echo → client tự rơi về
+  đường ảnh JPEG cũ). Frame = JSON `{"keypoints": [[x,y,z,vis] x33]}` hoặc
+  `{"keypoints": null}` (không thấy người). Mọi frame — kể cả frame hỏng — vẫn
+  nhận ĐÚNG MỘT phản hồi, vì client ghép cặp gửi/nhận theo thứ tự. Xem
+  `backend/app/ml/client_keypoints.py`, `routes/realtime.py`.
+- **Client.** `on_device_pose_service.dart` (ML Kit `base`+`stream`),
+  `pose_keypoint_encoder.dart` (chuẩn hoá), `analyze_session_screen.dart`. Tự rơi
+  về đường ảnh JPEG khi server không xác nhận, frame sai dạng, hoặc ML Kit lỗi
+  10 lần liên tiếp/treo quá 3 s. Giữ nguyên trần ~12 fps: `KeypointSmoother`,
+  cửa sổ 30 frame của điểm giống bài mẫu và các ngưỡng đều đã hiệu chỉnh cho nhịp
+  này.
+- **BẪY: `z` của ML Kit không dùng được, client luôn gửi `z = 0`.** Đo trên 191
+  frame thật (Squat, webcam): chênh z dọc cẳng chân lớn gấp ~2,6 lần chiều dài
+  cẳng chân trong ảnh, và góc gối 3D đọc 110° khi người đứng thẳng (thật ≈175°).
+  Squat tính góc gối bằng `calculate_angle_3d`, nên góc không bao giờ chạm ngưỡng
+  "đã đứng thẳng" → bỏ sót rep (5 squat thật, app đếm 3). Sau khi bỏ z: góc đứng
+  thẳng 175,7°, và 4 lần đếm khớp đúng 4 lần hạ hông thật (đối chiếu theo thời
+  điểm). Hệ quả: mọi góc từ keypoint của điện thoại là 2D; chưa biết bài nào từng
+  dựa vào z của MediaPipe (Deadlift, Hip Thrust...) bị ảnh hưởng ra sao.
+- **Nhận xét phụ.** Squat đo lưng theo giả định camera nhìn NGHIÊNG; webcam nhìn
+  thẳng làm góc lưng/hông bị sai và cờ `correct=false` báo nhầm — giới hạn có từ
+  trước, không do thay đổi này.
+
+⚠️ **Chưa đo trên điện thoại thật.** Emulator x86 chạy ML Kit rất chậm (400–560 ms
+mỗi frame → chỉ ~2–4 fps thực tế), nên chưa biết máy thật có theo kịp nhịp 12 fps
+không. Điều cần đo: dòng `[pose-ondevice] ML Kit ... avg ...ms` và
+`[analyze-latency] (on-device)` trong `flutter logs`.
+
+⚠️ **Thêm phụ thuộc `google_mlkit_pose_detection` làm iOS đòi tối thiểu 15.5** (dự án
+đang đặt 13.0 trong `ios/Runner.xcodeproj`) — `pod install` sẽ lỗi cho tới khi
+nâng deployment target. CHƯA xử lý, vì đó là quyết định bỏ máy iOS 13-15.4. Chế độ
+này chỉ bật cho Android (`OnDevicePoseService.isSupported`).
+
+⚠️ **Chỉ hưởng lợi khi backend đã deploy bản mới.** Backend cũ không echo `input`,
+nên APK mới vẫn chạy nhưng tự rơi về đường ảnh JPEG (log: `ve duong anh JPEG cua
+server`). Thứ tự: deploy backend trước, phát APK sau.
+
+⚠️ Điểm "độ giống bài mẫu" có thể lệch nhẹ: 113 file chuẩn được trích bằng
+MediaPipe, còn phiên live giờ là ML Kit (chưa đo độ lệch).
+
 ### 17/09/2026
 
 **Audit toàn bộ lõi real-time (rep-counting/pose-tracking) theo yêu cầu user

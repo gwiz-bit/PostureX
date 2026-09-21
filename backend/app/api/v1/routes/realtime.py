@@ -14,6 +14,7 @@ from app.ml.analyzers.common import visible_points
 from app.ml.analyzers.registry import ANALYZER_REGISTRY, build_analyzer
 from app.ml.analyzers.squat import SquatAnalyzer
 from app.ml.analyzers.thresholds import load_thresholds
+from app.ml.client_keypoints import parse_client_keypoints
 from app.ml.keypoint_smoother import KeypointSmoother
 from app.ml.pose_estimator import named_keypoints
 from app.ml.pose_estimator_pool import get_pose_estimator_pool
@@ -24,6 +25,10 @@ from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["realtime"])
+
+# Hai cách client đưa tư thế vào — xem docstring `analyze_realtime`.
+INPUT_IMAGE = "image"
+INPUT_KEYPOINTS = "keypoints"
 
 # Pool dùng chung cho toàn ứng dụng — cả với job phân tích video chạy nền
 # (xem `get_pose_estimator_pool` trong pose_estimator_pool.py). KHÔNG gọi
@@ -107,9 +112,17 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
     handshake. Từ chối kết nối trước khi accept() nếu thiếu/token sai.
 
     Giao thức:
-      1. Client gửi JSON init: {"exercise": "squat"}
+      1. Client gửi JSON init: {"exercise": "squat"} — có thể kèm
+         `"input": "keypoints"` để tự nhận diện tư thế trên máy (xem dưới)
       2. Client gửi liên tục frame JPEG (bytes hoặc base64)
       3. Server trả JSON FrameAnalysisResult sau mỗi frame
+
+    Chế độ `input: "keypoints"` (xem `app/ml/client_keypoints.py`): bước 2 đổi
+    thành frame JSON chứa 33 khớp đã nhận diện sẵn, server bỏ qua MediaPipe.
+    Server LUÔN echo `input` thật sự đang dùng trong message `ready` — server
+    cũ không biết chế độ này sẽ không echo, nên client dựa vào đó để quyết
+    định gửi keypoint hay rơi về gửi ảnh JPEG. Cả hai chế độ đều trả đúng MỘT
+    phản hồi cho mỗi frame nhận được (kể cả khi lỗi).
     """
     if token is None:
         await websocket.close(code=1008, reason="Thiếu token xác thực.")
@@ -141,16 +154,23 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
         try:
             init_data = json.loads(init_raw)
             exercise = init_data.get("exercise", "squat")
+            input_mode = init_data.get("input", INPUT_IMAGE)
         except (json.JSONDecodeError, AttributeError):
             exercise = "squat"
+            input_mode = INPUT_IMAGE
+        if input_mode not in (INPUT_IMAGE, INPUT_KEYPOINTS):
+            logger.warning("Chế độ input '%s' không hỗ trợ, dùng ảnh JPEG.", input_mode)
+            input_mode = INPUT_IMAGE
 
         session = SessionState(exercise=exercise)
         analyzer = _get_analyzer(exercise, session, await _load_exercise_thresholds(exercise))
         scorer = SimilarityScorer(exercise)
+        logger.info("Mở phiên phân tích: bài '%s', input=%s", session.exercise, input_mode)
 
         await websocket.send_json({
             "status": "ready",
             "exercise": session.exercise,
+            "input": input_mode,
             "message": f"Sẵn sàng phân tích bài tập: {session.exercise}",
         })
 
@@ -174,13 +194,25 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
             else:
                 continue
 
-            # Decode frame thành JPEG bytes
-            try:
-                jpeg_bytes = _decode_frame(frame_data)
-            except Exception as exc:
-                logger.debug("Không giải mã được frame: %s", exc)
-                await websocket.send_json({"error": "Không đọc được frame."})
-                continue
+            # Chuẩn bị đầu vào của frame: keypoint client đã nhận diện sẵn, hoặc
+            # ảnh JPEG để server tự nhận diện. Lỗi ở đây vẫn phải trả ĐÚNG MỘT
+            # phản hồi — client ghép cặp gửi/nhận theo thứ tự.
+            client_keypoints = None
+            jpeg_bytes = b""
+            if input_mode == INPUT_KEYPOINTS:
+                try:
+                    client_keypoints = parse_client_keypoints(frame_data)
+                except ValueError as exc:
+                    logger.debug("Frame keypoint không hợp lệ: %s", exc)
+                    await websocket.send_json({"error": f"Frame keypoint không hợp lệ: {exc}"})
+                    continue
+            else:
+                try:
+                    jpeg_bytes = _decode_frame(frame_data)
+                except Exception as exc:
+                    logger.debug("Không giải mã được frame: %s", exc)
+                    await websocket.send_json({"error": "Không đọc được frame."})
+                    continue
 
             # Xử lý MỘT frame trong try/except RIÊNG, tách khỏi khối try lớn
             # bọc cả vòng lặp (xem except Exception cuối hàm) — sửa
@@ -200,7 +232,11 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
                 # Chạy pose estimation, rồi làm mượt so với frame trước trong
                 # CÙNG phiên này — xem docstring KeypointSmoother. Mất người
                 # thì smoother tự xoá trạng thái cũ (không nội suy nhầm).
-                keypoints = smoother.smooth(await _pose_estimator_pool.estimate(jpeg_bytes))
+                if input_mode == INPUT_KEYPOINTS:
+                    detected = client_keypoints
+                else:
+                    detected = await _pose_estimator_pool.estimate(jpeg_bytes)
+                keypoints = smoother.smooth(detected)
                 if keypoints is None:
                     await websocket.send_json({
                         "rep_count": session.rep_counter.rep_count,

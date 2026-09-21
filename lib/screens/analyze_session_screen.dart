@@ -15,6 +15,7 @@ import '../features/exercises/exercises_module.dart';
 import '../features/workout/workout_module.dart';
 import '../models/frame_analysis_result.dart';
 import '../services/analyze_socket_service.dart';
+import '../services/on_device_pose_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_locale.dart';
 import '../utils/exercise_videos.dart';
@@ -39,6 +40,24 @@ const _frameInterval = Duration(milliseconds: 80); // ~12 fps cap
 /// half a second — short, but matches "lặp lại 3 lần liên tiếp" literally;
 /// tune here if that turns out to fire too eagerly in practice.
 const _ttsRepeatThreshold = 3;
+
+/// Ở chế độ nhận diện trên máy, số frame tối đa được gửi đi mà chưa có phản
+/// hồi. Server chỉ còn mất vài ms mỗi frame nên KHÔNG cần chờ từng vòng như
+/// đường ảnh JPEG (một frame một lúc, độ trễ mạng cộng dồn thẳng vào tốc độ);
+/// nhưng vẫn phải chặn trên để server chậm không bị dồn frame.
+const _maxInFlightOnDevice = 2;
+
+/// Frame gửi đi quá lâu không có phản hồi thì coi như mất, để không chặn mãi
+/// việc gửi frame mới (gấp đôi mốc timeout 500ms của đường ảnh JPEG, vì ở đây
+/// không có timer riêng — chỉ kiểm khi định gửi frame kế tiếp).
+const _staleRequestAge = Duration(milliseconds: 1000);
+
+/// Thời gian tối đa chờ ML Kit nhận diện một frame — xem [_detectAndSend].
+const _detectTimeout = Duration(seconds: 3);
+
+/// Số lần liên tiếp ML Kit ném lỗi trước khi bỏ cuộc, chuyển về gửi ảnh JPEG
+/// cho server tự nhận diện. Lỗi lẻ tẻ (một frame hỏng) không đáng kể.
+const _maxConsecutiveOnDeviceFailures = 10;
 
 /// Full-screen camera capture that streams frames to the backend's
 /// `/api/v1/ws/analyze` WebSocket and renders live rep-count/phase/error
@@ -103,6 +122,21 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   StreamSubscription<AnalyzeSocketEvent>? _socketSub;
   CameraController? _controller;
   int _rotationDegrees = 0;
+
+  /// Nhận diện tư thế ngay trên điện thoại (ML Kit), chỉ gửi toạ độ khớp lên
+  /// server — xem [OnDevicePoseService]. `_wantOnDevicePose` là điều ta MUỐN
+  /// (nền tảng hỗ trợ và chưa từng phải bỏ cuộc); `_useOnDevicePose` là điều
+  /// ĐÃ ĐƯỢC XÁC NHẬN, chỉ đúng sau khi server echo `input: keypoints` trong
+  /// `ready` (server cũ sẽ không echo, khi đó rơi về đường ảnh JPEG).
+  OnDevicePoseService? _poseService;
+  bool _wantOnDevicePose = OnDevicePoseService.isSupported;
+  bool _useOnDevicePose = false;
+  bool _isDetecting = false;
+  bool _isFallingBack = false;
+  int _onDeviceFailureCount = 0;
+  int _detectSampleCount = 0;
+  int _detectTotalMs = 0;
+  int _detectMaxMs = 0;
 
   _SessionStatus _status = _SessionStatus.initializing;
   String? _statusMessage;
@@ -239,6 +273,19 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     }
   }
 
+  /// Mọi nơi tạo camera đều phải đi qua đây: ML Kit trên Android chỉ nhận NV21,
+  /// trong khi đường ảnh JPEG cũ cần YUV420 mặc định của plugin — hai đường
+  /// không dùng chung được một định dạng ảnh.
+  CameraController _newCameraController(CameraDescription camera) {
+    return CameraController(
+      camera,
+      ResolutionPreset.medium,
+      enableAudio: false,
+      imageFormatGroup:
+          _wantOnDevicePose ? OnDevicePoseService.imageFormatGroup : null,
+    );
+  }
+
   Future<void> _init() async {
     final permission = await Permission.camera.request();
     if (!permission.isGranted) {
@@ -254,20 +301,18 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       );
       _rotationDegrees = rotationDegreesFor(camera);
 
-      final controller = CameraController(
-        camera,
-        ResolutionPreset.medium,
-        enableAudio: false,
-      );
+      final controller = _newCameraController(camera);
       await controller.initialize();
       if (!mounted) {
         await controller.dispose();
         return;
       }
       _controller = controller;
+      if (_wantOnDevicePose) _poseService ??= OnDevicePoseService();
       setState(() => _status = _SessionStatus.connecting);
 
-      await _socket.connect(widget.exercise);
+      await _socketSub?.cancel();
+      await _socket.connect(widget.exercise, onDevicePose: _wantOnDevicePose);
       _socketSub = _socket.events.listen(_onSocketEvent);
     } catch (_) {
       if (mounted) {
@@ -286,11 +331,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         (c) => c.lensDirection == _lensDirection,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(
-        camera,
-        ResolutionPreset.medium,
-        enableAudio: false,
-      );
+      final controller = _newCameraController(camera);
       await controller.initialize();
       if (!mounted) {
         await controller.dispose();
@@ -335,11 +376,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       }
       await oldController?.dispose();
 
-      final controller = CameraController(
-        targetCamera,
-        ResolutionPreset.medium,
-        enableAudio: false,
-      );
+      final controller = _newCameraController(targetCamera);
       await controller.initialize();
       if (!mounted) {
         await controller.dispose();
@@ -377,6 +414,15 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     if (!mounted) return;
 
     if (event.readyMessage != null) {
+      if (_wantOnDevicePose && event.input != analyzeInputKeypoints) {
+        // Server cũ chưa biết chế độ keypoint (không echo `input`) và vẫn
+        // đang chờ ảnh JPEG — gửi toạ độ cho nó chỉ nhận về toàn lỗi.
+        _fallbackToServerPose(
+          'server không xác nhận chế độ keypoint (input=${event.input})',
+        );
+        return;
+      }
+      _useOnDevicePose = _wantOnDevicePose;
       setState(() => _status = _SessionStatus.running);
       _sessionStart = DateTime.now();
       _controller?.startImageStream(_onCameraFrame);
@@ -433,6 +479,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 
     if (event.error != null) {
       _awaitingResponse = false;
+      // Server trả ĐÚNG MỘT phản hồi cho mỗi frame, kể cả khi lỗi — không rút
+      // mốc gửi tương ứng thì hàng đợi lệch một nấc: số đo latency sau đó ghép
+      // sai cặp, và ở chế độ nhận diện trên máy còn bị tính nhầm là frame vẫn
+      // đang chờ (chặn gửi frame mới).
+      if (_pendingRequestTimestamps.isNotEmpty) {
+        _pendingRequestTimestamps.removeAt(0);
+      }
       _showTransientError(event.error!);
     }
   }
@@ -479,8 +532,12 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   }
 
   void _onCameraFrame(CameraImage image) {
-    if (_status != _SessionStatus.running || _awaitingResponse || _isPaused)
+    if (_status != _SessionStatus.running || _isPaused) return;
+    if (_useOnDevicePose) {
+      _onCameraFrameOnDevice(image);
       return;
+    }
+    if (_awaitingResponse) return;
     if (!_loggedFrameGeometry) {
       _loggedFrameGeometry = true;
       final previewSize = _controller?.value.previewSize;
@@ -512,6 +569,162 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     _encodeAndSend(image);
   }
 
+  /// Ghi mốc gửi của một frame vừa đưa xuống socket — dùng chung cho cả hai
+  /// đường (ảnh JPEG và keypoint), vì cả hai đều dựa vào việc server trả lời
+  /// đúng thứ tự nhận.
+  void _markRequestSent() {
+    // Chốt an toàn: server mất kết nối hẳn thì không phản hồi nào tới để rút
+    // bớt hàng đợi. 50 là dư dả so với thực tế (bình thường 1-2 phần tử).
+    if (_pendingRequestTimestamps.length >= 50) {
+      _pendingRequestTimestamps.removeAt(0);
+    }
+    _pendingRequestTimestamps.add(DateTime.now());
+  }
+
+  /// Số frame đã gửi mà chưa có phản hồi. Frame quá cũ ([_staleRequestAge])
+  /// coi như đã mất và bị bỏ khỏi hàng đợi, để một phản hồi không bao giờ tới
+  /// không chặn vĩnh viễn việc gửi frame kế tiếp.
+  int _requestsInFlight() {
+    final cutoff = DateTime.now().subtract(_staleRequestAge);
+    _pendingRequestTimestamps.removeWhere((t) => t.isBefore(cutoff));
+    return _pendingRequestTimestamps.length;
+  }
+
+  /// Nhánh nhận diện trên máy của [_onCameraFrame]. Khác đường ảnh JPEG ở chỗ
+  /// không phải chờ server trả lời từng frame ([_maxInFlightOnDevice] frame
+  /// được bay cùng lúc), và việc nặng (nhận diện) chạy ngay trên máy.
+  ///
+  /// Giữ NGUYÊN trần ~12fps ([_frameInterval]) dù giờ đã có thể nhanh hơn: bộ
+  /// làm mượt (`KeypointSmoother`, alpha=0.25), cửa sổ chấm điểm giống bài mẫu
+  /// (30 frame) và các ngưỡng ước lượng đều được hiệu chỉnh cho nhịp này — đổi
+  /// nhịp là đổi luôn ý nghĩa của các con số đó mà chưa có số liệu thật.
+  void _onCameraFrameOnDevice(CameraImage image) {
+    final service = _poseService;
+    // ML Kit đang bận với frame trước: bỏ frame này (camera vẫn liên tục đẩy
+    // frame mới tới, không cần xếp hàng frame cũ).
+    if (service == null || _isDetecting) return;
+
+    final now = DateTime.now();
+    if (_lastFrameSentAt != null &&
+        now.difference(_lastFrameSentAt!) < _frameInterval) {
+      return;
+    }
+    if (_requestsInFlight() >= _maxInFlightOnDevice) return;
+    _lastFrameSentAt = now;
+
+    if (!_loggedFrameGeometry) {
+      _loggedFrameGeometry = true;
+      debugPrint(
+        '[pose-ondevice] frame dau tien: ${image.width}x${image.height}, '
+        'format=${image.format.group}, planes=${image.planes.length}, '
+        'rotation=$_rotationDegrees',
+      );
+    }
+    _detectAndSend(service, image);
+  }
+
+  Future<void> _detectAndSend(
+    OnDevicePoseService service,
+    CameraImage image,
+  ) async {
+    _isDetecting = true;
+    final startedAt = DateTime.now();
+    try {
+      // Có timeout vì `_isDetecting` chỉ được hạ ở `finally`: một lời gọi native
+      // treo mãi sẽ giữ cờ đó vĩnh viễn, không frame nào được gửi nữa và phiên
+      // chết im lặng thay vì rơi về đường dự phòng. Lần gọi ĐẦU TIÊN gồm cả việc
+      // nạp model nên có thể lâu — 3s là dư dả cho cả trường hợp đó.
+      final keypoints = await service
+          .detect(image, _rotationDegrees)
+          .timeout(_detectTimeout);
+      // Phiên có thể đã kết thúc hoặc đã chuyển sang đường ảnh JPEG trong lúc
+      // chờ ML Kit — gửi keypoint lúc đó chỉ làm rối server.
+      if (!mounted || !_useOnDevicePose) return;
+      _recordDetectSample(startedAt);
+      _onDeviceFailureCount = 0;
+      _markRequestSent();
+      _socket.sendKeypoints(keypoints);
+    } on UnsupportedCameraFrameException catch (e) {
+      // Thiết bị không cấp ảnh đúng dạng — thử lại vô ích, đổi đường luôn.
+      if (mounted) _fallbackToServerPose(e.message);
+    } catch (e) {
+      if (!mounted) return;
+      _onDeviceFailureCount++;
+      debugPrint(
+        '[pose-ondevice] loi nhan dien ($_onDeviceFailureCount lien tiep): $e',
+      );
+      if (_onDeviceFailureCount >= _maxConsecutiveOnDeviceFailures) {
+        _fallbackToServerPose('ML Kit lỗi $_onDeviceFailureCount lần liên tiếp');
+      }
+    } finally {
+      _isDetecting = false;
+    }
+  }
+
+  /// Bỏ chế độ nhận diện trên máy, chạy lại phiên bằng đường ảnh JPEG cũ (server
+  /// tự nhận diện bằng MediaPipe). Dùng khi server không hỗ trợ keypoint, thiết
+  /// bị không cấp ảnh NV21, hoặc ML Kit liên tục lỗi.
+  ///
+  /// Phải dựng lại cả camera (định dạng ảnh khác) lẫn kết nối (chế độ input là
+  /// thuộc tính cả phiên, không đổi giữa chừng được). Hệ quả: server thấy một
+  /// phiên MỚI, nên số rep đếm được trên kết nối trước bị mất — chấp nhận vì
+  /// đường này chỉ chạy khi có sự cố và thường xảy ra ngay frame đầu tiên.
+  Future<void> _fallbackToServerPose(String reason) async {
+    if (_isFallingBack || !_wantOnDevicePose) return;
+    _isFallingBack = true;
+    debugPrint('[pose-ondevice] ve duong anh JPEG cua server: $reason');
+    _wantOnDevicePose = false;
+    _useOnDevicePose = false;
+
+    try {
+      final controller = _controller;
+      _controller = null;
+      if (mounted) setState(() => _status = _SessionStatus.initializing);
+      if (controller != null) {
+        if (controller.value.isStreamingImages) {
+          try {
+            await controller.stopImageStream();
+          } catch (_) {}
+        }
+        await controller.dispose();
+      }
+      await _socketSub?.cancel();
+      _socketSub = null;
+      await _socket.close();
+      _responseTimeoutTimer?.cancel();
+      _awaitingResponse = false;
+      _pendingRequestTimestamps.clear();
+      _loggedFrameGeometry = false;
+      await _poseService?.close();
+      _poseService = null;
+    } finally {
+      _isFallingBack = false;
+    }
+    if (mounted) await _init();
+  }
+
+  /// Đo thời gian ML Kit nhận diện một frame, ghi log mỗi
+  /// [_latencyLogBatchSize] frame — chỉ trong debug. Số này quyết định hướng
+  /// này có đáng hay không: nếu quá gần `_frameInterval` (80ms) thì máy đó
+  /// không theo kịp nhịp 12fps.
+  void _recordDetectSample(DateTime startedAt) {
+    if (!kDebugMode) return;
+    final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+    _detectSampleCount++;
+    _detectTotalMs += elapsedMs;
+    if (elapsedMs > _detectMaxMs) _detectMaxMs = elapsedMs;
+    if (_detectSampleCount >= _latencyLogBatchSize) {
+      debugPrint(
+        '[pose-ondevice] ML Kit $_detectSampleCount frame: '
+        'avg ${(_detectTotalMs / _detectSampleCount).toStringAsFixed(0)}ms, '
+        'max ${_detectMaxMs}ms',
+      );
+      _detectSampleCount = 0;
+      _detectTotalMs = 0;
+      _detectMaxMs = 0;
+    }
+  }
+
   /// Accumulates one round-trip sample (send → this response) and flushes a
   /// summary to `debugPrint` every [_latencyLogBatchSize] frames. See the
   /// field doc comment above for why this exists.
@@ -531,7 +744,8 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       final avgMs = _latencyTotalMs / _latencySampleCount;
       final effectiveFps = avgMs > 0 ? 1000 / avgMs : 0;
       debugPrint(
-        '[analyze-latency] last $_latencySampleCount frames: '
+        '[analyze-latency] (${_useOnDevicePose ? "on-device" : "server-pose"}) '
+        'last $_latencySampleCount frames: '
         'avg ${avgMs.toStringAsFixed(0)}ms, max ${_latencyMaxMs}ms, '
         '~${effectiveFps.toStringAsFixed(1)} fps effective '
         '(dropped $_timeoutDropCount total this session)',
@@ -632,10 +846,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       // tục cho phép gửi frame mới, hàng đợi sẽ phình vô hạn suốt phiên nếu
       // không giới hạn. 50 là dư dả so với thực tế (bình thường chỉ 1-2 phần
       // tử tại một thời điểm).
-      if (_pendingRequestTimestamps.length >= 50) {
-        _pendingRequestTimestamps.removeAt(0);
-      }
-      _pendingRequestTimestamps.add(DateTime.now());
+      _markRequestSent();
       _socket.sendFrame(jpeg);
     } catch (_) {
       _awaitingResponse = false;
@@ -718,6 +929,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     _responseTimeoutTimer?.cancel();
     _socketSub?.cancel();
     _socket.close();
+    _poseService?.close();
     _controller?.dispose();
     _tts.stop();
     super.dispose();
