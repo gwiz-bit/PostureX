@@ -64,6 +64,44 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 24/09/2026
+
+**App crash ngay khi mở trên điện thoại thật, ngay sau khi cài bản 21/09/2026
+(ML Kit on-device) — thiếu quy tắc ProGuard cho lớp nạp bằng reflection.**
+Test thật đầu tiên trên điện thoại (bản 21/09 trước đó mới chỉ chạy qua
+emulator, không rút gọn mã) lộ ra: cài xong mở app là crash ngay, kể cả sau
+khi gỡ sạch cài lại (loại được khả năng do dữ liệu WorkManager cũ còn sót).
+
+**Nguyên nhân xác nhận qua `adb logcat`:** Flutter Gradle Plugin tự bật rút
+gọn mã (R8) cho bản release, nhưng dự án chưa từng có
+`android/app/proguard-rules.pro` nào — R8 đổi tên/xoá mất constructor không
+tham số của các lớp ML Kit tự nạp bằng reflection lúc khởi động
+(`PoseRegistrar`, `CommonComponentRegistrar`, `VisionCommonRegistrar`), ném
+`NoSuchMethodException` ngay trong `ComponentDiscovery`. Cùng một lượt xử lý
+`InitializationProvider.onCreate()`, `WorkManager` (dùng chung cơ chế
+`androidx.startup.Initializer`) sập theo ngay sau đó với
+`RuntimeException: Failed to create an instance of androidx.work.impl.WorkDatabase`
+— khiến log ban đầu dễ đọc nhầm nguyên nhân là WorkManager/Room, trong khi lỗi
+gốc nằm ở dòng cảnh báo `ComponentDiscovery` phía trên.
+
+**Sửa:** thêm `android/app/proguard-rules.pro` (giữ lại 3 lớp Registrar của
+ML Kit + `MlKitComponentRegistrar` nói chung, cùng mọi lớp implement
+`androidx.startup.Initializer` + `androidx.work.**`/`androidx.room.**`), và
+trỏ `proguardFiles(...)` trong `android/app/build.gradle.kts` (trước đó
+`buildTypes.release` không tham chiếu file proguard nào cả — rút gọn mã vẫn
+chạy bằng cấu hình ẩn mặc định của Flutter Gradle Plugin, chỉ bảo vệ được lớp
+của chính Flutter engine, không biết gì về plugin bên thứ ba). Build lại,
+cài lại, xác nhận qua `adb logcat` không còn `FATAL EXCEPTION`, tiến trình
+sống bình thường sau khi mở.
+
+⚠️ **Đây là lỗi thuộc riêng bản build release (rút gọn mã) — không lộ ra khi
+chạy `flutter run` debug/profile hay qua emulator**, đúng lý do commit
+21/09/2026 "test qua emulator" không phát hiện được. Bất kỳ plugin native
+mới nào dùng reflection để tự đăng ký (ML Kit, Firebase, các thư viện theo
+mẫu `ComponentRegistrar`/`Initializer`) đều có nguy cơ tương tự nếu thiếu
+keep rule — cần build thử bản **release** thật (không chỉ debug) trên máy
+thật trước khi coi một plugin mới là "đã tích hợp xong".
+
 ### 21/09/2026
 
 **Nhận diện tư thế chạy NGAY TRÊN ĐIỆN THOẠI (ML Kit, chỉ Android) — server chỉ còn
