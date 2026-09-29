@@ -1,0 +1,4173 @@
+[
+  {
+    "id": 145,
+    "name": "Abdominals Stretch Variation Four",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 146,
+    "name": "Abdominals Stretch Variation One",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 147,
+    "name": "Abdominals Stretch Variation Three",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 148,
+    "name": "Abdominals Stretch Variation Two",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 278,
+    "name": "Arc Trainer",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 336,
+    "name": "Arnold Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 279,
+    "name": "Assault Bike",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 199,
+    "name": "B Stance Hip Thrust",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 271,
+    "name": "Back Extension",
+    "muscle_groups": [
+      "Lower Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 11,
+    "name": "Backstroke Swim",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 12,
+    "name": "Band Assisted Pull Up",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 72,
+    "name": "Band Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 337,
+    "name": "Band External Rotation",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 200,
+    "name": "Band Glute Bridge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 338,
+    "name": "Band High Face Pull",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 201,
+    "name": "Band Hip Abduction",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 13,
+    "name": "Band Kneeling Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 339,
+    "name": "Band Lateral Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 249,
+    "name": "Band Leg Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 340,
+    "name": "Band Overhead Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 14,
+    "name": "Band Pullover",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 202,
+    "name": "Band Romanian Deadlift",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 15,
+    "name": "Band Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 16,
+    "name": "Band Seated Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 381,
+    "name": "Band Shrug",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 341,
+    "name": "Band Single Arm Lateral Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 280,
+    "name": "Band Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 149,
+    "name": "Band Wood Chopper",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 281,
+    "name": "Barbell Banded Back Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 382,
+    "name": "Barbell Behind The Back 30 Degree Shrug",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 106,
+    "name": "Barbell Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 18,
+    "name": "Barbell Bent Over Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 17,
+    "name": "Barbell Bent Over Row Overhand",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 150,
+    "name": "Barbell Clean And Press",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 396,
+    "name": "Barbell Close Grip Bench Press",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 73,
+    "name": "Barbell Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 383,
+    "name": "Barbell Deadlift",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 74,
+    "name": "Barbell Drag Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 107,
+    "name": "Barbell Floor Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 282,
+    "name": "Barbell Front Rack Step Up Knee Drive",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 108,
+    "name": "Barbell High Incline Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 203,
+    "name": "Barbell Hip Thrust",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 109,
+    "name": "Barbell Incline Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 151,
+    "name": "Barbell Muscle Snatch",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 342,
+    "name": "Barbell Overhead Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 152,
+    "name": "Barbell Power Snatch",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 19,
+    "name": "Barbell Pullover",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 384,
+    "name": "Barbell Rack Pull",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 283,
+    "name": "Barbell Reverse Lunge",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 250,
+    "name": "Barbell Romanian Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 385,
+    "name": "Barbell Shrug",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 153,
+    "name": "Barbell Snatch",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 154,
+    "name": "Barbell Spinal Jefferson Curl",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 204,
+    "name": "Barbell Split Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 284,
+    "name": "Barbell Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 285,
+    "name": "Barbell Step Up Knee Drive",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 205,
+    "name": "Barbell Stiff Leg Deadlifts",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 206,
+    "name": "Barbell Thruster",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 343,
+    "name": "Barbell Upright Row",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 192,
+    "name": "Barbell Wrist Curl",
+    "muscle_groups": [
+      "Forearms"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 344,
+    "name": "Battle Ropes",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 75,
+    "name": "Bayesian Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 345,
+    "name": "Behind The Neck Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 286,
+    "name": "Belt Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 397,
+    "name": "Bench Dips",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 5,
+    "name": "Bicep Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 155,
+    "name": "Bird Dog",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 207,
+    "name": "Bodyweight Alternating Lateral Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 208,
+    "name": "Bodyweight Alternating Reverse Lunges",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 209,
+    "name": "Bodyweight Box Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 156,
+    "name": "Bodyweight Deadlift",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 97,
+    "name": "Bodyweight Donkey Calf Raise",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 110,
+    "name": "Bodyweight Elevated Push Up",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 210,
+    "name": "Bodyweight Hip Abduction",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 111,
+    "name": "Bodyweight Knee Push Ups",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 211,
+    "name": "Bodyweight Reverse Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 157,
+    "name": "Bodyweight Russian Twist",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 158,
+    "name": "Bodyweight Spinal Jefferson Curl",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 287,
+    "name": "Bodyweight Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 288,
+    "name": "Box Jump",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "High",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 20,
+    "name": "Breaststroke Swim",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 289,
+    "name": "Bulgarian Split Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 159,
+    "name": "Burpee",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "High",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 21,
+    "name": "Butterfly Swim",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 386,
+    "name": "Cable 30 Degree Shrug",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 76,
+    "name": "Cable Bar Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 346,
+    "name": "Cable Bar Face Pull",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 398,
+    "name": "Cable Bar Pushdown",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 112,
+    "name": "Cable Bench Chest Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 113,
+    "name": "Cable Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 212,
+    "name": "Cable Bench Straight Leg Kickback",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 114,
+    "name": "Cable Chest Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 115,
+    "name": "Cable Decline Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 347,
+    "name": "Cable External Rotation",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 348,
+    "name": "Cable Front Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 116,
+    "name": "Cable High To Low Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 213,
+    "name": "Cable Hip Abduction",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 117,
+    "name": "Cable Incline Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 214,
+    "name": "Cable Kickback",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 349,
+    "name": "Cable Low Single Arm Lateral Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 118,
+    "name": "Cable Low To High Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 350,
+    "name": "Cable Overhead Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 119,
+    "name": "Cable Pec Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 215,
+    "name": "Cable Pull Through",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 351,
+    "name": "Cable Rope Hammer Curl",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 352,
+    "name": "Cable Rope Kneeling Face Pull",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 399,
+    "name": "Cable Rope Overhead Tricep Extension",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 22,
+    "name": "Cable Rope Pullover",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 400,
+    "name": "Cable Rope Pushdown",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 23,
+    "name": "Cable Row Bar Standing Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 353,
+    "name": "Cable Seated Rope Face Pull",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 160,
+    "name": "Cable Side Bend",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 24,
+    "name": "Cable Single Arm Neutral Grip Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 401,
+    "name": "Cable Single Arm Rope Pushdown",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 25,
+    "name": "Cable Single Arm Underhand Grip Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 251,
+    "name": "Cable Single Leg Laying Leg Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 161,
+    "name": "Cable Standing Low To High Wood Chopper",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 120,
+    "name": "Cable Standing Single Arm Chest Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 26,
+    "name": "Cable Supinating Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 162,
+    "name": "Cable Wood Chopper",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 193,
+    "name": "Cable Wrist Curl",
+    "muscle_groups": [
+      "Forearms"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 163,
+    "name": "Captains Chair Knee Raise",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 27,
+    "name": "Chest Supported Dumbbell Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 28,
+    "name": "Chest Supported T Bar Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 29,
+    "name": "Chin Ups",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 77,
+    "name": "Close Grip Barbell Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 7,
+    "name": "Cossack Squat",
+    "muscle_groups": [
+      "Adductors"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 78,
+    "name": "Cross Body Hammer Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 354,
+    "name": "Cuban Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 290,
+    "name": "Cycling Cooldown",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 291,
+    "name": "Cycling Intervals",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 292,
+    "name": "Cycling Sprint",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 293,
+    "name": "Cycling Warmup",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 164,
+    "name": "Dead Bug",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 194,
+    "name": "Dead Hang",
+    "muscle_groups": [
+      "Forearms"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 121,
+    "name": "Decline Barbell Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 165,
+    "name": "Decline Crunch",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 122,
+    "name": "Decline Machine Chest Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 123,
+    "name": "Decline Push Up",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 166,
+    "name": "Decline Sit Up",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 252,
+    "name": "Deficit Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 253,
+    "name": "Deficit Dumbbell Romanian Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 402,
+    "name": "Diamond Push Ups",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 294,
+    "name": "Dumbbell Alternating Forward Lunge",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 272,
+    "name": "Dumbbell Back Extension",
+    "muscle_groups": [
+      "Lower Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 124,
+    "name": "Dumbbell Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 216,
+    "name": "Dumbbell Bulgarian Split Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 125,
+    "name": "Dumbbell Chest Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 79,
+    "name": "Dumbbell Concentration Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 8,
+    "name": "Dumbbell Cossack Squat",
+    "muscle_groups": [
+      "Adductors"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 254,
+    "name": "Dumbbell Cross Body Romanian Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 80,
+    "name": "Dumbbell Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 255,
+    "name": "Dumbbell Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 126,
+    "name": "Dumbbell Decline Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 127,
+    "name": "Dumbbell Decline Chest Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 403,
+    "name": "Dumbbell Decline Skullcrusher",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 217,
+    "name": "Dumbbell Feet Elevated Glute Bridge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 218,
+    "name": "Dumbbell Figure Four Heels Elevated Hip Thrust",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 355,
+    "name": "Dumbbell Front Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 296,
+    "name": "Dumbbell Front Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 295,
+    "name": "Dumbbell Front Squat Tempo",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 219,
+    "name": "Dumbbell Goblet Alternating Curtsy Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 220,
+    "name": "Dumbbell Goblet Bulgarian Split Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 221,
+    "name": "Dumbbell Goblet Forward Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 222,
+    "name": "Dumbbell Goblet Reverse Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 223,
+    "name": "Dumbbell Goblet Split Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 224,
+    "name": "Dumbbell Goblet Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 81,
+    "name": "Dumbbell Hammer Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 225,
+    "name": "Dumbbell Heels Elevated Hip Thrust",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 128,
+    "name": "Dumbbell Incline Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 129,
+    "name": "Dumbbell Incline Chest Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 82,
+    "name": "Dumbbell Incline Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 356,
+    "name": "Dumbbell Incline Front Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 83,
+    "name": "Dumbbell Incline Hammer Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 9,
+    "name": "Dumbbell Lateral Lunge",
+    "muscle_groups": [
+      "Adductors"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 357,
+    "name": "Dumbbell Lateral Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 358,
+    "name": "Dumbbell Laying Reverse Fly",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 256,
+    "name": "Dumbbell Leg Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 297,
+    "name": "Dumbbell Overhead Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 84,
+    "name": "Dumbbell Preacher Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 359,
+    "name": "Dumbbell Push Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 360,
+    "name": "Dumbbell Rear Delt Fly",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 387,
+    "name": "Dumbbell Row Bilateral",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 388,
+    "name": "Dumbbell Row Unilateral",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 167,
+    "name": "Dumbbell Russian Twist",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 361,
+    "name": "Dumbbell Seated Overhead Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 404,
+    "name": "Dumbbell Seated Overhead Tricep Extension",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 362,
+    "name": "Dumbbell Seated Rear Delt Fly",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 389,
+    "name": "Dumbbell Seated Shrug",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 390,
+    "name": "Dumbbell Shrug",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 168,
+    "name": "Dumbbell Side Bend",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 130,
+    "name": "Dumbbell Single Arm Chest Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 169,
+    "name": "Dumbbell Single Arm Clean And Press",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 30,
+    "name": "Dumbbell Single Arm Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 98,
+    "name": "Dumbbell Single Leg Calf Raise",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 226,
+    "name": "Dumbbell Single Leg Hip Thrust",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 170,
+    "name": "Dumbbell Situp",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 405,
+    "name": "Dumbbell Skullcrusher",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 171,
+    "name": "Dumbbell Spinal Jefferson Curl",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 85,
+    "name": "Dumbbell Standing Single Arm Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 86,
+    "name": "Dumbbell Standing Single Arm Hammer Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 298,
+    "name": "Dumbbell Step Up Low",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 227,
+    "name": "Dumbbell Sumo Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 172,
+    "name": "Dumbbell Superman",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 228,
+    "name": "Dumbbell Thruster",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 406,
+    "name": "Dumbbell Tricep Kickback",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 363,
+    "name": "Dumbbell Upright Row",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 195,
+    "name": "Dumbbell Wrist Curl",
+    "muscle_groups": [
+      "Forearms"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 196,
+    "name": "Dumbbell Wrist Extension",
+    "muscle_groups": [
+      "Forearms"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 173,
+    "name": "Elbow Side Plank",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 299,
+    "name": "Elliptical",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 87,
+    "name": "Ez Bar Preacher Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 88,
+    "name": "Ez Bar Reverse Preacher Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 131,
+    "name": "Floor Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 229,
+    "name": "Forward Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 31,
+    "name": "Freestyle Swim",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 230,
+    "name": "Frog Pump",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 300,
+    "name": "Front Foot Elevated Split Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 174,
+    "name": "Front Plank",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 301,
+    "name": "Front Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 231,
+    "name": "Glute Bridge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 232,
+    "name": "Glute Kickback Machine",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 233,
+    "name": "Good Mornings",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 32,
+    "name": "Hammer Strength High Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 33,
+    "name": "Hammer Strength Iso Lateral Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 257,
+    "name": "Hamstring Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 175,
+    "name": "Hand Plank",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 302,
+    "name": "Hang Clean",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 303,
+    "name": "Hang Power Clean",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 176,
+    "name": "Hang Snatch",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 177,
+    "name": "Hanging Knee Raises",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 304,
+    "name": "Hiking",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 305,
+    "name": "Hill Climb Repeats",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 258,
+    "name": "Hip Hinge Speed Romanian Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 99,
+    "name": "Horizontal Leg Press Calf Press",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 132,
+    "name": "Incline Machine Chest Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 133,
+    "name": "Incline Push Up",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 306,
+    "name": "Incline Treadmill Walk",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 307,
+    "name": "Indoor Cycling Spin",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 34,
+    "name": "Inverted Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 407,
+    "name": "Jm Press",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 100,
+    "name": "Jump Rope",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "None",
+    "impact": "High",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 308,
+    "name": "Jump Squats",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "High",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 6,
+    "name": "Jumping Jack",
+    "muscle_groups": [
+      "Calves",
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "High",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 234,
+    "name": "Kettlebell Alternating Curtsy Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 235,
+    "name": "Kettlebell Assisted Bulgarian Split Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 134,
+    "name": "Kettlebell Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 101,
+    "name": "Kettlebell Calf Raise",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 89,
+    "name": "Kettlebell Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 391,
+    "name": "Kettlebell Farmers Carry",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 364,
+    "name": "Kettlebell Front Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 90,
+    "name": "Kettlebell Goblet Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 236,
+    "name": "Kettlebell Goblet Squat",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 35,
+    "name": "Kettlebell Gorilla Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 237,
+    "name": "Kettlebell Hip Thrust",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 135,
+    "name": "Kettlebell Incline Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 365,
+    "name": "Kettlebell Push Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 259,
+    "name": "Kettlebell Romanian Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 37,
+    "name": "Kettlebell Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 36,
+    "name": "Kettlebell Row Single",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 366,
+    "name": "Kettlebell Seated Overhead Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 392,
+    "name": "Kettlebell Shrug",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 38,
+    "name": "Kettlebell Single Arm Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 178,
+    "name": "Kettlebell Spinal Jefferson Curl",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 238,
+    "name": "Kettlebell Sumo Deadlift",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 239,
+    "name": "Kettlebell Swing",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 240,
+    "name": "Kettlebell Thruster",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 179,
+    "name": "Kettlebell Turkish Get Up",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 180,
+    "name": "Kettlebell Windmill",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 260,
+    "name": "Kickstand Dumbbell Romanian Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 181,
+    "name": "Kneeling Cable Crunch",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 367,
+    "name": "Landmine Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 39,
+    "name": "Landmine T Bar Rows",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 40,
+    "name": "Lat Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 368,
+    "name": "Leaning Cable Lateral Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 309,
+    "name": "Long Run",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 3,
+    "name": "Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 241,
+    "name": "Lunge Walking",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 261,
+    "name": "Lying Leg Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 273,
+    "name": "Machine 45 Degree Back Extension",
+    "muscle_groups": [
+      "Lower Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 41,
+    "name": "Machine Assisted Pull Up",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 408,
+    "name": "Machine Cable V Bar Push Downs",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 136,
+    "name": "Machine Chest Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 182,
+    "name": "Machine Crunch",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 409,
+    "name": "Machine Dips",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 369,
+    "name": "Machine Face Pulls",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 370,
+    "name": "Machine Front Military Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 310,
+    "name": "Machine Hack Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 242,
+    "name": "Machine Hip Abduction",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 10,
+    "name": "Machine Hip Adduction",
+    "muscle_groups": [
+      "Adductors"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 243,
+    "name": "Machine Hip Thrust",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 311,
+    "name": "Machine Horizontal Leg Press",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 42,
+    "name": "Machine Lat Pullover",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 371,
+    "name": "Machine Lateral Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 312,
+    "name": "Machine Leg Extension",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 313,
+    "name": "Machine Leg Press",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 43,
+    "name": "Machine Neutral Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 137,
+    "name": "Machine Pec Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 314,
+    "name": "Machine Plate Loaded Leg Extension",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 44,
+    "name": "Machine Plate Loaded T Bar Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 91,
+    "name": "Machine Preacher Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 45,
+    "name": "Machine Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 46,
+    "name": "Machine Seated Cable Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 410,
+    "name": "Machine Tricep Extension",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 47,
+    "name": "Machine Underhand Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 183,
+    "name": "Man Maker",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 48,
+    "name": "Meadows Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 184,
+    "name": "Mountain Climber",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "High",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 49,
+    "name": "Narrow Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 276,
+    "name": "Neck Curl",
+    "muscle_groups": [
+      "Neck"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 277,
+    "name": "Neck Extension",
+    "muscle_groups": [
+      "Neck"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 138,
+    "name": "Neutral Grip Dumbbell Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 50,
+    "name": "Neutral Grip Lat Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 51,
+    "name": "Neutral Grip Pull Up",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 262,
+    "name": "Nordic Hamstring Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 185,
+    "name": "Pallof Press",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 411,
+    "name": "Parralel Bar Dips",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 315,
+    "name": "Pause Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 52,
+    "name": "Pendlay Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 316,
+    "name": "Pendulum Squat V Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 4,
+    "name": "Plank",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 244,
+    "name": "Plate Forward Lunge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 372,
+    "name": "Plate Front Raise",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 197,
+    "name": "Plate Pinch",
+    "muscle_groups": [
+      "Forearms"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 317,
+    "name": "Power Clean",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 53,
+    "name": "Pull Ups",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 373,
+    "name": "Push Jerk",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 139,
+    "name": "Push Up",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 2,
+    "name": "Push-up",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 140,
+    "name": "Reverse Grip Barbell Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 92,
+    "name": "Reverse Grip Barbell Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 412,
+    "name": "Reverse Grip Tricep Pushdown",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 318,
+    "name": "Reverse Hack Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 274,
+    "name": "Reverse Hyperextension",
+    "muscle_groups": [
+      "Lower Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 374,
+    "name": "Reverse Pec Deck",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 263,
+    "name": "Romanian Deadlift Hamstring Sweeps",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 54,
+    "name": "Rowing Intervals",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 55,
+    "name": "Rowing Machine Steady State",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 56,
+    "name": "Rowing Sprint",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 319,
+    "name": "Running Cooldown",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 320,
+    "name": "Running Intervals",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 57,
+    "name": "Seal Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 102,
+    "name": "Seated Calf Raise",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 93,
+    "name": "Seated Dumbbell Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 264,
+    "name": "Seated Leg Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 375,
+    "name": "Shadow Boxing",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 141,
+    "name": "Single Arm Cable Fly",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 376,
+    "name": "Single Arm Dumbbell Overhead Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 377,
+    "name": "Single Arm Landmine Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 58,
+    "name": "Single Arm Lat Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 413,
+    "name": "Single Arm Overhead Cable Extension",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 414,
+    "name": "Single Arm Tricep Extension",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 275,
+    "name": "Single Leg Back Extension",
+    "muscle_groups": [
+      "Lower Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 265,
+    "name": "Single Leg Dumbbell Romanian Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 245,
+    "name": "Single Leg Glute Bridge",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 246,
+    "name": "Single Leg Hip Thrust",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 266,
+    "name": "Single Leg Kettlebell Romanian Deadlift Deficit",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 321,
+    "name": "Single Leg Press",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 103,
+    "name": "Single Leg Standing Calf Raise",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 322,
+    "name": "Single Leg Step Down",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 267,
+    "name": "Single Legged Romanian Deadlifts",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 323,
+    "name": "Sissy Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 59,
+    "name": "Ski Erg",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 60,
+    "name": "Sled Pull",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 324,
+    "name": "Sled Push",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 142,
+    "name": "Smith Machine Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 61,
+    "name": "Smith Machine Bent Over Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 104,
+    "name": "Smith Machine Calf Raise",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 415,
+    "name": "Smith Machine Close Grip Bench Press",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 325,
+    "name": "Smith Machine Front Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 143,
+    "name": "Smith Machine Incline Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 378,
+    "name": "Smith Machine Seated Overhead Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 326,
+    "name": "Smith Machine Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 393,
+    "name": "Smith Machine Standing Shrugs",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 268,
+    "name": "Smith Machine Sumo Romanian Deadlift",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 186,
+    "name": "Snatch Grip Deadlift",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 187,
+    "name": "Snatch Grip High Pull",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 188,
+    "name": "Snatch Pull",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 94,
+    "name": "Spider Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 379,
+    "name": "Split Jerk",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 327,
+    "name": "Split Squat Isometric Hold",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 1,
+    "name": "Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 269,
+    "name": "Stability Ball Leg Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 328,
+    "name": "Stair Climber",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 247,
+    "name": "Standing Cable Hip Abduction",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 105,
+    "name": "Standing Calf Raise Machine",
+    "muscle_groups": [
+      "Calves"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 329,
+    "name": "Steady State Ride",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 62,
+    "name": "Straight Arm Lat Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 189,
+    "name": "Supermans",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 63,
+    "name": "Swim Kick Drill",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 64,
+    "name": "Swim Pull Drill",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 65,
+    "name": "Swim Sprint Intervals",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 416,
+    "name": "Tate Press",
+    "muscle_groups": [
+      "Triceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 330,
+    "name": "Tempo Run",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 417,
+    "name": "Tibialis Raise",
+    "muscle_groups": [
+      "tibialis"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 190,
+    "name": "Toes To Bar",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 270,
+    "name": "Towel Slide Leg Curl",
+    "muscle_groups": [
+      "Hamstrings"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 331,
+    "name": "Trail Run",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 394,
+    "name": "Trap Bar Deadlift",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 395,
+    "name": "Trap Bar Shrug",
+    "muscle_groups": [
+      "Trapezius"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 332,
+    "name": "Treadmill Run",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "None",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 66,
+    "name": "Underhand Barbell Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Advanced"
+  },
+  {
+    "id": 191,
+    "name": "V Up",
+    "muscle_groups": [
+      "Core"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 333,
+    "name": "Versaclimber",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 248,
+    "name": "Wall Ball",
+    "muscle_groups": [
+      "Glutes"
+    ],
+    "spine": "Low",
+    "impact": "High",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 334,
+    "name": "Wall Sit",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Beginner"
+  },
+  {
+    "id": 67,
+    "name": "Weighted Pull Ups",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 144,
+    "name": "Wide Grip Barbell Bench Press",
+    "muscle_groups": [
+      "Chest"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 95,
+    "name": "Wide Grip Barbell Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 68,
+    "name": "Wide Grip Lat Pulldown",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 69,
+    "name": "Wide Grip Pull Up",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 70,
+    "name": "Wide Grip Seated Cable Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 198,
+    "name": "Wrist Roller",
+    "muscle_groups": [
+      "Forearms"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 71,
+    "name": "Yates Row",
+    "muscle_groups": [
+      "Back"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 380,
+    "name": "Z Press",
+    "muscle_groups": [
+      "Shoulders"
+    ],
+    "spine": "Medium",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 335,
+    "name": "Zercher Squat",
+    "muscle_groups": [
+      "Quadriceps"
+    ],
+    "spine": "High",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  },
+  {
+    "id": 96,
+    "name": "Zottman Curl",
+    "muscle_groups": [
+      "Biceps"
+    ],
+    "spine": "Low",
+    "impact": "Low",
+    "difficulty": "Intermediate"
+  }
+]
