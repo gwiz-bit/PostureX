@@ -80,6 +80,8 @@ class KeypointSmoother:
                 # trễ (vd tay vừa ra khỏi khung hình nhưng vẫn coi là "thấy"
                 # thêm vài frame vì độ tin cậy cũ còn cao).
                 visibility=new.visibility,
+                # Kích thước ảnh thuộc về frame MỚI, không làm mượt.
+                aspect=new.aspect,
             )
             for new, old in zip(keypoints, prev, strict=True)
         ]

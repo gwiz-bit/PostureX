@@ -16,6 +16,7 @@ import '../features/workout/workout_module.dart';
 import '../models/frame_analysis_result.dart';
 import '../services/analyze_socket_service.dart';
 import '../services/on_device_pose_service.dart';
+import '../services/pose_keypoint_encoder.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_locale.dart';
 import '../utils/exercise_videos.dart';
@@ -146,6 +147,9 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   bool _correct = true;
   List<String> _errors = const [];
   Map<String, Point>? _keypoints;
+
+  /// Làm mượt riêng cho khung xương vẽ từ ML Kit tại máy (không ảnh hưởng góc).
+  final _localSkeletonSmoother = KeypointEma();
   final List<bool> _correctnessSamples = [];
 
   /// Raw joint angles from the most recent frame — shown in a small debug
@@ -470,7 +474,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         // analyzer uses for angle math) — see SkeletonPainter's doc comment.
         // Falls back to keypoints only in case a stale build ever talks to a
         // backend that hasn't deployed all_keypoints yet.
-        _keypoints = frame.allKeypoints ?? frame.keypoints;
+        //
+        // Trên đường nhận diện tại máy thì KHÔNG ghi đè: khung xương đã được
+        // vẽ trực tiếp từ kết quả ML Kit ở `_detectAndSend` — phản hồi của
+        // server về sau vài frame nên ghi đè sẽ kéo khung xương lùi lại.
+        if (!_useOnDevicePose) {
+          _keypoints = frame.allKeypoints ?? frame.keypoints;
+        }
         _similarityScore = frame.similarityScore;
         _keyAngles = frame.keyAngles;
       });
@@ -634,7 +644,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       // treo mãi sẽ giữ cờ đó vĩnh viễn, không frame nào được gửi nữa và phiên
       // chết im lặng thay vì rơi về đường dự phòng. Lần gọi ĐẦU TIÊN gồm cả việc
       // nạp model nên có thể lâu — 3s là dư dả cho cả trường hợp đó.
-      final keypoints = await service
+      final pose = await service
           .detect(image, _rotationDegrees)
           .timeout(_detectTimeout);
       // Phiên có thể đã kết thúc hoặc đã chuyển sang đường ảnh JPEG trong lúc
@@ -642,8 +652,19 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       if (!mounted || !_useOnDevicePose) return;
       _recordDetectSample(startedAt);
       _onDeviceFailureCount = 0;
+      // Vẽ khung xương NGAY từ kết quả vừa nhận diện, không đợi vòng đi server.
+      if (pose == null) {
+        _localSkeletonSmoother.reset();
+      }
+      setState(() {
+        _keypoints = pose == null
+            ? null
+            : _localSkeletonSmoother.smooth(
+                displayPointsFromEncoded(pose.keypoints),
+              );
+      });
       _markRequestSent();
-      _socket.sendKeypoints(keypoints);
+      _socket.sendKeypoints(pose?.keypoints, aspect: pose?.aspect);
     } on UnsupportedCameraFrameException catch (e) {
       // Thiết bị không cấp ảnh đúng dạng — thử lại vô ích, đổi đường luôn.
       if (mounted) _fallbackToServerPose(e.message);

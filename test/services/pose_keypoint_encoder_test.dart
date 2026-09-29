@@ -2,6 +2,7 @@ import 'dart:ui' show Size;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:posturex/models/frame_analysis_result.dart' show Point;
 import 'package:posturex/services/pose_keypoint_encoder.dart';
 
 /// Thứ tự 33 khớp mà BACKEND mong đợi (`PoseEstimator.LANDMARK_NAMES`). Nếu
@@ -120,6 +121,73 @@ void main() {
 
     test('kích thước ảnh không hợp lệ thì trả null, không chia cho 0', () {
       expect(encodeLandmarks(_allLandmarks(), Size.zero), isNull);
+    });
+  });
+
+  group('displayPointsFromEncoded', () {
+    // Mỗi khớp một x khác nhau (= chỉ số / 100) để bắt nhầm khớp trái/phải.
+    final encoded = [
+      for (var i = 0; i < poseLandmarkCount; i++) [i / 100, 0.5, 0.0, 0.8],
+    ];
+
+    test('đặt tên khớp đúng vị trí — khớp trái/phải không bị hoán đổi', () {
+      final points = displayPointsFromEncoded(encoded);
+      expect(points['nose']!.x, 0.0);
+      expect(points['left_shoulder']!.x, 0.11);
+      expect(points['right_shoulder']!.x, 0.12);
+      expect(points['left_knee']!.x, 0.25);
+      expect(points['right_ankle']!.x, 0.28);
+      expect(points['right_foot_index']!.x, 0.32);
+    });
+
+    test('bỏ đầu ngón tay như server, giữ mọi khớp còn lại', () {
+      final points = displayPointsFromEncoded(encoded);
+      expect(points.length, poseLandmarkCount - 6);
+      for (final hidden in [
+        'left_pinky', 'right_pinky', 'left_index',
+        'right_index', 'left_thumb', 'right_thumb',
+      ]) {
+        expect(points.containsKey(hidden), isFalse, reason: hidden);
+      }
+    });
+
+    test('mang theo visibility', () {
+      expect(displayPointsFromEncoded(encoded)['left_hip']!.visibility, 0.8);
+    });
+  });
+
+  group('KeypointEma', () {
+    Map<String, Point> at(double x, {double visibility = 1.0}) => {
+      'a': Point(x: x, y: 0.5, visibility: visibility),
+    };
+
+    test('frame đầu giữ nguyên', () {
+      expect(KeypointEma().smooth(at(0.3))['a']!.x, 0.3);
+    });
+
+    test('làm giảm cú nhảy nhưng không đứng yên: 0,6·0,9 + 0,4·0,5 = 0,74', () {
+      final ema = KeypointEma(alpha: 0.6)..smooth(at(0.5));
+      expect(ema.smooth(at(0.9))['a']!.x, closeTo(0.74, 1e-9));
+    });
+
+    test('hội tụ về vị trí thật khi giữ yên', () {
+      final ema = KeypointEma(alpha: 0.6)..smooth(at(0.2));
+      var out = 0.0;
+      for (var i = 0; i < 20; i++) {
+        out = ema.smooth(at(0.8))['a']!.x;
+      }
+      expect(out, closeTo(0.8, 1e-6));
+    });
+
+    test('visibility lấy của frame mới, không làm mượt', () {
+      final ema = KeypointEma()..smooth(at(0.5, visibility: 1.0));
+      expect(ema.smooth(at(0.5, visibility: 0.1))['a']!.visibility, 0.1);
+    });
+
+    test('reset: lần thấy lại không bị kéo về vị trí cũ', () {
+      final ema = KeypointEma()..smooth(at(0.1));
+      ema.reset();
+      expect(ema.smooth(at(0.9))['a']!.x, 0.9);
     });
   });
 }

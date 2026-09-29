@@ -68,7 +68,10 @@ def _extract(video_path: Path, joints: tuple[str, str, str]):
                 else:
                     named = named_keypoints(keypoints)
                     frames_full.append({
-                        name: {"x": p.x, "y": p.y, "z": p.z, "visibility": p.visibility}
+                        name: {
+                            "x": p.x, "y": p.y, "z": p.z,
+                            "visibility": p.visibility, "aspect": p.aspect,
+                        }
                         for name, p in named.items()
                         if name in DISPLAY_LANDMARK_NAMES
                     })

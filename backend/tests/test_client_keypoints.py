@@ -104,6 +104,22 @@ def test_parse_kep_visibility_vao_0_1() -> None:
     assert parsed[1].visibility == 1.0
 
 
+def test_parse_aspect_co_thi_dung_khong_co_thi_mac_dinh_1() -> None:
+    row = [[0.5, 0.5, 0.0, 1.0]] * LANDMARK_COUNT
+    with_aspect = parse_client_keypoints(json.dumps({"keypoints": row, "aspect": 0.667}))
+    without = parse_client_keypoints(json.dumps({"keypoints": row}))
+    assert with_aspect is not None and without is not None
+    assert all(k.aspect == 0.667 for k in with_aspect)
+    assert all(k.aspect == 1.0 for k in without)  # client cũ không vỡ
+
+
+@pytest.mark.parametrize("bad", [0, -1, 0.0, 99, "0.667", True, math.nan, math.inf])
+def test_parse_aspect_vo_ly_bi_tu_choi(bad) -> None:
+    row = [[0.5, 0.5, 0.0, 1.0]] * LANDMARK_COUNT
+    with pytest.raises(ValueError, match="aspect"):
+        parse_client_keypoints(json.dumps({"keypoints": row, "aspect": bad}))
+
+
 def test_parse_cho_phep_khop_hoi_vuot_khung_hinh() -> None:
     """Khớp ngoài khung hình (x hơi âm, y hơi >1) là hợp lệ, không được từ chối."""
     row = [[0.5, 0.5, 0.0, 1.0]] * LANDMARK_COUNT
@@ -184,6 +200,25 @@ def test_dem_dung_rep_qua_keypoint_khong_can_pose_estimation(ws_client: TestClie
     assert last["correct"] is True
     assert last["key_angles"]["left_knee"] is not None
     assert last["keypoints"] is not None
+
+
+def test_aspect_di_het_duong_ong_den_goc_khop(ws_client: TestClient, monkeypatch) -> None:
+    """Cùng một tư thế nhưng khác aspect phải cho góc khác nhau ở tận key_angles —
+    chứng minh aspect không bị đánh rơi giữa parse → làm mượt → analyzer."""
+    _forbid_server_pose_estimation(monkeypatch)
+    pose = squat_pose(120.0, 175.0)
+    body = [[k.x, k.y, k.z, k.visibility] for k in pose]
+
+    def knee_angle(aspect: float) -> float:
+        ctx, init = _connect(ws_client, input="keypoints")
+        with ctx as ws:
+            ws.send_text(json.dumps(init))
+            ws.receive_json()
+            ws.send_text(json.dumps({"keypoints": body, "aspect": aspect}))
+            return ws.receive_json()["key_angles"]["left_knee"]
+
+    assert knee_angle(1.0) == pytest.approx(120.0, abs=1.0)
+    assert abs(knee_angle(0.5) - knee_angle(1.0)) > 3.0
 
 
 def test_null_bao_khong_thay_nguoi_va_giu_phien(ws_client: TestClient, monkeypatch) -> None:

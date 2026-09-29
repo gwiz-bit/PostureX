@@ -117,6 +117,19 @@ void main() {
     expect((sent['keypoints'] as List)[7], [0.07, 0.5, -0.1, 0.9]);
   });
 
+  test('sendKeypoints kèm aspect khi client biết tỉ lệ khung ảnh', () async {
+    await boot();
+    await socket.connect('squat', onDevicePose: true);
+    await socket.events.first; // ready
+
+    final pose = List.generate(33, (i) => [i / 100, 0.5, 0.0, 0.9]);
+    socket.sendKeypoints(pose, aspect: 480 / 720);
+    await server.waitForMessages(2);
+
+    final sent = jsonDecode(server.received[1]) as Map<String, dynamic>;
+    expect(sent['aspect'], closeTo(0.6667, 0.001));
+  });
+
   test('null nghĩa là không thấy người và vẫn được gửi đi', () async {
     await boot();
     await socket.connect('squat', onDevicePose: true);

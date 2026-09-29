@@ -20,6 +20,15 @@ def test_frame_dau_tien_giu_nguyen() -> None:
     assert result[0].x == 0.3
 
 
+def test_aspect_cua_frame_moi_duoc_giu_lai() -> None:
+    """Làm mượt tạo Keypoint mới — quên chép `aspect` thì góc lại méo lặng lẽ
+    từ frame thứ hai trở đi (frame đầu thì trả nguyên vẹn nên không lộ)."""
+    smoother = KeypointSmoother(alpha=0.5)
+    smoother.smooth([Keypoint(x=0.5, y=0.5, z=0.0, visibility=1.0, aspect=0.667)])
+    result = smoother.smooth([Keypoint(x=0.6, y=0.5, z=0.0, visibility=1.0, aspect=0.667)])
+    assert result[0].aspect == 0.667
+
+
 def test_lam_muot_giam_bien_do_nhay() -> None:
     """Một cú nhảy đột ngột (nhiễu MediaPipe) phải bị GIẢM BỚT, không đi
     thẳng tới vị trí mới ngay lập tức — đúng mục đích chống 'nhảy loạn'."""

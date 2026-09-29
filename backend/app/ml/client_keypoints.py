@@ -15,7 +15,12 @@ bài mẫu đều nhận đúng cùng kiểu `list[Keypoint]` như trước.
 ĐỊNH DẠNG MỘT FRAME (text JSON)
 -------------------------------
     {"keypoints": [[x, y, z, visibility], ...33 phần tử...]}
+    {"keypoints": [...], "aspect": 0.667}
     {"keypoints": null}          # client không thấy người trong frame
+
+`aspect` (tuỳ chọn) = rộng / cao của khung ảnh đã xoay thẳng đứng mà x, y được
+chuẩn hoá theo. Cần để tính góc đúng (xem `Keypoint`); thiếu thì coi là 1,0 —
+tức client cũ vẫn chạy nhưng góc bị méo như trước.
 
 x, y chuẩn hoá 0..1 theo khung ảnh ĐÃ XOAY THẲNG ĐỨNG (cùng hệ toạ độ với
 MediaPipe — gốc ở góc trên trái, x sang phải, y xuống dưới). z cùng thang với
@@ -36,6 +41,11 @@ LANDMARK_COUNT = len(PoseEstimator.LANDMARK_NAMES)
 # vài đơn vị trở lên chắc chắn là client quên chuẩn hoá (còn ở đơn vị pixel),
 # và nếu lọt qua thì analyzer tính ra góc vô nghĩa mà không lỗi nào báo.
 _MAX_ABS_COORD = 5.0
+
+# Tỉ lệ rộng/cao hợp lý của một khung camera (từ 1:10 tới 10:1). Ngoài khoảng này
+# chắc chắn là gửi nhầm (vd pixel thay vì tỉ lệ) — tỉ lệ 0 còn làm mọi góc suy biến.
+_MIN_ASPECT = 0.1
+_MAX_ASPECT = 10.0
 
 
 def parse_client_keypoints(data: bytes | str) -> list[Keypoint] | None:
@@ -66,6 +76,8 @@ def parse_client_keypoints(data: bytes | str) -> list[Keypoint] | None:
     if not isinstance(raw, list) or len(raw) != LANDMARK_COUNT:
         raise ValueError(f"'keypoints' phải có đúng {LANDMARK_COUNT} khớp.")
 
+    aspect = _parse_aspect(payload.get("aspect"))
+
     keypoints: list[Keypoint] = []
     for index, item in enumerate(raw):
         if not isinstance(item, list) or len(item) != 4:
@@ -77,5 +89,20 @@ def parse_client_keypoints(data: bytes | str) -> list[Keypoint] | None:
         x, y, z, visibility = (float(v) for v in item)
         if max(abs(x), abs(y), abs(z)) > _MAX_ABS_COORD:
             raise ValueError(f"Khớp {index} có toạ độ quá lớn — toạ độ phải chuẩn hoá về 0..1.")
-        keypoints.append(Keypoint(x=x, y=y, z=z, visibility=min(1.0, max(0.0, visibility))))
+        keypoints.append(
+            Keypoint(x=x, y=y, z=z, visibility=min(1.0, max(0.0, visibility)), aspect=aspect)
+        )
     return keypoints
+
+
+def _parse_aspect(value: object) -> float:
+    if value is None:
+        return 1.0
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not math.isfinite(value)
+        or not _MIN_ASPECT <= value <= _MAX_ASPECT
+    ):
+        raise ValueError(f"'aspect' phải là số trong khoảng {_MIN_ASPECT}..{_MAX_ASPECT}.")
+    return float(value)

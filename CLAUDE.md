@@ -64,6 +64,50 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 30/09/2026
+
+**Góc khớp bị MÉO theo tỉ lệ khung ảnh — đã sửa bằng `Keypoint.aspect`.** Toạ độ
+khớp chuẩn hoá x theo chiều RỘNG, y theo chiều CAO, nhưng `calculate_angle`/
+`calculate_angle_3d` từng tính thẳng trên (x, y) như thể hai trục cùng thang đo.
+Mô phỏng bằng chính hàm của backend: ảnh dọc 2:3 méo góc tới ~23° (9:16 và 16:9
+tới ~32°, 4:3 ~16°, ảnh vuông 0°). Squat cẳng chân nghiêng 20° (rất phổ biến):
+góc thật 95° đọc ra 108,5°; ngưỡng `KNEE_DEPTH=95°` thực tế đòi hạ sâu thêm tới
+~22° tuỳ hướng cẳng chân. Vượt xa biên dung sai 10° của `RepCounter`, nên là
+nghi phạm mạnh của hụt rep và lời nhắc "chưa đủ sâu" oan.
+
+- **Sửa.** `Keypoint` có thêm `aspect` (rộng/cao, mặc định 1,0 = hành vi cũ); hai
+  hàm góc nhân x (và z, vì MediaPipe cho z cùng thang với x) với `aspect` trước
+  khi tính. `PoseEstimator.estimate` tự điền từ ảnh JPEG; đường keypoint nhận
+  trường `aspect` TUỲ CHỌN trong frame (`client_keypoints.py`) — client cũ không
+  gửi thì rơi về 1,0, tức vẫn méo như trước. `KeypointSmoother` chép `aspect`
+  sang frame mới (quên là góc méo lại từ frame thứ hai). `plank._is_horizontal`
+  cũng nhân `aspect`. Flutter: `OnDevicePoseService.detect` trả `DetectedPose`
+  (kèm tỉ lệ), `sendKeypoints(..., aspect:)`.
+- **KHÔNG đổi:** `knee_overshoot` (so x với tỉ lệ chiều rộng khung, không phải
+  góc). Nó còn phụ thuộc khoảng cách người–camera, nên nên chuẩn hoá theo chiều
+  dài thân/cẳng chân — chưa làm.
+- **Hệ quả cần biết:** MỌI số góc đều đổi so với lúc ngưỡng được ước lượng/hiệu
+  chỉnh. Ngưỡng nào từng được chỉnh tay theo số đo live trên điện thoại (Pulldown
+  90°, các ngưỡng suy từ overlay 15/09) đã bù ngầm cho độ méo và cần soát lại.
+- ⚠️ **113 file chuẩn tham chiếu trên VPS được trích TRƯỚC bản sửa** (không có
+  `aspect`, đọc lại thành 1,0) nên điểm "độ giống bài mẫu" đang so góc live đã
+  sửa với góc chuẩn còn méo. Cần chạy lại `scripts/extract_reference_poses.py`
+  trên VPS (script đã lưu `aspect` vào JSON).
+- ⚠️ **Thứ tự deploy:** backend trước, APK sau. Backend cũ gặp trường `aspect`
+  lạ thì bỏ qua (an toàn), nhưng APK cũ + backend mới vẫn méo vì không gửi `aspect`.
+- **Khung xương trên đường ML Kit giờ vẽ TRỰC TIẾP từ kết quả nhận diện tại máy**
+  (`displayPointsFromEncoded` + `KeypointEma` trong `pose_keypoint_encoder.dart`,
+  gọi từ `_detectAndSend`), không còn chờ `all_keypoints` từ server. Trước đây
+  khung xương đi vòng gửi → server làm mượt (α=0,25) → nhận lại nên luôn trễ vài
+  frame so với người — đúng triệu chứng "khung xương không khớp người". Phản hồi
+  server trên đường này chỉ còn cấp rep/phase/lỗi/màu đúng-sai
+  (`_onSocketEvent` không ghi đè `_keypoints` khi `_useOnDevicePose`). Đường ảnh
+  JPEG dự phòng giữ nguyên. Làm mượt vẽ chỉ ở client, α=0,6 (ƯỚC LƯỢNG, chưa đo
+  người thật) — không ảnh hưởng góc/đếm rep vì server vẫn tự làm mượt riêng.
+- ⚠️ Chưa chạy trên người thật. 499 test backend xanh (thêm test góc thật trên 4
+  tỉ lệ ảnh × 6 hướng xoay, parse/từ chối `aspect`, `aspect` đi hết đường ống tới
+  `key_angles`), 92 test Flutter xanh, `ruff`/`flutter analyze` không lỗi mới.
+
 ### 21/09/2026
 
 **Nhận diện tư thế chạy NGAY TRÊN ĐIỆN THOẠI (ML Kit, chỉ Android) — server chỉ còn

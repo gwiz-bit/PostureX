@@ -16,6 +16,19 @@ class UnsupportedCameraFrameException implements Exception {
   String toString() => 'UnsupportedCameraFrameException: $message';
 }
 
+/// Một tư thế nhận diện được trên máy, kèm tỉ lệ khung ảnh mà toạ độ chuẩn hoá
+/// theo. Server cần [aspect] để tính góc đúng: x chia cho chiều rộng còn y chia
+/// cho chiều cao nên hai trục không cùng thang đo (ảnh dọc 2:3 méo góc tới ~23°).
+class DetectedPose {
+  const DetectedPose(this.keypoints, this.aspect);
+
+  /// 33 phần tử `[x, y, z, visibility]`, xem `encodeLandmarks`.
+  final List<List<double>> keypoints;
+
+  /// Rộng / cao của khung ảnh đã xoay thẳng đứng.
+  final double aspect;
+}
+
 /// Chạy pose estimation NGAY TRÊN ĐIỆN THOẠI bằng ML Kit, thay cho việc gửi
 /// ảnh JPEG lên server chạy MediaPipe.
 ///
@@ -60,7 +73,7 @@ class OnDevicePoseService {
   ///
   /// Ném [UnsupportedCameraFrameException] nếu frame sai dạng; các lỗi khác là
   /// từ ML Kit và được để nguyên cho người gọi quyết định.
-  Future<List<List<double>>?> detect(
+  Future<DetectedPose?> detect(
     CameraImage image,
     int sensorOrientation,
   ) async {
@@ -91,10 +104,10 @@ class OnDevicePoseService {
     final poses = await _detector.processImage(input);
     if (poses.isEmpty) return null;
 
-    return encodeLandmarks(
-      poses.first.landmarks,
-      uprightImageSize(image.width, image.height, sensorOrientation),
-    );
+    final size = uprightImageSize(image.width, image.height, sensorOrientation);
+    final keypoints = encodeLandmarks(poses.first.landmarks, size);
+    if (keypoints == null) return null;
+    return DetectedPose(keypoints, size.width / size.height);
   }
 
   Future<void> close() => _detector.close();

@@ -115,8 +115,16 @@ class AnalyzeSocketService {
   /// nhận `input == "keypoints"`). [keypoints] là 33 phần tử
   /// `[x, y, z, visibility]` (xem `encodeLandmarks`), hoặc `null` khi không
   /// thấy người — server vẫn trả đúng một phản hồi cho cả hai trường hợp.
-  void sendKeypoints(List<List<double>>? keypoints) {
-    _channel?.sink.add(jsonEncode({'keypoints': keypoints}));
+  ///
+  /// [aspect] là rộng / cao của khung ảnh mà x, y được chuẩn hoá theo; server
+  /// cần nó để tính góc đúng. Bỏ trống thì server coi là 1,0 (góc bị méo).
+  void sendKeypoints(List<List<double>>? keypoints, {double? aspect}) {
+    _channel?.sink.add(
+      jsonEncode({
+        'keypoints': keypoints,
+        if (aspect != null && keypoints != null) 'aspect': aspect,
+      }),
+    );
   }
 
   Future<void> close() async {

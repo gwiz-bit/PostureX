@@ -30,11 +30,20 @@ _FINE_HAND_LANDMARKS = frozenset({
 
 @dataclass
 class Keypoint:
-    """Tọa độ chuẩn hóa và độ tin cậy của một điểm khớp."""
+    """Tọa độ chuẩn hóa và độ tin cậy của một điểm khớp.
+
+    `x` chuẩn hoá theo chiều RỘNG ảnh còn `y` theo chiều CAO, nên một đơn vị x
+    và một đơn vị y dài khác nhau trên màn hình (ảnh dọc 2:3: 1 đơn vị y dài
+    gấp 1,5 lần). Tính góc thẳng trên (x, y) như vậy làm méo góc — tới 20-30°
+    ở ảnh dọc/16:9 — nên `aspect` (= rộng / cao của ảnh gốc) đi kèm mọi khớp để
+    `angle_utils` đưa về cùng thang đo trước khi tính. Mặc định 1,0 (ảnh vuông,
+    không méo) giữ nguyên hành vi cho mọi nơi chưa biết kích thước ảnh.
+    """
     x: float
     y: float
     z: float
     visibility: float
+    aspect: float = 1.0
 
 
 class PoseEstimator:
@@ -93,9 +102,11 @@ class PoseEstimator:
         if not result.pose_landmarks:
             return None
 
+        height, width = img.shape[:2]
+        aspect = width / height
         landmarks = result.pose_landmarks[0]
         return [
-            Keypoint(x=lm.x, y=lm.y, z=lm.z, visibility=lm.visibility)
+            Keypoint(x=lm.x, y=lm.y, z=lm.z, visibility=lm.visibility, aspect=aspect)
             for lm in landmarks
         ]
 

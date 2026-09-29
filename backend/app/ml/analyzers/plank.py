@@ -126,6 +126,7 @@ class PlankAnalyzer(ExerciseAnalyzer):
 def _is_horizontal(shoulder: Keypoint, ankle: Keypoint) -> bool:
     """True nếu thân người trải ngang khung hình (đang nằm plank) thay vì
     đứng thẳng — so sánh khoảng cách ngang (x) và dọc (y) giữa vai và mắt cá."""
-    horizontal_span = abs(shoulder.x - ankle.x)
+    # Nhân aspect để x và y cùng thang pixel (xem `angle_utils`).
+    horizontal_span = abs(shoulder.x - ankle.x) * shoulder.aspect
     vertical_span = abs(shoulder.y - ankle.y) + 1e-6
     return horizontal_span / vertical_span >= HORIZONTAL_POSTURE_RATIO
