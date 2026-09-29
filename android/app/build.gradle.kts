@@ -47,6 +47,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // Flutter Gradle Plugin tự bật rút gọn mã (R8) cho bản release, nhưng
+            // không biết gì về các lớp bên thứ ba (vd ML Kit) nạp bằng reflection —
+            // cần proguard-rules.pro để R8 không xoá/đổi tên nhầm (xem CHANGELOG
+            // 24/09/2026: NoSuchMethodException khi mở app do thiếu file này).
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
