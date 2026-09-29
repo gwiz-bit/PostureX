@@ -25,14 +25,45 @@ from app.main import app
 
 # Import mọi model để Base.metadata biết đủ bảng trước khi create_all — thiếu một
 # cái là khoá ngoại trỏ vào bảng không tồn tại và create_all nổ.
+from app.models.achievement import Achievement, UserAchievement  # noqa: F401
+from app.models.ai_qa import AiQaPair, AiSafetyRule  # noqa: F401
+from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.body_measurement import BodyMeasurement  # noqa: F401
 from app.models.coach_message import CoachMessage  # noqa: F401
+from app.models.device import Device  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
+from app.models.movement_role import MovementRole  # noqa: F401
 from app.models.notification import Notification  # noqa: F401
+from app.models.onboarding import (  # noqa: F401
+    EquipmentOption,
+    FocusArea,
+    FocusAreaAccessory,
+    GoalDirectionScore,
+    HealthIssue,
+    HealthIssueExclusion,
+    HealthIssueReplacement,
+    OnboardingGoal,
+    StartingLoadHint,
+    VolumeModifier,
+)
+from app.models.plan_details import PlanScheduledSession, PlanWorkoutDay  # noqa: F401
+from app.models.posture_error_type import PostureErrorType  # noqa: F401
+from app.models.program_template import (  # noqa: F401
+    ProgramTemplate,
+    SlotDefaultExercise,
+    TemplateProgression,
+    TemplateSession,
+    TemplateSlot,
+)
 from app.models.role import USER_ROLE_NAME, Role
+from app.models.session import RealtimeFeedback, SessionExercise, SessionRep, WorkoutSession  # noqa: F401
 from app.models.subscription import Payment, SubscriptionPlan, UserSubscription  # noqa: F401
 from app.models.user import User
+from app.models.user_onboarding import UserEquipment, UserFocusArea, UserGoal, UserHealthIssue  # noqa: F401
+from app.models.user_settings import UserSettings  # noqa: F401
 from app.models.video import Video  # noqa: F401
 from app.models.workout import Workout  # noqa: F401
+from app.models.workout_plan_db import WorkoutPlanDB, WorkoutPlanExercise  # noqa: F401
 
 TEST_PASSWORD = "Test123"
 

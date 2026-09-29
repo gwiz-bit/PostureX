@@ -369,6 +369,12 @@ void main() {
     }
     expect(find.text('Set your workout days'), findsOneWidget);
 
+    // Default workoutsPerWeek = 4, so must select exactly 4 days before Finish is enabled.
+    for (final day in ['Mon', 'Tue', 'Thu', 'Fri']) {
+      await tester.tap(find.text(day));
+      await tester.pumpAndSettle();
+    }
+
     await tester.tap(find.text('Finish'));
     await tester.pump(const Duration(milliseconds: 300));
     // The incoming route is still mid page-transition here, so its content

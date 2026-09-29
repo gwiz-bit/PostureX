@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Minimal i18n helper — no extra packages needed.
 ///
 /// Usage in a StatefulWidget:
-///   class _MyState extends State<MyWidget> with AppLocaleMixin { ... }
+///   `class _MyState extends State<MyWidget> with AppLocaleMixin { ... }`
 ///   Then just call AppLocale.t('key') in build().
 ///
 /// For parameterised strings call AppLocale.format('key', {'param': value}).
@@ -760,7 +760,7 @@ class AppLocale {
 
 /// Add to any StatefulWidget's State class to auto-rebuild when the
 /// app language changes:
-///   class _MyState extends State<My> with AppLocaleMixin { ... }
+///   `class _MyState extends State<T> with AppLocaleMixin { ... }`
 mixin AppLocaleMixin<T extends StatefulWidget> on State<T> {
   @override
   void initState() {

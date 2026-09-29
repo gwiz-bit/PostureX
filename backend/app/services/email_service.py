@@ -2,10 +2,20 @@
 thread pool để không chặn event loop async."""
 
 import asyncio
+import logging
 import smtplib
 from email.mime.text import MIMEText
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+_PLACEHOLDER = "youraccount@gmail.com"
+
+
+def _smtp_configured() -> bool:
+    """Trả về True khi SMTP đã được điền thông tin thật (không phải placeholder)."""
+    return bool(settings.SMTP_USER) and settings.SMTP_USER != _PLACEHOLDER
 
 
 def _send_sync(to_email: str, subject: str, body: str) -> None:
@@ -21,7 +31,16 @@ def _send_sync(to_email: str, subject: str, body: str) -> None:
 
 
 async def send_otp_email(to_email: str, otp_code: str) -> None:
-    """Gửi mã OTP xác thực đăng ký tới email người dùng."""
+    """Gửi mã OTP xác thực đăng ký tới email người dùng.
+
+    Khi SMTP chưa cấu hình (môi trường dev), in OTP ra log thay vì gửi email
+    để không chặn luồng đăng ký.
+    """
+    if not _smtp_configured():
+        logger.warning(
+            "[DEV] SMTP chưa cấu hình — OTP cho %s là: %s", to_email, otp_code
+        )
+        return
     subject = "Posture X - Mã xác thực đăng ký"
     body = (
         f"Mã xác thực (OTP) của bạn là: {otp_code}\n\n"

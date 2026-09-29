@@ -9,12 +9,10 @@ import '../../domain/usecases/send_coach_message.dart';
 
 class AiCoachController extends ChangeNotifier {
   AiCoachController({
-    required SendCoachMessage sendCoachMessage,
-    required FetchCoachHistory fetchCoachHistory,
-    required ClearCoachHistory clearCoachHistory,
-  })  : _sendCoachMessage = sendCoachMessage,
-        _fetchCoachHistory = fetchCoachHistory,
-        _clearCoachHistory = clearCoachHistory {
+    required this._sendCoachMessage,
+    required this._fetchCoachHistory,
+    required this._clearCoachHistory,
+  }) {
     _loadHistory();
   }
 
@@ -28,6 +26,10 @@ class AiCoachController extends ChangeNotifier {
   bool isGeneratingPlan = false;
   String? errorMessage;
   String? planMessage;
+
+  /// True khi tin nhắn user vừa gửi chứa intent xin lịch tập —
+  /// screen sẽ hiện nút "Áp dụng vào lịch tập" dưới reply AI cuối.
+  bool showPlanSuggestion = false;
 
   /// The server is now the source of truth for history (see CHANGELOG
   /// 11/09/2026) — restore it once when the controller is created, instead
@@ -50,12 +52,14 @@ class AiCoachController extends ChangeNotifier {
 
     messages.add(ChatMessage(role: 'user', content: text));
     isSending = true;
+    showPlanSuggestion = false; // reset trước mỗi lần gửi
     errorMessage = null;
     notifyListeners();
 
     try {
       final reply = await _sendCoachMessage(message: text);
       messages.add(ChatMessage(role: 'model', content: reply));
+      showPlanSuggestion = _isPlanRequest(text);
     } on AppFailure catch (e) {
       errorMessage = e.message;
     } catch (_) {
@@ -64,6 +68,29 @@ class AiCoachController extends ChangeNotifier {
       isSending = false;
       notifyListeners();
     }
+  }
+
+  void dismissPlanSuggestion() {
+    showPlanSuggestion = false;
+    notifyListeners();
+  }
+
+  /// Phát hiện intent xin tư vấn / cập nhật lịch tập qua từ khoá.
+  static bool _isPlanRequest(String text) {
+    final lower = text.toLowerCase();
+    const keywords = [
+      // Tiếng Việt
+      'lịch tập', 'giáo án', 'chương trình tập', 'kế hoạch tập',
+      'tạo lịch', 'cập nhật lịch', 'gợi ý lịch', 'lên lịch',
+      'thay đổi lịch', 'điều chỉnh lịch', 'xây dựng lịch',
+      'chế độ tập', 'buổi tập', 'lịch gym', 'lịch tập luyện',
+      'chương trình luyện tập', 'kế hoạch luyện tập',
+      // English
+      'workout plan', 'training plan', 'exercise plan',
+      'workout schedule', 'training schedule', 'training program',
+      'create plan', 'make plan', 'update plan', 'suggest plan',
+    ];
+    return keywords.any(lower.contains);
   }
 
   /// One-shot consume so the screen shows the "plan ready" confirmation

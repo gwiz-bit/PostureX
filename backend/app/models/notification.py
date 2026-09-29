@@ -3,11 +3,13 @@
 Bảng này thuộc schema PostureX của nhóm (sql/postureX123_schema.sql), giống
 Users/Roles: cột đặt tên PascalCase và **không** do create_tables.py quản lý.
 Tuyệt đối không thêm bảng này vào DROP_SQL của create_tables.py.
+
+Thay đổi v2: NotificationId đổi sang BIGINT.
 """
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -16,7 +18,7 @@ from app.core.database import Base
 class Notification(Base):
     __tablename__ = "Notifications"
 
-    id: Mapped[int] = mapped_column("NotificationId", primary_key=True)
+    id: Mapped[int] = mapped_column("NotificationId", Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
         "UserId", ForeignKey("Users.UserId"), nullable=False, index=True
     )

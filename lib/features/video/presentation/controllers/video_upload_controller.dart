@@ -18,12 +18,10 @@ import '../../domain/usecases/validate_video_file.dart';
 /// (via [GetVideo]) until [analyzedVideo] is ready or polling gives up.
 class VideoUploadController extends ChangeNotifier {
   VideoUploadController({
-    required UploadVideo uploadVideo,
-    required GetVideo getVideo,
-    required ValidateVideoFile validateVideoFile,
-  })  : _uploadVideo = uploadVideo,
-        _getVideo = getVideo,
-        _validateVideoFile = validateVideoFile;
+    required this._uploadVideo,
+    required this._getVideo,
+    required this._validateVideoFile,
+  });
 
   final UploadVideo _uploadVideo;
   final GetVideo _getVideo;

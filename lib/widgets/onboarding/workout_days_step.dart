@@ -43,6 +43,8 @@ class _WorkoutDaysStepState extends State<WorkoutDaysStep> {
 
   @override
   Widget build(BuildContext context) {
+    final bool canFinish = _selectedDays.isNotEmpty &&
+        (widget.maxSelection == null || _selectedDays.length == widget.maxSelection);
     return OnboardingScaffold(
       step: widget.step,
       totalSteps: widget.totalSteps,
@@ -50,6 +52,7 @@ class _WorkoutDaysStepState extends State<WorkoutDaysStep> {
       subtitle: widget.subtitle,
       onBack: widget.onBack,
       continueLabel: widget.continueLabel,
+      continueEnabled: canFinish,
       onContinue: () => widget.onContinue(_selectedDays, _reminderEnabled),
       body: Column(
         children: [

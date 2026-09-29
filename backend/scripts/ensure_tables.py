@@ -15,20 +15,34 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.database import Base, engine
 from app.models import (  # noqa: F401 đăng ký hết model để Base.metadata đầy đủ
+    achievement,
+    ai_qa,
+    audit_log,
+    body_measurement,
     coach_message,
+    device,
     device_token,
     email_otp,
     exercise,
     goal,
+    movement_role,
     muscle_group,
     notification,
+    onboarding,
     password_reset_token,
+    plan_details,
+    posture_error_type,
+    program_template,
     role,
+    session,
     subscription,
     user,
+    user_onboarding,
     user_profile,
+    user_settings,
     video,
     workout,
+    workout_plan_db,
 )
 
 

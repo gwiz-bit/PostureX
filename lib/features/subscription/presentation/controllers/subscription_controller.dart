@@ -11,16 +11,12 @@ import '../../domain/usecases/start_checkout.dart';
 
 class SubscriptionController extends ChangeNotifier {
   SubscriptionController({
-    required GetPlans getPlans,
-    required GetMySubscription getMySubscription,
-    required StartCheckout startCheckout,
-    required CancelAutoRenew cancelAutoRenew,
-    required ResumeAutoRenew resumeAutoRenew,
-  })  : _getPlans = getPlans,
-        _getMySubscription = getMySubscription,
-        _startCheckout = startCheckout,
-        _cancelAutoRenew = cancelAutoRenew,
-        _resumeAutoRenew = resumeAutoRenew;
+    required this._getPlans,
+    required this._getMySubscription,
+    required this._startCheckout,
+    required this._cancelAutoRenew,
+    required this._resumeAutoRenew,
+  });
 
   final GetPlans _getPlans;
   final GetMySubscription _getMySubscription;
