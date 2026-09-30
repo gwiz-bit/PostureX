@@ -1,4 +1,8 @@
-"""Model bảng UserProfiles (1-1 với Users) — hồ sơ thể chất từ onboarding."""
+"""Model bảng UserProfiles (1-1 với Users) — hồ sơ thể chất từ onboarding.
+
+Thay đổi v2: thêm TargetWeightKg, ActivityLevel, MotivationCode, OnboardedAt.
+Bio đổi từ Text → String(500) theo schema v2.
+"""
 
 from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING
@@ -22,7 +26,13 @@ class UserProfile(Base):
     gender: Mapped[str | None] = mapped_column("Gender", String(10), nullable=True)
     height_cm: Mapped[float | None] = mapped_column("HeightCm", Numeric(5, 2), nullable=True)
     weight_kg: Mapped[float | None] = mapped_column("WeightKg", Numeric(5, 2), nullable=True)
+    target_weight_kg: Mapped[float | None] = mapped_column("TargetWeightKg", Numeric(5, 2), nullable=True)
     fitness_level: Mapped[str | None] = mapped_column("FitnessLevel", String(20), nullable=True)
+    activity_level: Mapped[str | None] = mapped_column("ActivityLevel", String(20), nullable=True)
+    motivation_code: Mapped[str | None] = mapped_column("MotivationCode", String(40), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column("AvatarUrl", String(500), nullable=True)
+    bio: Mapped[str | None] = mapped_column("Bio", String(500), nullable=True)
+    onboarded_at: Mapped[datetime | None] = mapped_column("OnboardedAt", DateTime, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         "UpdatedAt", DateTime, default=lambda: datetime.now(timezone.utc)
     )

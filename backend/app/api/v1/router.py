@@ -9,6 +9,7 @@ from app.api.v1.routes import (
     exercises,
     notifications,
     realtime,
+    sessions,
     subscriptions,
     users,
     videos,
@@ -27,3 +28,4 @@ api_router.include_router(notifications.router)
 api_router.include_router(subscriptions.router)
 api_router.include_router(exercises.router)
 api_router.include_router(coach.router)
+api_router.include_router(sessions.router)

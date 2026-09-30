@@ -12,12 +12,10 @@ import '../../domain/usecases/get_workouts.dart';
 /// is the one place that decides when the UI should redraw.
 class WorkoutController extends ChangeNotifier {
   WorkoutController({
-    required GetWorkouts getWorkouts,
-    required CreateWorkout createWorkout,
-    required GetWorkoutStats getWorkoutStats,
-  })  : _getWorkouts = getWorkouts,
-        _createWorkout = createWorkout,
-        _getWorkoutStats = getWorkoutStats;
+    required this._getWorkouts,
+    required this._createWorkout,
+    required this._getWorkoutStats,
+  });
 
   final GetWorkouts _getWorkouts;
   final CreateWorkout _createWorkout;

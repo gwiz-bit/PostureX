@@ -664,8 +664,9 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     }
     final now = DateTime.now();
     if (_lastFrameSentAt != null &&
-        now.difference(_lastFrameSentAt!) < _frameInterval)
+        now.difference(_lastFrameSentAt!) < _frameInterval) {
       return;
+    }
     _lastFrameSentAt = now;
     _awaitingResponse = true;
     // Safety net: if the server drops a response, _awaitingResponse would

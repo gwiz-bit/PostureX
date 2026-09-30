@@ -20,22 +20,43 @@ _RETRYABLE_CODE = 503
 _MAX_ATTEMPTS = 3
 _RETRY_DELAYS_SECONDS = (1, 3)
 
+# Khi model chính bị 404 (Google tắt model cũ), tự động thử các model dự
+# phòng theo thứ tự — tránh downtime khi Google deprecate model mà không báo.
+_FALLBACK_MODELS = ('gemini-2.0-flash', 'gemini-1.5-flash')
+
 
 async def _generate_with_retry(**kwargs):
-    """Gọi `generate_content`, tự thử lại tối đa 2 lần nếu Gemini báo 503."""
+    """Gọi `generate_content`, tự thử lại tối đa 2 lần nếu Gemini báo 503.
+    Nếu model bị 404 (đã bị Google tắt) hoặc 400 INVALID_ARGUMENT (model không
+    hỗ trợ tham số thinking_budget), tự động chuyển sang model dự phòng."""
     client = _client()
-    for attempt in range(_MAX_ATTEMPTS):
-        try:
-            return await client.aio.models.generate_content(**kwargs)
-        except genai_errors.APIError as e:
-            if e.code != _RETRYABLE_CODE or attempt == _MAX_ATTEMPTS - 1:
-                raise
-            delay = _RETRY_DELAYS_SECONDS[attempt]
-            logger.warning(
-                "Gemini 503 (quá tải) — thử lại lần %d/%d sau %ds",
-                attempt + 2, _MAX_ATTEMPTS, delay,
-            )
-            await asyncio.sleep(delay)
+    primary = kwargs.pop('model', settings.GEMINI_MODEL)
+    models_to_try = [primary] + [m for m in _FALLBACK_MODELS if m != primary]
+
+    last_err: Exception | None = None
+    for model in models_to_try:
+        for attempt in range(_MAX_ATTEMPTS):
+            try:
+                return await client.aio.models.generate_content(model=model, **kwargs)
+            except genai_errors.APIError as e:
+                if e.code in (404, 400):
+                    logger.warning(
+                        "Model %s không hỗ trợ yêu cầu (HTTP %d) — thử model dự phòng tiếp theo",
+                        model, e.code,
+                    )
+                    last_err = e
+                    break  # sang model tiếp theo
+                if e.code != _RETRYABLE_CODE or attempt == _MAX_ATTEMPTS - 1:
+                    raise
+                delay = _RETRY_DELAYS_SECONDS[attempt]
+                logger.warning(
+                    "Gemini 503 (quá tải) — thử lại lần %d/%d sau %ds",
+                    attempt + 2, _MAX_ATTEMPTS, delay,
+                )
+                await asyncio.sleep(delay)
+
+    if last_err is not None:
+        raise last_err
     raise AssertionError("unreachable: loop always returns or raises")
 
 _SYSTEM_PROMPT = """Bạn là huấn luyện viên thể hình AI cấp cao của ứng dụng \
@@ -175,18 +196,6 @@ async def ask(*, message: str, history: list[ChatMessage], user_context: str) ->
             system_instruction=_SYSTEM_PROMPT.format(user_context=user_context),
             temperature=0.6,
             max_output_tokens=3072,
-            # gemini-flash-latest bật "thinking" mặc định, tốn hàng nghìn token
-            # suy luận ẩn (không hiển thị cho user) trước khi trả lời, khiến
-            # câu trả lời dài bị cắt cụt giữa chừng do chạm max_output_tokens.
-            # thinking_budget=0 tắt hẳn, dồn toàn bộ ngân sách cho câu trả lời
-            # thật. Dùng budget=0 thay vì thinking_level=MINIMAL — "-latest"
-            # là alias trỏ tới bản model mới nhất của Google, có thể đổi
-            # ngầm bất cứ lúc nào; MINIMAL từng chạy được nhưng một phiên bản
-            # model mới hơn đã bắt đầu từ chối level đó (400 INVALID_ARGUMENT
-            # "Thinking level MINIMAL is not supported for this model"),
-            # trong khi budget=0 là cách tắt thinking ổn định hơn giữa các
-            # phiên bản.
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
         ),
     )
     text = response.text
@@ -269,7 +278,6 @@ async def generate_plan(
             response_schema=AiPlanResponse,
             temperature=0.8,
             max_output_tokens=3072,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
         ),
     )
     parsed = response.parsed

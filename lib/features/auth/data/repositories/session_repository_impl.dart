@@ -1,6 +1,8 @@
 import '../../../../core/errors/failures.dart';
 import '../../../../models/auth_response.dart';
 import '../../../../models/user_session.dart';
+import '../../../../models/workout_plan.dart';
+import '../../../../services/api_client.dart';
 import '../../../../services/api_exception.dart';
 import '../../../../services/google_auth_service.dart';
 import '../../../../services/token_storage.dart';
@@ -45,6 +47,36 @@ class SessionRepositoryImpl implements SessionRepository {
       // for this run even if secure storage is unavailable.
     }
     UserSession.hasCompletedOnboarding = hasCompletedOnboarding;
+    if (hasCompletedOnboarding) {
+      try {
+        final p = await TokenStorage.readPlanParams();
+        if (p != null) {
+          UserSession.weeklyGoal = p.weeklyGoal;
+          UserSession.fitnessLevel = p.fitnessLevel;
+          UserSession.workoutDays = p.workoutDays;
+          UserSession.focusAreas = p.focusAreas.isEmpty ? {'Full body'} : p.focusAreas;
+          UserSession.equipment = p.equipment;
+          UserSession.goals = p.goals;
+          UserSession.healthIssues = p.healthIssues;
+        } else {
+          // Fallback: restore at least weeklyGoal + fitnessLevel from backend
+          final pd = await ApiClient.instance
+              .fetchProfile()
+              .timeout(const Duration(seconds: 5));
+          if (pd.weeklyGoal != null) UserSession.weeklyGoal = pd.weeklyGoal!;
+          if (pd.fitnessLevel != null) UserSession.fitnessLevel = pd.fitnessLevel!;
+        }
+        UserSession.plan = WorkoutPlan.generate(
+          workoutDays: UserSession.workoutDays,
+          weeklyGoal: UserSession.weeklyGoal,
+          focusAreas: UserSession.focusAreas,
+          fitnessLevel: UserSession.fitnessLevel,
+          equipment: UserSession.equipment,
+          goals: UserSession.goals,
+          healthIssues: UserSession.healthIssues,
+        );
+      } catch (_) {}
+    }
     return AuthSessionResult(
       isAdmin: profile.isAdmin,
       isNewUser: auth.isNewUser,

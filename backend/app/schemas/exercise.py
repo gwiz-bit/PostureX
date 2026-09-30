@@ -13,6 +13,8 @@ class ExerciseOut(BaseModel):
     description: str | None
     category: str | None
     difficulty: str | None
+    spine_load: str | None = None
+    impact: str | None = None
     exercise_type: str
     demo_video_url: str | None
     thumbnail_url: str | None
@@ -32,11 +34,17 @@ class ExerciseOut(BaseModel):
     supports_analysis: bool = False
 
 
+_SPINE_PATTERN = "^(None|Low|Medium|High)$"
+_IMPACT_PATTERN = "^(Low|High)$"
+
+
 class ExerciseCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     description: str | None = None
     category: str | None = Field(default=None, max_length=50)
     difficulty: str | None = Field(default=None, pattern="^(Beginner|Intermediate|Advanced)$")
+    spine_load: str | None = Field(default=None, pattern=_SPINE_PATTERN)
+    impact: str | None = Field(default=None, pattern=_IMPACT_PATTERN)
     exercise_type: str = Field(default="Standard", pattern="^(Standard|Duration)$")
     demo_video_url: str | None = None
     thumbnail_url: str | None = None
@@ -49,6 +57,8 @@ class ExerciseUpdate(BaseModel):
     description: str | None = None
     category: str | None = Field(default=None, max_length=50)
     difficulty: str | None = Field(default=None, pattern="^(Beginner|Intermediate|Advanced)$")
+    spine_load: str | None = Field(default=None, pattern=_SPINE_PATTERN)
+    impact: str | None = Field(default=None, pattern=_IMPACT_PATTERN)
     exercise_type: str | None = Field(default=None, pattern="^(Standard|Duration)$")
     demo_video_url: str | None = None
     thumbnail_url: str | None = None

@@ -2,6 +2,7 @@ from app.models.coach_message import CoachMessage
 from app.models.device_token import DeviceToken
 from app.models.email_otp import EmailOtp
 from app.models.exercise import Exercise
+from app.models.movement_role import MovementRole
 from app.models.muscle_group import ExerciseMuscleGroup, MuscleGroup
 from app.models.notification import Notification
 from app.models.password_reset_token import PasswordResetToken
@@ -15,6 +16,7 @@ from app.models.workout import Workout
 
 __all__ = [
     "CoachMessage",
+    "MovementRole",
     "Role",
     "User",
     "Video",

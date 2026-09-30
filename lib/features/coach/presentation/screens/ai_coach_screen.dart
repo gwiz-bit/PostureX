@@ -100,6 +100,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
   @override
   Widget build(BuildContext context) {
     final messages = _controller.messages;
+    final showPlanButton = _controller.showPlanSuggestion && !_controller.isSending;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -148,10 +149,16 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
                   : ListView.builder(
                       controller: _scrollController,
                       padding: const EdgeInsets.all(16),
-                      itemCount: messages.length + (_controller.isSending ? 1 : 0),
+                      itemCount: messages.length +
+                          (_controller.isSending ? 1 : 0) +
+                          (showPlanButton ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index >= messages.length) {
-                          return const _TypingBubble();
+                          if (_controller.isSending) return const _TypingBubble();
+                          return _ApplyPlanButton(onTap: () {
+                            _controller.dismissPlanSuggestion();
+                            _controller.generatePlan();
+                          });
                         }
                         return _ChatBubble(message: messages[index]);
                       },
@@ -333,6 +340,36 @@ class _SuggestionChip extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         child: Text(text, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+      ),
+    );
+  }
+}
+
+/// Button shown below the last AI reply when the user's message was detected
+/// as a plan-request. Tapping it dismisses the suggestion and triggers
+/// [generateAndApplyAiPlan] — the AppBar ✨ spinner reflects the loading state.
+class _ApplyPlanButton extends StatelessWidget {
+  const _ApplyPlanButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: FilledButton.icon(
+          onPressed: onTap,
+          icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+          label: const Text('Áp dụng vào lịch tập'),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.onPrimary,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          ),
+        ),
       ),
     );
   }

@@ -284,8 +284,8 @@ class ApiClient {
 
   Future<UserProfile> updateMe({String? fullName, String? password}) async {
     final json = await _patch('/api/v1/users/me', auth: true, body: {
-      if (fullName != null) 'full_name': fullName,
-      if (password != null) 'password': password,
+      'full_name': ?fullName,
+      'password': ?password,
     });
     return UserProfile.fromJson(json as Map<String, dynamic>);
   }
@@ -301,12 +301,12 @@ class ApiClient {
     int? weeklyGoal,
   }) async {
     final json = await _put('/api/v1/users/me/profile', auth: true, body: {
-      if (age != null) 'age': age,
-      if (gender != null) 'gender': gender,
-      if (heightCm != null) 'height_cm': heightCm,
-      if (weightKg != null) 'weight_kg': weightKg,
-      if (fitnessLevel != null) 'fitness_level': fitnessLevel,
-      if (weeklyGoal != null) 'weekly_goal': weeklyGoal,
+      'age': ?age,
+      'gender': ?gender,
+      'height_cm': ?heightCm,
+      'weight_kg': ?weightKg,
+      'fitness_level': ?fitnessLevel,
+      'weekly_goal': ?weeklyGoal,
     });
     return ProfileData.fromJson(json as Map<String, dynamic>);
   }
@@ -394,9 +394,9 @@ class ApiClient {
     bool? isAdmin,
   }) async {
     final json = await _patch('/api/v1/admin/users/$userId', auth: true, body: {
-      if (fullName != null) 'full_name': fullName,
-      if (isActive != null) 'is_active': isActive,
-      if (isAdmin != null) 'is_admin': isAdmin,
+      'full_name': ?fullName,
+      'is_active': ?isActive,
+      'is_admin': ?isAdmin,
     });
     return AdminUser.fromJson(json as Map<String, dynamic>);
   }
@@ -490,11 +490,11 @@ class ApiClient {
     bool? isActive,
   }) async {
     final json = await _patch('/api/v1/admin/plans/$planId', auth: true, body: {
-      if (name != null) 'name': name,
-      if (priceMonthly != null) 'price_monthly': priceMonthly,
-      if (currency != null) 'currency': currency,
-      if (features != null) 'features': features,
-      if (isActive != null) 'is_active': isActive,
+      'name': ?name,
+      'price_monthly': ?priceMonthly,
+      'currency': ?currency,
+      'features': ?features,
+      'is_active': ?isActive,
     });
     return AdminPlan.fromJson(json as Map<String, dynamic>);
   }
@@ -555,7 +555,7 @@ class ApiClient {
 
   Future<AdminExercise> updateAdminExercise(int exerciseId, {bool? isActive}) async {
     final json = await _patch('/api/v1/admin/exercises/$exerciseId', auth: true, body: {
-      if (isActive != null) 'is_active': isActive,
+      'is_active': ?isActive,
     });
     return AdminExercise.fromJson(json as Map<String, dynamic>);
   }

@@ -5,7 +5,7 @@ import '../../domain/entities/exercise.dart';
 import '../../domain/usecases/get_exercises.dart';
 
 class ExercisesController extends ChangeNotifier {
-  ExercisesController({required GetExercises getExercises}) : _getExercises = getExercises;
+  ExercisesController({required this._getExercises});
 
   final GetExercises _getExercises;
 

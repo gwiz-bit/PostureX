@@ -8,12 +8,10 @@ import '../../domain/usecases/mark_notification_read.dart';
 
 class NotificationsController extends ChangeNotifier {
   NotificationsController({
-    required GetNotifications getNotifications,
-    required MarkNotificationRead markNotificationRead,
-    required MarkAllNotificationsRead markAllNotificationsRead,
-  })  : _getNotifications = getNotifications,
-        _markNotificationRead = markNotificationRead,
-        _markAllNotificationsRead = markAllNotificationsRead;
+    required this._getNotifications,
+    required this._markNotificationRead,
+    required this._markAllNotificationsRead,
+  });
 
   final GetNotifications _getNotifications;
   final MarkNotificationRead _markNotificationRead;

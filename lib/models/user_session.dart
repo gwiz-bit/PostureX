@@ -23,6 +23,10 @@ class UserSession {
   static int weeklyGoal = _defaultWeeklyGoal;
   static String fitnessLevel = _defaultFitnessLevel;
   static Set<String> focusAreas = {..._defaultFocusAreas};
+  static Set<String> workoutDays = const {};
+  static Set<String> equipment = const {};
+  static Set<String> goals = const {};
+  static Set<String> healthIssues = const {};
 
   static bool isSignedIn = false;
   static bool hasCompletedOnboarding = false;
@@ -63,11 +67,17 @@ class UserSession {
     weeklyGoal = profile.workoutsPerWeek;
     fitnessLevel = profile.fitnessLevel ?? _defaultFitnessLevel;
     focusAreas = profile.focusAreas.isEmpty ? {'Full body'} : profile.focusAreas;
+    workoutDays = profile.workoutDays;
+    equipment = profile.equipment;
+    goals = profile.goals;
+    healthIssues = profile.healthIssues;
     plan = WorkoutPlan.generate(
-      workoutDays: profile.workoutDays,
+      workoutDays: workoutDays,
       weeklyGoal: weeklyGoal,
       focusAreas: focusAreas,
       fitnessLevel: fitnessLevel,
+      goals: goals,
+      healthIssues: healthIssues,
     );
     isSignedIn = true;
     hasCompletedOnboarding = true;
@@ -101,6 +111,10 @@ class UserSession {
     weeklyGoal = _defaultWeeklyGoal;
     fitnessLevel = _defaultFitnessLevel;
     focusAreas = {..._defaultFocusAreas};
+    workoutDays = const {};
+    equipment = const {};
+    goals = const {};
+    healthIssues = const {};
     plan = WorkoutPlan.generate(
       workoutDays: const {},
       weeklyGoal: _defaultWeeklyGoal,

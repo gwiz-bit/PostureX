@@ -6,9 +6,17 @@ import logging
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError
+from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.core.security import decode_token
+from app.crud.session import (
+    create_workout_session,
+    finalize_session,
+    get_or_create_session_exercise,
+    record_feedback,
+    record_rep,
+)
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.common import visible_points
 from app.ml.analyzers.registry import ANALYZER_REGISTRY, build_analyzer
@@ -20,6 +28,7 @@ from app.ml.pose_estimator import named_keypoints
 from app.ml.pose_estimator_pool import get_pose_estimator_pool
 from app.ml.session_state import SessionState
 from app.ml.similarity_scorer import SimilarityScorer
+from app.models.exercise import Exercise
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 
 logger = logging.getLogger(__name__)
@@ -135,6 +144,8 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
         await websocket.close(code=1008, reason="Token không hợp lệ hoặc đã hết hạn.")
         return
 
+    user_id: int = int(payload["sub"])
+
     await websocket.accept()
     session: SessionState | None = None
     analyzer: ExerciseAnalyzer | None = None
@@ -147,6 +158,13 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
     # ngưỡng hiện có (xem CHANGELOG 11/09/2026 (3)). Tạo SAU khi biết
     # `exercise` (bên dưới), vì cần tên bài để tra chuẩn tham chiếu.
     scorer: SimilarityScorer | None = None
+
+    # Lịch sử DB: ID các hàng được tạo trong phiên này. Tất cả thao tác DB
+    # được bọc try/except — lỗi DB không bao giờ làm sập phiên phân tích.
+    _ws_session_id: int | None = None
+    _exercise_db_id: int | None = None
+    _session_exercise_id: int | None = None
+    _prev_rep_count: int = 0
 
     try:
         # --- Bước 1: nhận message khởi tạo ---
@@ -166,6 +184,21 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
         analyzer = _get_analyzer(exercise, session, await _load_exercise_thresholds(exercise))
         scorer = SimilarityScorer(exercise)
         logger.info("Mở phiên phân tích: bài '%s', input=%s", session.exercise, input_mode)
+
+        # Tạo WorkoutSession trong DB — best-effort, không block nếu lỗi
+        try:
+            async with AsyncSessionLocal() as db:
+                ex_result = await db.execute(
+                    select(Exercise).where(Exercise.name.ilike(exercise))
+                )
+                ex_row = ex_result.scalar_one_or_none()
+                _exercise_db_id = ex_row.id if ex_row else None
+
+                ws_row = await create_workout_session(db, user_id=user_id)
+                await db.commit()
+                _ws_session_id = ws_row.id
+        except Exception as exc:
+            logger.warning("Không tạo được WorkoutSession: %s", exc)
 
         await websocket.send_json({
             "status": "ready",
@@ -254,6 +287,41 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
                 result: FrameAnalysisResult = analyzer.analyze(keypoints)
                 session.record_frame(result.errors)
 
+                # Ghi lịch sử rep khi có rep mới — best-effort, không block
+                new_count = result.rep_count
+                if _ws_session_id and _exercise_db_id and new_count > _prev_rep_count:
+                    try:
+                        async with AsyncSessionLocal() as db:
+                            if _session_exercise_id is None:
+                                se = await get_or_create_session_exercise(
+                                    db,
+                                    session_id=_ws_session_id,
+                                    exercise_id=_exercise_db_id,
+                                )
+                                _session_exercise_id = se.id  # capture trước commit
+                                await db.commit()
+                            rep_row = await record_rep(
+                                db,
+                                session_exercise_id=_session_exercise_id,
+                                rep_number=new_count,
+                                is_clean=result.correct,
+                                form_score=result.accuracy,
+                            )
+                            if not result.correct and result.errors:
+                                for err_msg in result.errors:
+                                    await record_feedback(
+                                        db,
+                                        session_exercise_id=_session_exercise_id,
+                                        rep_id=rep_row.id,
+                                        message=err_msg,
+                                        feedback_type="Error",
+                                        channel="voice",
+                                    )
+                            await db.commit()
+                    except Exception as exc:
+                        logger.debug("Không ghi SessionRep (rep %d): %s", new_count, exc)
+                _prev_rep_count = new_count
+
                 # Khung xương ĐẦY ĐỦ cho client vẽ (mặt, khuỷu tay, cổ tay...),
                 # tách khỏi `result.keypoints` (chỉ những khớp analyzer này
                 # thực sự dùng để tính góc) — gán SAU khi analyzer trả về,
@@ -287,9 +355,30 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
             reps,
             acc,
         )
+        if _ws_session_id:
+            try:
+                async with AsyncSessionLocal() as db:
+                    await finalize_session(
+                        db,
+                        session_id=_ws_session_id,
+                        overall_form_score=acc if acc > 0 else None,
+                        status="Completed",
+                    )
+            except Exception as exc:
+                logger.debug("Không finalize WorkoutSession %d: %s", _ws_session_id, exc)
     except Exception as exc:
         logger.exception("Lỗi WebSocket không mong đợi: %s", exc)
         try:
             await websocket.send_json({"error": "Lỗi hệ thống phía server."})
         except Exception:
             pass
+        if _ws_session_id:
+            try:
+                async with AsyncSessionLocal() as db:
+                    await finalize_session(
+                        db,
+                        session_id=_ws_session_id,
+                        status="Discarded",
+                    )
+            except Exception:
+                pass
