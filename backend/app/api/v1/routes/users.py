@@ -1,6 +1,7 @@
 """Endpoints quản lý thông tin user."""
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -60,5 +61,12 @@ async def delete_me(
     current_user: User = Depends(get_current_user),
 ) -> None:
     """Xóa tài khoản và toàn bộ dữ liệu của user đang đăng nhập."""
+    uid = current_user.id
+    # Xoá dữ liệu ở các bảng không có ON DELETE CASCADE trước để tránh FK violation
+    await db.execute(text("DELETE FROM coach_messages  WHERE user_id  = :uid"), {"uid": uid})
+    await db.execute(text("DELETE FROM device_tokens   WHERE user_id  = :uid"), {"uid": uid})
+    await db.execute(text("DELETE FROM WorkoutPlans    WHERE UserId   = :uid"), {"uid": uid})
+    await db.execute(text("DELETE FROM videos          WHERE user_id  = :uid"), {"uid": uid})
+    await db.execute(text("DELETE FROM workouts        WHERE user_id  = :uid"), {"uid": uid})
     await db.delete(current_user)
     await db.flush()
