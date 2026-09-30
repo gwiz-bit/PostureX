@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/user_session.dart';
 import '../../models/workout_plan.dart';
 import '../../services/api_client.dart';
+import '../../services/token_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_locale.dart';
 import '../main_shell.dart';
@@ -60,6 +61,15 @@ class _PlanGeneratingScreenState extends State<PlanGeneratingScreen>
   void _onStatusChanged(AnimationStatus status) {
     if (status != AnimationStatus.completed || !mounted) return;
     _rebuildPlanIfReady();
+    TokenStorage.savePlanParams(
+      workoutDays: UserSession.workoutDays,
+      weeklyGoal: UserSession.weeklyGoal,
+      fitnessLevel: UserSession.fitnessLevel,
+      focusAreas: UserSession.focusAreas,
+      equipment: UserSession.equipment,
+      goals: UserSession.goals,
+      healthIssues: UserSession.healthIssues,
+    );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const MainShell()),
     );

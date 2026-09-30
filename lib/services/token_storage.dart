@@ -40,6 +40,14 @@ class TokenStorage {
   static const _userIdKey = 'user_id';
   static const _emailKey = 'user_email';
 
+  static const _workoutDaysKey = 'plan_workout_days';
+  static const _weeklyGoalKey = 'plan_weekly_goal';
+  static const _fitnessLevelKey = 'plan_fitness_level';
+  static const _focusAreasKey = 'plan_focus_areas';
+  static const _equipmentKey = 'plan_equipment';
+  static const _goalsKey = 'plan_goals';
+  static const _healthIssuesKey = 'plan_health_issues';
+
   static Future<void> saveSession({
     required String accessToken,
     required int userId,
@@ -66,6 +74,44 @@ class TokenStorage {
   static Future<void> clear() async {
     await backend.deleteAll();
   }
+
+  static Future<void> savePlanParams({
+    required Set<String> workoutDays,
+    required int weeklyGoal,
+    required String fitnessLevel,
+    required Set<String> focusAreas,
+    required Set<String> equipment,
+    required Set<String> goals,
+    required Set<String> healthIssues,
+  }) async {
+    await Future.wait([
+      backend.write(key: _workoutDaysKey, value: workoutDays.join(',')),
+      backend.write(key: _weeklyGoalKey, value: weeklyGoal.toString()),
+      backend.write(key: _fitnessLevelKey, value: fitnessLevel),
+      backend.write(key: _focusAreasKey, value: focusAreas.join(',')),
+      backend.write(key: _equipmentKey, value: equipment.join(',')),
+      backend.write(key: _goalsKey, value: goals.join(',')),
+      backend.write(key: _healthIssuesKey, value: healthIssues.join(',')),
+    ]);
+  }
+
+  static Future<StoredPlanParams?> readPlanParams() async {
+    final days = await backend.read(key: _workoutDaysKey);
+    final goal = await backend.read(key: _weeklyGoalKey);
+    final level = await backend.read(key: _fitnessLevelKey);
+    if (days == null || goal == null || level == null) return null;
+    Set<String> parse(String? s) =>
+        (s == null || s.isEmpty) ? {} : s.split(',').toSet();
+    return StoredPlanParams(
+      workoutDays: parse(days),
+      weeklyGoal: int.tryParse(goal) ?? 4,
+      fitnessLevel: level,
+      focusAreas: parse(await backend.read(key: _focusAreasKey)),
+      equipment: parse(await backend.read(key: _equipmentKey)),
+      goals: parse(await backend.read(key: _goalsKey)),
+      healthIssues: parse(await backend.read(key: _healthIssuesKey)),
+    );
+  }
 }
 
 class StoredSession {
@@ -78,4 +124,24 @@ class StoredSession {
   final String accessToken;
   final int userId;
   final String email;
+}
+
+class StoredPlanParams {
+  const StoredPlanParams({
+    required this.workoutDays,
+    required this.weeklyGoal,
+    required this.fitnessLevel,
+    required this.focusAreas,
+    required this.equipment,
+    required this.goals,
+    required this.healthIssues,
+  });
+
+  final Set<String> workoutDays;
+  final int weeklyGoal;
+  final String fitnessLevel;
+  final Set<String> focusAreas;
+  final Set<String> equipment;
+  final Set<String> goals;
+  final Set<String> healthIssues;
 }
