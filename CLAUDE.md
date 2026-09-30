@@ -64,6 +64,99 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 01/10/2026 (2)
+
+**Scale theo tạng người (người to/nhỏ, đứng gần/xa) — kiểm bằng mô phỏng qua analyzer thật, sửa
+hai chỗ không scale.** Kết quả đo: (1) góc + đếm rep BẤT BIẾN theo kích thước (5 mức 0,5–1,6,
+cùng 1 rep, không lỗi) ✔. (2) "Gối vượt mũi chân" KHÔNG scale: ngưỡng cũ cố định 0,05 chiều rộng
+khung ⇒ bị báo khi gối vượt 10% chiều dài chân ở người to/gần nhưng phải vượt tới 31% ở người
+nhỏ/xa (chênh ~3 lần; Squat/Lunge/Deadlift). (3) Nhiễu khớp cùng độ lớn điểm ảnh ⇒ độ lệch chuẩn
+góc gối 5,2° (người nhỏ, s=0,5) vs 1,6° (người to, s=1,6) — tính chất của phép đo, tỉ lệ nghịch
+kích thước; mức tuyệt đối (σ=0,004 khung) là GIẢ ĐỊNH chưa đo với ML Kit thật.
+
+- **Sửa 1 — `knee_overshoot` → `knee_overshoot_leg`** (`common.knee_passes_toe`): tỉ lệ theo CHIỀU
+  DÀI CHÂN (hông→cổ chân, nhân `aspect` cho x), mặc định 0,15 (= mức cũ quy ra người cỡ trung bình).
+  ĐỔI TÊN khoá thay vì đổi nghĩa để giá trị cũ còn trong bảng `ExercisePostureRules` không bị hiểu
+  sai âm thầm (đã khai đủ 3 nơi: `tunables.py`, `thresholds.py`, `posture_rule.py`); dòng DB cũ với
+  khoá `knee_overshoot` bị bỏ qua vô hại. Khoảng hợp lệ 0–0,60 bước 0,01. Deadlift nay cần thêm hông
+  và cổ chân nhìn rõ mới kiểm tra mục này (để đo chiều dài chân). ⚠️ Cần DEPLOY backend để có hiệu lực.
+- **Sửa 2 — cảnh báo "người quá nhỏ trong khung"** (`CaptureIssue.tooSmall`, client): đo chiều dài
+  thân (trung điểm vai→hông, theo chiều cao khung, có nhân `aspect`) từ khung xương; thân <0,14 liên
+  tục ~1,2 s thì hiện banner "hãy đứng gần hơn" (thoát khi >0,16). Thân thật ≈30% chiều cao người nên
+  0,14 ≈ người cao <~47% khung. Ưu tiên: thiếu sáng > quá nhỏ > mất góc. Ngưỡng là ƯỚC LƯỢNG.
+- **Sửa 3 — `tests/test_body_scale.py` (52 test)** khoá tính bất biến theo kích thước/tỉ lệ khung:
+  XANH trên code mới, ĐỎ 13 test trên code cũ (người nhỏ bị bỏ sót, người to bị báo oan, tỉ lệ khung).
+  Bài học test: mức vượt dùng để chứng minh "không báo oan" phải NẰM GIỮA hai ngưỡng (12%: cũ báo ở
+  ~10% người to, mới báo từ 15%) — chọn 5% thì test qua cả trên code cũ, không chứng minh gì.
+- ⚠️ **Chưa kiểm chứng được (cần người thật):** ảnh hưởng của mỡ/cơ lên độ chính xác khớp (bụng che
+  hông/gối khi nhìn nghiêng), tỉ lệ thân–chân–đùi khác nhau so với ngưỡng độ sâu 95° v.v. (đều ước
+  lượng cho người "trung bình"), trẻ em/người rất cao/thấp.
+
+### 01/10/2026
+
+**Khung xương là ẢNH GƯƠNG của người thật ở camera trước — bản sửa 14/09 "lật chung một
+`Transform`" dựa trên giả định SAI.** Test thật đầu tiên trên điện thoại (2 ảnh chụp
+màn hình): khung xương đối xứng với người qua trục dọc giữa khung hình. Kiểm bằng số:
+khung rộng 429 px, thân người ở x≈160, cột sống khung xương ở x≈270 ≈ 429−160; khung
+rộng 398 px, người x≈185, khung xương ~190–215 ≈ 398−185. Nguyên nhân: ML Kit nhận ảnh
+GỐC chưa lật nên toạ độ khớp luôn ở không gian gốc, còn texture `CameraPreview` thì plugin
+có thể TỰ lật gương (chỉ texture, không lật ảnh phân tích). Bản 14/09 cho rằng "hai thứ
+luôn cùng chiều nên lật chung một `Transform` là khớp" — đúng hệ quả nhưng sai tiền đề, và
+lỗi 11/09 → 14/09 → nay chỉ là ba biểu hiện của cùng một ẩn số: plugin có lật texture hay
+không (flutter/flutter#156974, khác nhau theo máy).
+
+- **Sửa bằng MỘT bit hiệu chỉnh** `pluginMirrorsFrontPreview` (`lib/utils/preview_mirror.dart`,
+  `PreviewMirrorPlan`): gọi P = plugin đã lật texture, T = app bọc `Transform`, S = khung
+  xương tự lật x. Muốn preview hiện như gương (P+T lẻ) và khung xương khớp hình (S=P):
+  **T = 1−P, S = P**. Camera sau không lật gì. `SkeletonPainter` lấy lại tham số `mirrorX`
+  (chỉ do `PreviewMirrorPlan` điều khiển, không bao giờ theo lens một mình).
+- **Mặc định P = true** (khớp bằng chứng từ ảnh chụp); **nút "Khung xương bị ngược? Bấm để
+  sửa"** (biểu tượng `flip`, chỉ hiện ở camera trước, cạnh nút sao chép log) đảo bit, lưu qua
+  `CameraCalibrationStorage` (dùng `TokenStorage.backend`, nên đăng xuất xoá về mặc định).
+  Log phiên ghi `front_preview_mirrored_by_plugin`, `mirror_plan` và sự kiện
+  `mirror_calibration`.
+- **Log phiên tự động vào clipboard khi bấm kết thúc phiên** (`_endSession`) — người test
+  đã lỡ mất log vì quên bấm nút sao chép trước khi thoát (log chỉ sống trong màn phân tích).
+  Thông báo hiện qua `ScaffoldMessenger` gốc nên còn thấy ở màn tổng kết. Lưu ý: nó ghi đè
+  clipboard hiện có của người dùng.
+- ⚠️ Chưa biết máy nào khác cư xử thế nào — đây là lý do phải có nút sửa thay vì đoán tiếp.
+  Kết quả mong đợi ở máy có ảnh chụp: camera trước hiện như gương, khung xương khớp người.
+
+### 30/09/2026 (2)
+
+**Đo hiệu năng VPS (2 vCPU / 4 GB) — lần đầu có số thật, thay cho ước lượng.** Hai
+script mới trong `backend/scripts/`: `bench_pose.py` (chạy TRÊN VPS, đo MediaPipe,
+cần `sudo` vì đọc `storage/` của root) và `bench_ws.py` (chạy từ máy bất kỳ, đo độ
+trễ đầu-cuối của `/ws/analyze` như app đi; đăng nhập bằng biến môi trường
+`BENCH_EMAIL`/`BENCH_PASSWORD`, đừng gõ mật khẩu vào dòng lệnh).
+
+- **Đường ảnh JPEG (server chạy MediaPipe): ~75–80 ms/frame**, 12,7 fps mỗi luồng,
+  24,3 fps với 2 luồng (gần tuyến tính theo số nhân). Chia cho 12 fps/người ⇒
+  **chỉ ~1–2 người tập mượt cùng lúc** (chưa tính CPU cho phần còn lại của server).
+  Ghi chú cũ "30–60 ms/frame" trong các mục nhật ký 11–15/09 là ƯỚC LƯỢNG và thấp
+  hơn số đo thật.
+- **Đường keypoint (ML Kit, server chỉ phân tích): 1 người 5,9 ms · 5 người 10,0 ms ·
+  15 người 17,0 ms trung bình** (p95 7,4 / 13,0 / 26,7 ms; max 36,7 ms; 0 lỗi/3000
+  frame; không frame nào >500 ms; mỗi người giữ đủ ~12 fps). Độ trễ tăng ~0,8 ms cho
+  mỗi người thêm. Nghĩa là **VPS không phải nút thắt của đường ML Kit** — nếu điện
+  thoại lag thì tìm ở thời gian ML Kit trên máy hoặc mạng di động, không phải server.
+- ⚠️ **Giới hạn của phép đo, đừng suy rộng:** dùng tư thế giả đứng yên (thật ra server
+  còn tốn thêm DTW và ghi DB mỗi khi rep tăng); đo từ máy có ping ~5 ms tới VPS (4G/5G
+  chậm hơn nhiều); mọi người giả lập dùng CHUNG một tài khoản/token; chưa thấy điểm
+  gãy nên không biết sức chứa tối đa; và thời gian ML Kit chạy trên điện thoại vẫn
+  chưa đo (log phiên có `ml_kit_ms`).
+- ⚠️ **Mỗi người giả lập tạo một bản ghi phiên tập RỖNG** trong DB dưới tài khoản
+  đăng nhập (route WebSocket giờ lưu lịch sử) — nên dùng tài khoản thử nghiệm riêng.
+- **Test WebSocket phải chặn DB thật.** Route `/ws/analyze` lưu phiên/rep/lỗi qua
+  `AsyncSessionLocal()`; hai fixture `ws_client` nay gọi `_block_real_db` (mẫu `no_db`).
+  Không chặn thì test ghi vào MySQL thật của máy chạy test (trên VPS là DB production)
+  và làm vỡ test async khác với `'NoneType' object has no attribute 'send'` — chỉ khi
+  chạy cả bộ. Test WebSocket mới phải dùng lại `_block_real_db`.
+- **Link APK `http://103.82.21.150:9001/posturex-latest.apk`** do một tiến trình
+  `python3 -m http.server 9001` chạy TAY (không phải service) phục vụ thư mục
+  `/home/hiephann/apk_release`; `scripts/publish_apk.ps1` build + tải vào đó, giữ bản
+  cũ thành `posturex-prev.apk`. VPS khởi động lại thì tiến trình chết, link chết theo.
+
 ### 30/09/2026
 
 **Góc khớp bị MÉO theo tỉ lệ khung ảnh — đã sửa bằng `Keypoint.aspect`.** Toạ độ
@@ -2007,7 +2100,7 @@ Phân tầng FastAPI tiêu chuẩn: `api/v1/routes/` (auth, users, workouts, vid
 
 Phần đáng chú ý nhất là `app/ml/`: `pose_estimator.py` chạy pose landmarker của MediaPipe (`app/ml/models/pose_landmarker_full.task`, tải bằng `scripts/download_models.py` — là file nhị phân, đã gitignore, không commit vào mã nguồn), `angle_utils.py` tính góc khớp, `rep_counter.py` đếm rep bằng máy trạng thái, và `analyzers/` chứa phần nhận xét kỹ thuật cho từng bài.
 
-**Đừng bao giờ gọi thẳng `PoseEstimator.estimate()` từ code async.** `detect()` của MediaPipe là lời gọi CPU 30–60 ms và không nhả điều khiển, nên chạy nó bên trong handler WebSocket sẽ đóng băng *toàn bộ* event loop — đăng nhập và mọi request khác đều xếp hàng sau người đang tập dở. `app/ml/pose_estimator_pool.py` đẩy việc đó sang luồng riêng và giới hạn số lượng chạy cùng lúc. Phải là pool chứ không phải chỉ `asyncio.to_thread`, vì `PoseLandmarker` **không thread-safe**: hai luồng dùng chung một instance là hành vi không xác định. Instance được tạo lười, số lượng lấy theo số CPU và chặn trên ở 4.
+**Đừng bao giờ gọi thẳng `PoseEstimator.estimate()` từ code async.** `detect()` của MediaPipe là lời gọi CPU ~80 ms trên VPS 2 vCPU (đo 30/09/2026) và không nhả điều khiển, nên chạy nó bên trong handler WebSocket sẽ đóng băng *toàn bộ* event loop — đăng nhập và mọi request khác đều xếp hàng sau người đang tập dở. `app/ml/pose_estimator_pool.py` đẩy việc đó sang luồng riêng và giới hạn số lượng chạy cùng lúc. Phải là pool chứ không phải chỉ `asyncio.to_thread`, vì `PoseLandmarker` **không thread-safe**: hai luồng dùng chung một instance là hành vi không xác định. Instance được tạo lười, số lượng lấy theo số CPU và chặn trên ở 4.
 
 `ANALYZER_REGISTRY` nằm ở `app/ml/analyzers/registry.py` (không phải `routes/realtime.py` — `routes/exercises.py` cũng cần nó, mà import module realtime sẽ kéo cả mediapipe vào chỉ để đọc vài cái tên). Nó ánh xạ **204 khoá tên bài tập vào 16 class analyzer**, phủ 197 trong khoảng 417 bài của thư viện (thêm 7 analyzer mới ngày 06/09/2026 — xem Nhật ký thay đổi). Danh sách được liệt kê từng tên một cách có chủ đích: khớp theo chuỗi con nhìn thì tiện nhưng sai theo kiểu đánh lừa người dùng — "Barbell Upright Row" là bài vai, "Nar-row Pulldown" chỉ tình cờ chứa mấy chữ cái đó, "Rowing Machine Steady State" là bài cardio. Các biến thể cũng bị loại khi analyzer gộp hoặc so sánh hai bên (row một tay không bao giờ chạm ngưỡng co vì cánh tay rảnh kéo giá trị trung bình lên), và split squat được ánh xạ sang `LungeAnalyzer` chứ không phải `SquatAnalyzer` vì lunge lấy `min()` của hai gối trong khi squat lấy trung bình. `tests/test_analyzer_registry.py` khoá lại các quyết định loại trừ đó. Tên không có trong bảng sẽ rơi về `SquatAnalyzer` kèm một cảnh báo trong log, nhưng client nên dùng cờ `supports_analysis` của `GET /exercises` để người dùng không bao giờ rơi vào nhánh dự phòng đó.
 
