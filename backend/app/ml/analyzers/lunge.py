@@ -1,14 +1,13 @@
 """Phân tích kỹ thuật Lunge: độ sâu gối trước, gối trước không vượt mũi chân."""
 
 from app.ml.analyzers.base import ExerciseAnalyzer
-from app.ml.analyzers.common import is_visible, visible_points
+from app.ml.analyzers.common import KNEE_OVERSHOOT_LEG_RATIO, is_visible, knee_passes_toe, visible_points
 from app.ml.angle_utils import calculate_angle, calculate_angle_3d
 from app.ml.pose_estimator import Keypoint
 from app.ml.rep_counter import RepCounter
 from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 
 KNEE_DEPTH_THRESHOLD = 100.0     # Gối trước phải gập ≤ ngưỡng này mới đủ sâu
-KNEE_OVERSHOOT_RATIO = 0.05      # Gối trước không được vượt qua mũi chân quá 5% chiều rộng frame
 BACK_STRAIGHT_MIN = 150.0        # Góc vai-hông-gối phải ≥ ngưỡng này (thân thẳng, không cúi)
 
 
@@ -79,12 +78,15 @@ class LungeAnalyzer(ExerciseAnalyzer):
             if self.rep_counter.shallow_reversal:
                 errors.append("Chùng chân chưa đủ sâu — hạ thấp hông thêm cho đùi trước song song sàn.")
 
-        overshoot = self.threshold("knee_overshoot", KNEE_OVERSHOOT_RATIO)
+        # Tỉ lệ theo chiều dài chân, không theo chiều rộng khung (xem `knee_passes_toe`).
+        overshoot = self.threshold("knee_overshoot_leg", KNEE_OVERSHOOT_LEG_RATIO)
         if is_visible(left_knee, left_foot) and left_knee_angle == front_knee_angle:
-            if left_knee.x > left_foot.x + overshoot:
+            if knee_passes_toe(left_knee, left_foot, left_hip, left_ankle, outward=+1, max_ratio=overshoot):
                 errors.append("Gối trước vượt quá mũi chân — lùi chân sau ra xa hơn.")
         if is_visible(right_knee, right_foot) and right_knee_angle == front_knee_angle:
-            if right_knee.x < right_foot.x - overshoot:
+            if knee_passes_toe(
+                right_knee, right_foot, right_hip, right_ankle, outward=-1, max_ratio=overshoot
+            ):
                 errors.append("Gối trước vượt quá mũi chân — lùi chân sau ra xa hơn.")
 
         back_angle: float | None = None

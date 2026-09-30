@@ -1,6 +1,7 @@
 """Phân tích kỹ thuật squat: độ sâu, gối vượt mũi chân, lưng thẳng."""
 
 from app.ml.analyzers.base import ExerciseAnalyzer
+from app.ml.analyzers.common import KNEE_OVERSHOOT_LEG_RATIO, knee_passes_toe
 from app.ml.analyzers.common import avg as _avg
 from app.ml.analyzers.common import is_visible as _visible
 from app.ml.analyzers.common import visible_points as _visible_points
@@ -11,7 +12,6 @@ from app.schemas.analysis import FrameAnalysisResult, KeyAngles
 
 # Ngưỡng góc (độ)
 KNEE_DEPTH_THRESHOLD = 95.0      # Gối phải gập ≤ ngưỡng này mới đủ sâu
-KNEE_OVERSHOOT_RATIO = 0.05      # Gối không được vượt qua mũi chân quá 5% chiều rộng frame
 BACK_STRAIGHT_MIN = 150.0        # Góc hông-vai-cổ phải ≥ ngưỡng này (lưng thẳng)
 
 
@@ -87,14 +87,18 @@ class SquatAnalyzer(ExerciseAnalyzer):
         # --- Kiểm tra gối vượt mũi chân ---
         # Tra ngưỡng một lần rồi dùng lại cho cả hai bên: `analyze` chạy mỗi
         # frame nên tránh tra dict hai lần cho cùng một giá trị.
-        overshoot = self.threshold("knee_overshoot", KNEE_OVERSHOOT_RATIO)
+        # Ngưỡng là tỉ lệ theo CHIỀU DÀI CHÂN, không phải chiều rộng khung hình — để
+        # người to/nhỏ, đứng gần/xa bị báo ở cùng một mức (xem `knee_passes_toe`).
+        overshoot = self.threshold("knee_overshoot_leg", KNEE_OVERSHOOT_LEG_RATIO)
         if _visible(left_knee, left_foot) and left_knee_angle is not None:
-            if left_knee.x > left_foot.x + overshoot:
+            if knee_passes_toe(left_knee, left_foot, left_hip, left_ankle, outward=+1, max_ratio=overshoot):
                 errors.append("Gối trái vượt quá mũi chân — hãy đẩy hông về sau.")
 
         if _visible(right_knee, right_foot) and right_knee_angle is not None:
             # Gối phải ở phía ngược lại trong không gian ảnh
-            if right_knee.x < right_foot.x - overshoot:
+            if knee_passes_toe(
+                right_knee, right_foot, right_hip, right_ankle, outward=-1, max_ratio=overshoot
+            ):
                 errors.append("Gối phải vượt quá mũi chân — hãy đẩy hông về sau.")
 
         # --- Kiểm tra lưng thẳng (góc vai-hông-gối) ---

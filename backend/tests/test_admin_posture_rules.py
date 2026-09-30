@@ -164,7 +164,7 @@ async def test_bai_chua_ghi_de_hien_mac_dinh(client: AsyncClient, admin_setup: d
     assert body["analyzer"] == "SquatAnalyzer"
     theo_khoa = {t["key"]: t for t in body["tunables"]}
     assert set(theo_khoa) == {
-        "knee_depth", "stand_up_min", "back_straight_min", "knee_overshoot",
+        "knee_depth", "stand_up_min", "back_straight_min", "knee_overshoot_leg",
     }
     assert theo_khoa["knee_depth"]["default"] == 95.0
     assert theo_khoa["knee_depth"]["current"] is None
@@ -174,15 +174,15 @@ async def test_bai_chua_ghi_de_hien_mac_dinh(client: AsyncClient, admin_setup: d
 async def test_nguong_ti_le_khong_bi_gan_don_vi_do(client: AsyncClient, admin_setup: dict) -> None:
     """`knee_overshoot` là khoá DUY NHẤT không phải góc.
 
-    Nó là tỉ lệ theo chiều rộng khung hình (0.05 = 5%), nên giao diện không
-    được gắn "°" vào — "0.05°" khiến admin hiểu sai hoàn toàn thứ mình chỉnh.
+    Nó là tỉ lệ theo chiều dài chân (0.15 = 15%), nên giao diện không
+    được gắn "°" vào — "0.15°" khiến admin hiểu sai hoàn toàn thứ mình chỉnh.
     Bước nhảy cũng phải nhỏ hơn nhiều so với 1° của các ngưỡng góc.
     """
     resp = await client.get(f"{URL}/{admin_setup['squat'].id}", headers=admin_setup["admin"])
 
     theo_khoa = {t["key"]: t for t in resp.json()["tunables"]}
-    assert theo_khoa["knee_overshoot"]["unit"] == ""
-    assert theo_khoa["knee_overshoot"]["step"] == 0.01
+    assert theo_khoa["knee_overshoot_leg"]["unit"] == ""
+    assert theo_khoa["knee_overshoot_leg"]["step"] == 0.01
     assert theo_khoa["knee_depth"]["unit"] == "°"
     assert theo_khoa["knee_depth"]["step"] == 1.0
 
@@ -199,9 +199,9 @@ async def test_nguong_ti_le_luu_va_doc_lai_dung_gia_tri(
     """
     sq = admin_setup["squat"].id
     await client.put(f"{URL}/{sq}", headers=admin_setup["admin"],
-                     json={"values": {"knee_overshoot": 0.12}})
+                     json={"values": {"knee_overshoot_leg": 0.12}})
 
-    assert await load_thresholds(db_session, "Squat") == {"knee_overshoot": 0.12}
+    assert await load_thresholds(db_session, "Squat") == {"knee_overshoot_leg": 0.12}
 
 
 @pytest.mark.asyncio
@@ -466,7 +466,8 @@ async def test_nguong_ti_le_cung_toi_duoc_analyzer(
     Trước đây ba analyzer (squat, lunge, deadlift) đọc thẳng hằng số module
     `KNEE_OVERSHOOT_RATIO`, nên nó nằm ngoài mọi ghi đè theo bài. Test này
     chứng minh đường mới thông: cùng một tư thế gối vượt mũi chân 0.12 khung
-    hình, ngưỡng 0.05 mặc định thì báo lỗi, ngưỡng 0.20 admin đặt thì không.
+    hình (~41% chiều dài chân trong tư thế dựng sẵn), ngưỡng 0.15 mặc định thì
+    báo lỗi, ngưỡng 0.60 admin đặt thì không.
     """
     from app.ml.analyzers.squat import SquatAnalyzer
     from tests.pose_builders import squat_pose
@@ -480,6 +481,6 @@ async def test_nguong_ti_le_cung_toi_duoc_analyzer(
     assert co_bao_loi(await load_thresholds(db_session, "Squat")) is True
 
     await client.put(f"{URL}/{admin_setup['squat'].id}", headers=admin_setup["admin"],
-                     json={"values": {"knee_overshoot": 0.20}})
+                     json={"values": {"knee_overshoot_leg": 0.60}})
 
     assert co_bao_loi(await load_thresholds(db_session, "Squat")) is False

@@ -59,9 +59,11 @@ class Tunable:
     #: Giao diện dùng cờ này để cảnh báo admin.
     affects_rep_count: bool = False
 
-    #: Đơn vị hiển thị. Gần hết là độ, riêng `knee_overshoot` là tỉ lệ theo
-    #: chiều rộng frame nên để rỗng — hiện "0.05°" sẽ khiến admin hiểu sai
-    #: hoàn toàn thứ mình đang chỉnh.
+    #: Đơn vị hiển thị. Gần hết là độ, riêng `knee_overshoot_leg` là tỉ lệ theo
+    #: chiều dài chân nên để rỗng — hiện "0.15°" sẽ khiến admin hiểu sai hoàn
+    #: toàn thứ mình đang chỉnh. (Trước 01/10/2026 khoá này tên `knee_overshoot`
+    #: và là tỉ lệ theo chiều rộng khung; đổi tên để giá trị cũ còn trong DB
+    #: không bị hiểu sai âm thầm theo nghĩa mới.)
     unit: str = "°"
 
     #: Bước nhảy của thanh trượt. Với góc, dưới 1° không có ý nghĩa thực tế
@@ -82,8 +84,8 @@ TUNABLES: dict[str, list[Tunable]] = {
                 155.0, 120.0, 180.0, affects_rep_count=True),
         Tunable("back_straight_min", "Lưng thẳng — thân phải mở ít nhất góc này",
                 150.0, 80.0, 180.0),
-        Tunable("knee_overshoot", "Gối vượt mũi chân — tỉ lệ theo chiều rộng khung hình",
-                0.05, 0.0, 0.30, unit="", step=0.01),
+        Tunable("knee_overshoot_leg", "Gối vượt mũi chân — tỉ lệ theo chiều dài chân (hông → cổ chân)",
+                0.15, 0.0, 0.60, unit="", step=0.01),
     ],
     "LungeAnalyzer": [
         Tunable("knee_depth", "Độ sâu gối trước — gập dưới góc này mới tính đủ sâu",
@@ -92,8 +94,8 @@ TUNABLES: dict[str, list[Tunable]] = {
                 160.0, 120.0, 180.0, affects_rep_count=True),
         Tunable("back_straight_min", "Thân thẳng — vai-hông-gối phải mở ít nhất góc này",
                 150.0, 80.0, 180.0),
-        Tunable("knee_overshoot", "Gối vượt mũi chân — tỉ lệ theo chiều rộng khung hình",
-                0.05, 0.0, 0.30, unit="", step=0.01),
+        Tunable("knee_overshoot_leg", "Gối vượt mũi chân — tỉ lệ theo chiều dài chân (hông → cổ chân)",
+                0.15, 0.0, 0.60, unit="", step=0.01),
     ],
     "CossackSquatAnalyzer": [
         Tunable("knee_depth", "Độ sâu gối chân chịu lực — gập dưới góc này mới tính đủ sâu",
@@ -130,8 +132,8 @@ TUNABLES: dict[str, list[Tunable]] = {
                 110.0, 50.0, 150.0, affects_rep_count=True),
         Tunable("hip_up", "Đứng thẳng — vượt góc này là đã dựng người hoàn toàn",
                 165.0, 120.0, 180.0, affects_rep_count=True),
-        Tunable("knee_overshoot", "Gối vượt mũi chân — tỉ lệ theo chiều rộng khung hình",
-                0.05, 0.0, 0.30, unit="", step=0.01),
+        Tunable("knee_overshoot_leg", "Gối vượt mũi chân — tỉ lệ theo chiều dài chân (hông → cổ chân)",
+                0.15, 0.0, 0.60, unit="", step=0.01),
     ],
     "HipThrustAnalyzer": [
         Tunable("hip_down", "Hạ hông — góc hông dưới mức này mới tính đã hạ đủ",

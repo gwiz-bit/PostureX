@@ -54,11 +54,13 @@ VALUE_COLUMN: dict[str, str] = {
     "stand_up_min": "min_angle",        # lên trên góc này = đã đứng thẳng lại
     # Squat / Lunge / Deadlift
     #
-    # Khoá DUY NHẤT không phải góc: đây là tỉ lệ theo chiều rộng frame (0.05 =
-    # gối được phép vượt mũi chân 5% chiều rộng khung hình). Vì thế nó lấy giá
+    # Khoá DUY NHẤT không phải góc: đây là tỉ lệ theo CHIỀU DÀI CHÂN (hông → cổ chân;
+    # từ 01/10/2026, trước đó là `knee_overshoot` theo chiều rộng khung — đổi tên để
+    # giá trị cũ trong DB không bị hiểu sai âm thầm). Ví dụ cũ cho dễ hình dung (0.05 =
+    # gối vượt mũi chân 5% chiều rộng khung). Hiện 0.15 = vượt 15% chiều dài chân. Nó lấy giá
     # trị từ cột `Tolerance` chứ không phải Min/MaxAngle — nhét một tỉ lệ 0.05
     # vào cột mang tên "góc" sẽ đánh lừa mọi người đọc thẳng DB.
-    "knee_overshoot": "tolerance",
+    "knee_overshoot_leg": "tolerance",
     # Deadlift / Hip thrust
     "hip_down": "max_angle",
     "hip_up": "min_angle",

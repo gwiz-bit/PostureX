@@ -65,8 +65,8 @@ class TunableOut(BaseModel):
     affects_rep_count: bool
 
     #: Đơn vị hiển thị — "°" cho góc, rỗng cho tỉ lệ. Giao diện không được tự
-    #: gắn "°" vào mọi giá trị: `knee_overshoot` là tỉ lệ theo chiều rộng
-    #: khung hình, hiện "0.05°" sẽ khiến admin hiểu sai thứ mình đang chỉnh.
+    #: gắn "°" vào mọi giá trị: `knee_overshoot_leg` là tỉ lệ theo chiều dài chân (trước là chiều rộng
+    #: khung hình), hiện "0.15°" sẽ khiến admin hiểu sai thứ mình đang chỉnh.
     unit: str
     #: Bước nhảy của thanh trượt.
     step: float

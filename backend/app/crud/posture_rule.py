@@ -24,7 +24,7 @@ _JOINTS: dict[str, tuple[str, str, str]] = {
     "stand_up_min": ("Hip", "Knee", "Ankle"),
     # Không phải góc: so vị trí ngang của gối với mũi chân, nên bộ ba này chỉ
     # nói "liên quan tới gối và bàn chân" chứ không mô tả một góc thật.
-    "knee_overshoot": ("Knee", "Ankle", "FootIndex"),
+    "knee_overshoot_leg": ("Knee", "Ankle", "FootIndex"),
     "back_straight_min": ("Shoulder", "Hip", "Knee"),
     "hip_down": ("Shoulder", "Hip", "Knee"),
     "hip_up": ("Shoulder", "Hip", "Knee"),
