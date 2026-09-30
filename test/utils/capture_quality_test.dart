@@ -1,7 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posturex/models/frame_analysis_result.dart' show KeyAngles;
+import 'package:posturex/models/frame_analysis_result.dart'
+    show KeyAngles, Point;
 import 'package:posturex/utils/capture_quality.dart';
 
 Uint8List _flat(int width, int height, int value, {int bytesPerRow = 0}) {
@@ -180,6 +181,148 @@ void main() {
       feed(m, 15, measured: false);
       m.addFrame(personPresent: false, angleMeasured: false);
       feed(m, 15, measured: false);
+      expect(m.issue, isNull);
+    });
+  });
+
+  group('torsoLengthInFrameHeights', () {
+    Point p(double x, double y, {double v = 1.0}) =>
+        Point(x: x, y: y, visibility: v);
+
+    Map<String, Point> standing({double scale = 1.0}) => {
+      'left_shoulder': p(0.45, 0.30),
+      'right_shoulder': p(0.55, 0.30),
+      'left_hip': p(0.45, 0.30 + 0.25 * scale),
+      'right_hip': p(0.55, 0.30 + 0.25 * scale),
+    };
+
+    test('người đứng: thân = khoảng cách trung điểm vai → hông', () {
+      expect(
+        torsoLengthInFrameHeights(standing(), aspect: 0.75),
+        closeTo(0.25, 1e-9),
+      );
+    });
+
+    test('người nhỏ hơn thì thân ngắn hơn theo đúng tỉ lệ', () {
+      final to = torsoLengthInFrameHeights(standing(), aspect: 0.75)!;
+      final nho = torsoLengthInFrameHeights(standing(scale: 0.5), aspect: 0.75)!;
+      expect(nho, closeTo(to / 2, 1e-9));
+    });
+
+    test('người nằm ngang (plank) vẫn đo đúng nhờ nhân aspect cho trục x', () {
+      // Thân nằm ngang dài 0,5 chiều RỘNG khung; khung 0,5 rộng/cao ⇒ 0,25 chiều cao.
+      final plank = {
+        'left_shoulder': p(0.2, 0.5),
+        'right_shoulder': p(0.2, 0.5),
+        'left_hip': p(0.7, 0.5),
+        'right_hip': p(0.7, 0.5),
+      };
+      expect(torsoLengthInFrameHeights(plank, aspect: 0.5), closeTo(0.25, 1e-9));
+      // Thiếu aspect (coi như 1) sẽ ra 0,5 — sai gấp đôi.
+      expect(torsoLengthInFrameHeights(plank, aspect: 1.0), closeTo(0.5, 1e-9));
+    });
+
+    test('thiếu một bên thì dùng cặp vai–hông bên còn lại', () {
+      final mot = {
+        'left_shoulder': p(0.45, 0.30),
+        'left_hip': p(0.45, 0.55),
+        'right_shoulder': p(0.55, 0.30, v: 0.1),
+        'right_hip': p(0.55, 0.55, v: 0.1),
+      };
+      expect(torsoLengthInFrameHeights(mot, aspect: 0.75), closeTo(0.25, 1e-9));
+    });
+
+    test('không đủ khớp nhìn rõ hoặc không có người thì trả null', () {
+      expect(torsoLengthInFrameHeights(null, aspect: 0.75), isNull);
+      expect(torsoLengthInFrameHeights({}, aspect: 0.75), isNull);
+      final mo = {
+        'left_shoulder': p(0.45, 0.30, v: 0.2),
+        'left_hip': p(0.45, 0.55, v: 0.2),
+      };
+      expect(torsoLengthInFrameHeights(mo, aspect: 0.75), isNull);
+      expect(torsoLengthInFrameHeights(standing(), aspect: 0), isNull);
+    });
+  });
+
+  group('CaptureQualityMonitor — người quá nhỏ trong khung', () {
+    test('một vài mẫu nhỏ thoáng qua không báo', () {
+      final m = CaptureQualityMonitor();
+      for (var i = 0; i < 10; i++) {
+        m.addBodySize(0.08);
+      }
+      expect(m.issue, isNull);
+    });
+
+    test('nhỏ liên tục thì báo, to lại thì tắt', () {
+      final m = CaptureQualityMonitor();
+      for (var i = 0; i < 15; i++) {
+        m.addBodySize(0.10);
+      }
+      expect(m.issue, CaptureIssue.tooSmall);
+      for (var i = 0; i < 6; i++) {
+        m.addBodySize(0.22);
+      }
+      expect(m.issue, isNull);
+    });
+
+    test('người vừa khung (thân ~0,20) không bao giờ bị báo', () {
+      final m = CaptureQualityMonitor();
+      for (var i = 0; i < 200; i++) {
+        m.addBodySize(0.20);
+      }
+      expect(m.issue, isNull);
+    });
+
+    test('hysteresis: giữa hai ngưỡng (0,15) vẫn coi là nhỏ, vượt 0,16 mới tắt', () {
+      final m = CaptureQualityMonitor();
+      for (var i = 0; i < 15; i++) {
+        m.addBodySize(0.10);
+      }
+      expect(m.issue, CaptureIssue.tooSmall);
+      for (var i = 0; i < 30; i++) {
+        m.addBodySize(0.15);
+      }
+      expect(m.issue, CaptureIssue.tooSmall);
+      for (var i = 0; i < 6; i++) {
+        m.addBodySize(0.17);
+      }
+      expect(m.issue, isNull);
+    });
+
+    test('mất người (null) xoá đà đếm, không cộng dồn qua lúc vắng mặt', () {
+      final m = CaptureQualityMonitor();
+      for (var i = 0; i < 10; i++) {
+        m.addBodySize(0.08);
+      }
+      m.addBodySize(null);
+      for (var i = 0; i < 10; i++) {
+        m.addBodySize(0.08);
+      }
+      expect(m.issue, isNull);
+    });
+
+    test('ưu tiên: thiếu sáng > quá nhỏ > mất góc', () {
+      final m = CaptureQualityMonitor();
+      for (var i = 0; i < 18; i++) {
+        m.addFrame(personPresent: true, angleMeasured: false);
+      }
+      expect(m.issue, CaptureIssue.angleLost);
+      for (var i = 0; i < 15; i++) {
+        m.addBodySize(0.08);
+      }
+      expect(m.issue, CaptureIssue.tooSmall);
+      for (var i = 0; i < 4; i++) {
+        m.addLuminance(20);
+      }
+      expect(m.issue, CaptureIssue.lowLight);
+    });
+
+    test('reset xoá cả cảnh báo quá nhỏ', () {
+      final m = CaptureQualityMonitor();
+      for (var i = 0; i < 15; i++) {
+        m.addBodySize(0.08);
+      }
+      m.reset();
       expect(m.issue, isNull);
     });
   });

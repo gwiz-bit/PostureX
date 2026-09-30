@@ -15,12 +15,14 @@ import '../features/exercises/exercises_module.dart';
 import '../features/workout/workout_module.dart';
 import '../models/frame_analysis_result.dart';
 import '../services/analyze_socket_service.dart';
+import '../services/camera_calibration_storage.dart';
 import '../services/on_device_pose_service.dart';
 import '../services/pose_keypoint_encoder.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_locale.dart';
 import '../utils/capture_quality.dart';
 import '../utils/exercise_videos.dart';
+import '../utils/preview_mirror.dart';
 import '../utils/session_log.dart';
 import '../utils/squat_error_tips.dart';
 import '../widgets/guide_video_player.dart';
@@ -158,10 +160,21 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   /// không báo lỗi nào. Xem [CaptureQualityMonitor].
   final _quality = CaptureQualityMonitor();
 
+  /// Rộng / cao của khung ảnh ĐÃ XOAY THẲNG ĐỨNG mà toạ độ khớp chuẩn hoá theo — cần
+  /// để đo khoảng cách đúng thang pixel (xem `torsoLengthInFrameHeights`). Cập nhật
+  /// từ mỗi frame camera; 0,75 chỉ là giá trị khởi đầu cho tới frame đầu tiên.
+  double _frameAspect = 0.75;
+
   /// Nhật ký phiên để người test sao chép rồi gửi cho lập trình viên (nút ở góc
   /// trên) — ở phòng tập điện thoại không cắm được máy tính nên không có
   /// `adb logcat`. Xem [SessionLogRecorder].
   final _sessionLog = SessionLogRecorder();
+
+  /// Plugin camera có tự lật gương preview camera trước không — quyết định việc
+  /// lật preview/khung xương, xem [PreviewMirrorPlan]. Đọc từ kho lưu lúc mở màn,
+  /// người dùng đảo bằng nút trên thanh trên nếu khung xương bị ngược.
+  bool _frontPreviewMirroredByPlugin =
+      CameraCalibrationStorage.defaultFrontPreviewMirroredByPlugin;
   double? _lastLuma;
   int? _lastDetectMs;
   int? _lastRoundTripMs;
@@ -292,7 +305,30 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     _tts.setLanguage('vi-VN');
     _init();
     _loadGuideVideo();
+    _loadCalibration();
   }
+
+  Future<void> _loadCalibration() async {
+    final saved =
+        await CameraCalibrationStorage.readFrontPreviewMirroredByPlugin();
+    if (mounted && saved != _frontPreviewMirroredByPlugin) {
+      setState(() => _frontPreviewMirroredByPlugin = saved);
+    }
+  }
+
+  /// Đảo hiệu chỉnh lật gương (nút trên thanh trên, chỉ hiện với camera trước) khi
+  /// thấy khung xương là ảnh gương của người thật.
+  Future<void> _toggleFrontPreviewMirror() async {
+    final next = !_frontPreviewMirroredByPlugin;
+    setState(() => _frontPreviewMirroredByPlugin = next);
+    _sessionLog.event('mirror_calibration plugin_mirrors_front_preview=$next');
+    await CameraCalibrationStorage.writeFrontPreviewMirroredByPlugin(next);
+  }
+
+  PreviewMirrorPlan get _mirrorPlan => PreviewMirrorPlan.forCamera(
+    isFront: _lensDirection == CameraLensDirection.front,
+    pluginMirrorsFrontPreview: _frontPreviewMirroredByPlugin,
+  );
 
   /// Best-effort, independent of [_init]'s camera/socket setup — a failed
   /// fetch here should never block the analyze session, just leave the
@@ -534,6 +570,11 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         roundTripMs: _lastRoundTripMs,
       );
       _processErrorsForTts(frame.errors);
+      // Đường nhận diện tại máy đã đo kích thước người ở `_detectAndSend`; chỉ đường
+      // ảnh JPEG mới lấy khung xương từ phản hồi server.
+      if (!_useOnDevicePose) {
+        _noteBodySize(frame.allKeypoints ?? frame.keypoints);
+      }
       setState(() {
         _repCount = frame.repCount;
         _phase = frame.phase;
@@ -644,8 +685,26 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     }
   }
 
+  /// Đo kích thước người trong khung (chiều dài thân theo chiều cao khung) và cập
+  /// nhật cảnh báo "đứng xa/người quá nhỏ". Người chiếm ít khung thì nhiễu góc lớn
+  /// (xem `CaptureIssue.tooSmall`). Gọi ở cả hai đường nhận diện; `setState` do nơi
+  /// gọi lo (cả hai nơi đều `setState` ngay sau đó).
+  void _noteBodySize(Map<String, Point>? points) {
+    final before = _quality.issue;
+    final torso = torsoLengthInFrameHeights(points, aspect: _frameAspect);
+    _quality.addBodySize(torso);
+    if (_quality.issue != before) {
+      _sessionLog.event(
+        'issue ${before?.name ?? "none"} -> ${_quality.issue?.name ?? "none"} '
+        'torso=${torso?.toStringAsFixed(3) ?? "n/a"}',
+      );
+    }
+  }
+
   void _onCameraFrame(CameraImage image) {
     if (_status != _SessionStatus.running || _isPaused) return;
+    final upright = uprightImageSize(image.width, image.height, _rotationDegrees);
+    _frameAspect = upright.width / upright.height;
     _sampleBrightness(image);
     if (_useOnDevicePose) {
       _onCameraFrameOnDevice(image);
@@ -762,13 +821,13 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       if (pose == null) {
         _localSkeletonSmoother.reset();
       }
-      setState(() {
-        _keypoints = pose == null
-            ? null
-            : _localSkeletonSmoother.smooth(
-                displayPointsFromEncoded(pose.keypoints),
-              );
-      });
+      final displayPoints = pose == null
+          ? null
+          : _localSkeletonSmoother.smooth(
+              displayPointsFromEncoded(pose.keypoints),
+            );
+      _noteBodySize(displayPoints);
+      setState(() => _keypoints = displayPoints);
       _markRequestSent();
       _socket.sendKeypoints(pose?.keypoints, aspect: pose?.aspect);
     } on UnsupportedCameraFrameException catch (e) {
@@ -879,6 +938,8 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         'mode': _useOnDevicePose ? 'on-device' : 'server-pose',
         'camera': _lensDirection.name,
         'rotation': '$_rotationDegrees',
+        'front_preview_mirrored_by_plugin': '$_frontPreviewMirroredByPlugin',
+        'mirror_plan': '$_mirrorPlan',
         'reps_on_screen': '$_repCount',
         'ml_kit_ms':
             'avg ${avg(_statDetectSumMs, _statDetectN)} '
@@ -1047,6 +1108,25 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
   Future<void> _endSession() async {
     if (_isEnding) return;
     setState(() => _isEnding = true);
+
+    // Tự sao chép log vào clipboard TRƯỚC khi rời màn: log chỉ sống trong màn này,
+    // thoát ra là mất hẳn (người test đã lỡ mất log vì quên bấm nút sao chép). Dùng
+    // messenger gốc của MaterialApp để thông báo còn hiện ở màn tổng kết.
+    final messenger = ScaffoldMessenger.of(context);
+    if (_sessionLog.lineCount > 0) {
+      _sessionLog.event('session_end reps=$_repCount');
+      await Clipboard.setData(ClipboardData(text: _buildSessionLogText()));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocale.format('analyze_log_autocopied', {
+              'n': '${_sessionLog.lineCount}',
+            }),
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
 
     final controller = _controller;
     if (controller != null && controller.value.isStreamingImages) {
@@ -1275,6 +1355,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                     // given device — is now purely cosmetic and still
                     // unknowable from Dart, but it is no longer a
                     // skeleton/video misalignment bug either way.
+                    final plan = _mirrorPlan;
                     final cameraAndSkeleton = Stack(
                       fit: StackFit.expand,
                       children: [
@@ -1289,6 +1370,11 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                           painter: SkeletonPainter(
                             keypoints: _keypoints,
                             correct: _correct,
+                            // UPDATE 30/09/2026: khung xương khớp hình hay không
+                            // phụ thuộc plugin có tự lật texture preview hay
+                            // không — xem `PreviewMirrorPlan` (kết luận "lật
+                            // chung một Transform là luôn khớp" ở trên là SAI).
+                            mirrorX: plan.mirrorSkeleton,
                           ),
                         ),
                       ],
@@ -1296,7 +1382,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                     return SizedBox(
                       width: constraints.maxWidth,
                       height: constraints.maxWidth / displayAspect,
-                      child: _lensDirection == CameraLensDirection.front
+                      child: plan.flipWholeStack
                           ? Transform(
                               alignment: Alignment.center,
                               transform: Matrix4.rotationY(pi),
@@ -1368,6 +1454,16 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                           color: Colors.white,
                         ),
                       ),
+                      if (_lensDirection == CameraLensDirection.front)
+                        IconButton(
+                          tooltip: AppLocale.t('analyze_fix_mirror'),
+                          onPressed: _toggleFrontPreviewMirror,
+                          icon: const Icon(
+                            Icons.flip_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
                       IconButton(
                         tooltip: AppLocale.t('analyze_copy_log'),
                         onPressed: _copySessionLog,
@@ -1498,20 +1594,26 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                           child: Row(
                             children: [
                               Icon(
-                                _quality.issue == CaptureIssue.lowLight
-                                    ? Icons.light_mode_outlined
-                                    : Icons.visibility_off_outlined,
+                                switch (_quality.issue) {
+                                  CaptureIssue.lowLight =>
+                                    Icons.light_mode_outlined,
+                                  CaptureIssue.tooSmall =>
+                                    Icons.zoom_in_map_outlined,
+                                  _ => Icons.visibility_off_outlined,
+                                },
                                 color: Colors.orangeAccent,
                                 size: 20,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  AppLocale.t(
-                                    _quality.issue == CaptureIssue.lowLight
-                                        ? 'analyze_issue_low_light'
-                                        : 'analyze_issue_angle_lost',
-                                  ),
+                                  AppLocale.t(switch (_quality.issue) {
+                                    CaptureIssue.lowLight =>
+                                      'analyze_issue_low_light',
+                                    CaptureIssue.tooSmall =>
+                                      'analyze_issue_too_small',
+                                    _ => 'analyze_issue_angle_lost',
+                                  }),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,

@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
-import '../models/frame_analysis_result.dart' show KeyAngles;
+import 'dart:math' as math;
+
+import '../models/frame_analysis_result.dart' show KeyAngles, Point;
 
 /// Vì sao app đang đứng yên không đếm rep dù người dùng vẫn tập — để báo cho
 /// họ biết thay vì im lặng.
@@ -12,6 +14,11 @@ import '../models/frame_analysis_result.dart' show KeyAngles;
 enum CaptureIssue {
   /// Khung hình quá tối — ảnh nhiễu, nhận diện tư thế kém.
   lowLight,
+
+  /// Người chiếm quá ít khung hình (đứng xa hoặc người nhỏ): cùng một độ nhiễu điểm
+  /// ảnh thì góc khớp dao động mạnh hơn nhiều (mô phỏng 01/10/2026: nhiễu góc gối
+  /// 5,2° ở người nhỏ so với 1,6° ở người to), dễ đếm hụt/thừa rep.
+  tooSmall,
 
   /// Thấy người nhưng không đo được góc khớp nào của bài này (khớp bị che khỏi
   /// khung hình, bị máy/vật che, hoặc quá tối để nhận rõ).
@@ -49,6 +56,51 @@ double? meanLuminance({
     }
   }
   return count == 0 ? null : sum / count;
+}
+
+/// Chiều dài thân (trung điểm vai → trung điểm hông) tính theo CHIỀU CAO KHUNG HÌNH,
+/// hay `null` nếu không đủ khớp nhìn rõ để đo.
+///
+/// Đo bằng khoảng cách Euclid có nhân [aspect] (rộng/cao) cho trục x để hai trục cùng
+/// thang pixel — chỉ dùng độ chênh y sẽ hỏng khi người nằm ngang (plank) và x, y chuẩn
+/// hoá theo hai chiều khác nhau. Dùng thân thay vì cả người vì vai và hông gần như luôn
+/// nằm trong khung ở mọi bài (kể cả bài chỉ thấy nửa thân trên), trong khi chân/đầu
+/// hay bị cắt. Thân người thật chiếm khoảng 30% chiều cao cơ thể.
+///
+/// Thiếu một bên thì dùng cặp vai–hông cùng bên còn lại.
+double? torsoLengthInFrameHeights(
+  Map<String, Point>? points, {
+  required double aspect,
+  double minVisibility = 0.5,
+}) {
+  if (points == null || aspect <= 0) return null;
+
+  Point? ok(String name) {
+    final p = points[name];
+    return (p != null && p.visibility >= minVisibility) ? p : null;
+  }
+
+  double dist(Point a, Point b) {
+    final dx = (a.x - b.x) * aspect;
+    final dy = a.y - b.y;
+    return math.sqrt(dx * dx + dy * dy);
+  }
+
+  final ls = ok('left_shoulder'), rs = ok('right_shoulder');
+  final lh = ok('left_hip'), rh = ok('right_hip');
+
+  if (ls != null && rs != null && lh != null && rh != null) {
+    final shoulder = Point(
+      x: (ls.x + rs.x) / 2,
+      y: (ls.y + rs.y) / 2,
+      visibility: 1,
+    );
+    final hip = Point(x: (lh.x + rh.x) / 2, y: (lh.y + rh.y) / 2, visibility: 1);
+    return dist(shoulder, hip);
+  }
+  if (ls != null && lh != null) return dist(ls, lh);
+  if (rs != null && rh != null) return dist(rs, rh);
+  return null;
 }
 
 /// Frame này có đo được ít nhất một góc khớp không.
@@ -116,6 +168,17 @@ class CaptureQualityMonitor {
 
   final _lowLight = _Debounced(enterAfter: 4, exitAfter: 3);
 
+  /// Thân người (vai → hông) ngắn hơn mức này (tính theo chiều cao khung) thì coi là
+  /// quá nhỏ/xa. Thân thật chiếm ~30% chiều cao người, nên 0,14 ≈ người cao chưa tới
+  /// ~47% khung; người đứng vừa khung (~65%) có thân ~0,20. Ngưỡng thoát cao hơn để
+  /// không nhấp nháy. ƯỚC LƯỢNG — chỉnh theo dữ liệu thật (log phiên có cột `issue`).
+  static const tooSmallEnter = 0.14;
+  static const tooSmallExit = 0.16;
+
+  /// Đo ~12 lần/giây ⇒ 15 mẫu ≈ 1,2 giây mới cảnh báo: người bước ra xa thoáng qua
+  /// giữa động tác không đáng làm phiền.
+  final _tooSmall = _Debounced(enterAfter: 15, exitAfter: 6);
+
   /// ~1,5 giây liên tiếp ở 12 fps mới coi là mất góc: ngắn hơn thì chỉ là một
   /// cú che khuất thoáng qua giữa chuyển động.
   final _angleLost = _Debounced(enterAfter: 18, exitAfter: 3);
@@ -124,8 +187,20 @@ class CaptureQualityMonitor {
   /// chính là nguyên nhân của nó.
   CaptureIssue? get issue {
     if (_lowLight.active) return CaptureIssue.lowLight;
+    // Quá xa thường là NGUYÊN NHÂN của "không đo được khớp", nên báo trước.
+    if (_tooSmall.active) return CaptureIssue.tooSmall;
     if (_angleLost.active) return CaptureIssue.angleLost;
     return null;
+  }
+
+  /// [torso] từ [torsoLengthInFrameHeights]; `null` (không thấy người hoặc không đo
+  /// được) thì xoá đà đếm — không cộng dồn qua lúc vắng người.
+  void addBodySize(double? torso) {
+    if (torso == null) {
+      _tooSmall.reset();
+      return;
+    }
+    _tooSmall.feed(torso < (_tooSmall.active ? tooSmallExit : tooSmallEnter));
   }
 
   void addLuminance(double meanLuma) => _lowLight.feed(meanLuma < _lowLightThreshold());
@@ -144,6 +219,7 @@ class CaptureQualityMonitor {
 
   void reset() {
     _lowLight.reset();
+    _tooSmall.reset();
     _angleLost.reset();
   }
 }

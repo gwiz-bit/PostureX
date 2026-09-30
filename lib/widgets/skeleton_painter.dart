@@ -44,6 +44,14 @@ const _faceLandmarks = {
 /// reports a binary correct/incorrect per frame today, not per-joint
 /// severity, so that's the full color vocabulary available here.
 ///
+/// UPDATE 30/09/2026: the "one shared Transform makes misalignment impossible"
+/// reasoning below turned out to be WRONG on a real device — the camera plugin
+/// can mirror only the preview texture while the joint coordinates stay in the
+/// raw (un-mirrored) frame space, which makes the skeleton a mirror image of the
+/// person (confirmed by screenshots). [mirrorX] is therefore back, but driven by
+/// `PreviewMirrorPlan` (a single calibration bit), never by the lens direction
+/// alone — read that file first.
+///
 /// Always draws the RAW, un-mirrored coordinates the backend returns
 /// (`_encodeCameraImage` in `AnalyzeSessionScreen` only rotates the sensor
 /// JPEG, never mirrors it, so this is the space the backend's pose
@@ -71,7 +79,15 @@ class SkeletonPainter extends CustomPainter {
   const SkeletonPainter({
     required this.keypoints,
     required this.correct,
+    this.mirrorX = false,
   });
+
+  /// Lật toạ độ x (`1 - x`) TRƯỚC khi vẽ. Chỉ dùng để khớp với texture mà plugin
+  /// camera đã tự lật gương (xem `PreviewMirrorPlan`): toạ độ khớp luôn ở không
+  /// gian gốc chưa lật, nên khi preview đã bị lật mà khung xương thì chưa, hai thứ
+  /// thành ảnh gương của nhau (ảnh chụp thật 30/09/2026). KHÔNG dựa vào camera
+  /// trước/sau tại đây — bên gọi quyết định qua `PreviewMirrorPlan`.
+  final bool mirrorX;
 
   /// Pass [FrameAnalysisResult.allKeypoints] here, not `.keypoints` — the
   /// latter is only the subset the active exercise's analyzer uses for
@@ -92,7 +108,8 @@ class SkeletonPainter extends CustomPainter {
     Offset? offsetFor(String name) {
       final p = points[name];
       if (p == null) return null;
-      return Offset(p.x * size.width, p.y * size.height);
+      final x = mirrorX ? 1 - p.x : p.x;
+      return Offset(x * size.width, p.y * size.height);
     }
 
     // Lớp glow vẽ TRƯỚC (nằm dưới): nét dày + mờ (MaskFilter.blur) dọc theo
@@ -155,5 +172,7 @@ class SkeletonPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SkeletonPainter oldDelegate) =>
-      oldDelegate.keypoints != keypoints || oldDelegate.correct != correct;
+      oldDelegate.keypoints != keypoints ||
+      oldDelegate.correct != correct ||
+      oldDelegate.mirrorX != mirrorX;
 }
