@@ -35,7 +35,25 @@ def ws_client(monkeypatch):
     """
     monkeypatch.setattr("app.main.start_scheduler", lambda: None)
     monkeypatch.setattr("app.main.shutdown_scheduler", lambda: None)
+    _block_real_db(monkeypatch)
     return TestClient(app)
+
+
+def _block_real_db(monkeypatch) -> None:
+    """Chặn route WebSocket chạm MySQL THẬT.
+
+    Route giờ lưu phiên tập/rep/lỗi vào DB qua `AsyncSessionLocal()`. Không chặn thì
+    test ghi vào MySQL thật của máy chạy test (trên VPS là DB production!), và
+    còn để lại kết nối gắn với vòng lặp sự kiện của TestClient trong pool chung —
+    test async sau đó tái dùng nó và vỡ với `'NoneType' object has no attribute
+    'send'` (chỉ khi chạy cả bộ, chạy riêng thì qua). Mọi chỗ lưu DB trong route đều
+    bọc try/except nên ném lỗi ở đây chỉ là bỏ qua phần lưu, đúng như khi mất DB thật.
+    """
+
+    def no_db():
+        raise RuntimeError("test không được chạm MySQL thật")
+
+    monkeypatch.setattr(realtime, "AsyncSessionLocal", no_db)
 
 
 def _feed_angles(monkeypatch, angles: list[float], back_angle: float = 175.0) -> None:
