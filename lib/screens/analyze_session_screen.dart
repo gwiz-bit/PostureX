@@ -19,7 +19,9 @@ import '../services/on_device_pose_service.dart';
 import '../services/pose_keypoint_encoder.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_locale.dart';
+import '../utils/capture_quality.dart';
 import '../utils/exercise_videos.dart';
+import '../utils/session_log.dart';
 import '../utils/squat_error_tips.dart';
 import '../widgets/guide_video_player.dart';
 import '../widgets/skeleton_painter.dart';
@@ -150,6 +152,39 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
 
   /// Làm mượt riêng cho khung xương vẽ từ ML Kit tại máy (không ảnh hưởng góc).
   final _localSkeletonSmoother = KeypointEma();
+
+  /// Báo cho người dùng biết vì sao rep không được đếm (thiếu sáng, khớp bị che)
+  /// thay vì để app im lặng — analyzer bỏ qua mọi frame không đo được góc mà
+  /// không báo lỗi nào. Xem [CaptureQualityMonitor].
+  final _quality = CaptureQualityMonitor();
+
+  /// Nhật ký phiên để người test sao chép rồi gửi cho lập trình viên (nút ở góc
+  /// trên) — ở phòng tập điện thoại không cắm được máy tính nên không có
+  /// `adb logcat`. Xem [SessionLogRecorder].
+  final _sessionLog = SessionLogRecorder();
+  double? _lastLuma;
+  int? _lastDetectMs;
+  int? _lastRoundTripMs;
+
+  // Thống kê hiệu năng cho phần đầu của log. Tách khỏi `_recordDetectSample`/
+  // `_recordLatencySample` vì hai hàm đó chỉ đo khi `kDebugMode` (bản release
+  // không in gì), trong khi số này cần có cả trong bản APK phát cho người test.
+  int _statDetectN = 0;
+  int _statDetectSumMs = 0;
+  int _statDetectMaxMs = 0;
+  int _statRoundTripN = 0;
+  int _statRoundTripSumMs = 0;
+  int _statRoundTripMaxMs = 0;
+
+  /// Các lỗi nhắc ở frame trước — để chỉ ghi log khi một lỗi MỚI xuất hiện,
+  /// không lặp lại mỗi frame nó còn tồn tại.
+  Set<String> _prevLoggedErrors = {};
+
+  /// Lấy mẫu độ sáng mỗi [_lumaSampleEvery] lần camera đẩy frame (~2 lần/giây ở
+  /// 30 fps) — đo thường hơn là thừa, độ sáng không đổi theo từng frame.
+  static const _lumaSampleEvery = 15;
+  int _lumaFrameCounter = 0;
+  int _lumaLogCounter = 0;
   final List<bool> _correctnessSamples = [];
 
   /// Raw joint angles from the most recent frame — shown in a small debug
@@ -427,6 +462,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         return;
       }
       _useOnDevicePose = _wantOnDevicePose;
+      _sessionLog.event(
+        'session_start mode=${_useOnDevicePose ? "on-device" : "server-pose"} '
+        'camera=${_lensDirection.name} rotation=$_rotationDegrees',
+      );
       setState(() => _status = _SessionStatus.running);
       _sessionStart = DateTime.now();
       _controller?.startImageStream(_onCameraFrame);
@@ -448,6 +487,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         _correctnessSamples.add(frame.correct);
       }
       if (frame.repCount != _repCount) {
+        _sessionLog.event(
+          'rep $_repCount -> ${frame.repCount} phase=${frame.phase} '
+          'ok=${frame.correct} ${_formatAngles(frame.keyAngles)}',
+        );
         // Log mọi lần rep_count đổi (không chỉ lúc tăng) kèm góc thật tại
         // đúng thời điểm đó — để đối chiếu qua log thay vì chỉ đọc số trên
         // màn hình, đúng cách debug overlay góc đã làm cho việc hiệu chỉnh
@@ -464,6 +507,32 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
         // (every rep still counts toward the total either way).
         SystemSound.play(SystemSoundType.click);
       }
+      final issueBefore = _quality.issue;
+      _quality.addFrame(
+        personPresent: !frame.errors.contains(_noPersonMessage),
+        angleMeasured: hasMeasuredAngle(frame.keyAngles),
+      );
+      if (_quality.issue != issueBefore) {
+        _sessionLog.event(
+          'issue ${issueBefore?.name ?? "none"} -> '
+          '${_quality.issue?.name ?? "none"}',
+        );
+      }
+      for (final error in frame.errors) {
+        if (!_prevLoggedErrors.contains(error)) _sessionLog.event('err $error');
+      }
+      _prevLoggedErrors = frame.errors.toSet();
+      _sessionLog.row(
+        phase: frame.phase,
+        reps: frame.repCount,
+        correct: frame.correct,
+        angles: frame.keyAngles,
+        similarity: frame.similarityScore,
+        issue: _quality.issue?.name,
+        luma: _lastLuma,
+        detectMs: _lastDetectMs,
+        roundTripMs: _lastRoundTripMs,
+      );
       _processErrorsForTts(frame.errors);
       setState(() {
         _repCount = frame.repCount;
@@ -541,8 +610,43 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     });
   }
 
+  /// Đo độ sáng khung hình (thưa) và cập nhật cảnh báo thiếu sáng. Chạy cho cả
+  /// hai đường nhận diện vì đọc thẳng mặt phẳng Y của ảnh camera.
+  void _sampleBrightness(CameraImage image) {
+    if (++_lumaFrameCounter % _lumaSampleEvery != 0) return;
+    if (image.planes.isEmpty) return;
+    final plane = image.planes.first;
+    final luma = meanLuminance(
+      yPlane: plane.bytes,
+      width: image.width,
+      height: image.height,
+      bytesPerRow: plane.bytesPerRow,
+    );
+    if (luma == null) return;
+    _lastLuma = luma;
+
+    final before = _quality.issue;
+    _quality.addLuminance(luma);
+    // Log thưa (~mỗi 5 giây) để có số thật mà hiệu chỉnh ngưỡng tối.
+    if (++_lumaLogCounter % 10 == 0) {
+      debugPrint('[capture-quality] do sang trung binh ${luma.toStringAsFixed(1)}/255');
+    }
+    if (_quality.issue != before && mounted) {
+      _sessionLog.event(
+        'issue ${before?.name ?? "none"} -> ${_quality.issue?.name ?? "none"} '
+        'luma=${luma.toStringAsFixed(0)}',
+      );
+      debugPrint(
+        '[capture-quality] canh bao: $before -> ${_quality.issue} '
+        '(sang ${luma.toStringAsFixed(1)})',
+      );
+      setState(() {});
+    }
+  }
+
   void _onCameraFrame(CameraImage image) {
     if (_status != _SessionStatus.running || _isPaused) return;
+    _sampleBrightness(image);
     if (_useOnDevicePose) {
       _onCameraFrameOnDevice(image);
       return;
@@ -651,6 +755,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       // chờ ML Kit — gửi keypoint lúc đó chỉ làm rối server.
       if (!mounted || !_useOnDevicePose) return;
       _recordDetectSample(startedAt);
+      _noteDetectTime(DateTime.now().difference(startedAt).inMilliseconds);
       _onDeviceFailureCount = 0;
       // Vẽ khung xương NGAY từ kết quả vừa nhận diện, không đợi vòng đi server.
       if (pose == null) {
@@ -694,8 +799,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     if (_isFallingBack || !_wantOnDevicePose) return;
     _isFallingBack = true;
     debugPrint('[pose-ondevice] ve duong anh JPEG cua server: $reason');
+    _sessionLog.event('fallback_to_server_pose: $reason');
     _wantOnDevicePose = false;
     _useOnDevicePose = false;
+    _quality.reset();
 
     try {
       final controller = _controller;
@@ -746,6 +853,59 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     }
   }
 
+  void _noteDetectTime(int ms) {
+    _lastDetectMs = ms;
+    _statDetectN++;
+    _statDetectSumMs += ms;
+    if (ms > _statDetectMaxMs) _statDetectMaxMs = ms;
+  }
+
+  void _noteRoundTrip(int ms) {
+    _lastRoundTripMs = ms;
+    _statRoundTripN++;
+    _statRoundTripSumMs += ms;
+    if (ms > _statRoundTripMaxMs) _statRoundTripMaxMs = ms;
+  }
+
+  /// Dựng văn bản log để sao chép: siêu dữ liệu + hiệu năng + toàn bộ dòng đã
+  /// ghi. Gọi lúc bấm nút nên thống kê là của cả phiên tính tới thời điểm đó.
+  String _buildSessionLogText() {
+    String avg(int sum, int n) => n == 0 ? 'n/a' : (sum / n).toStringAsFixed(0);
+    return _sessionLog.toText(
+      header: {
+        'exercise': widget.exercise,
+        'platform': defaultTargetPlatform.name,
+        'mode': _useOnDevicePose ? 'on-device' : 'server-pose',
+        'camera': _lensDirection.name,
+        'rotation': '$_rotationDegrees',
+        'reps_on_screen': '$_repCount',
+        'ml_kit_ms':
+            'avg ${avg(_statDetectSumMs, _statDetectN)} '
+            'max $_statDetectMaxMs (n=$_statDetectN)',
+        'roundtrip_ms':
+            'avg ${avg(_statRoundTripSumMs, _statRoundTripN)} '
+            'max $_statRoundTripMaxMs (n=$_statRoundTripN)',
+        'dropped_by_timeout': '$_timeoutDropCount',
+        'quality_issue_now': _quality.issue?.name ?? 'none',
+      },
+    );
+  }
+
+  Future<void> _copySessionLog() async {
+    final text = _buildSessionLogText();
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocale.format('analyze_log_copied', {
+            'n': '${_sessionLog.lineCount}',
+          }),
+        ),
+      ),
+    );
+  }
+
   /// Accumulates one round-trip sample (send → this response) and flushes a
   /// summary to `debugPrint` every [_latencyLogBatchSize] frames. See the
   /// field doc comment above for why this exists.
@@ -757,6 +917,7 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     // bị timer 500ms đánh dấu "rớt" trước khi phản hồi thật sự tới.
     final sentAt = _pendingRequestTimestamps.removeAt(0);
     final elapsedMs = DateTime.now().difference(sentAt).inMilliseconds;
+    _noteRoundTrip(elapsedMs);
     _latencySampleCount++;
     _latencyTotalMs += elapsedMs;
     if (elapsedMs > _latencyMaxMs) _latencyMaxMs = elapsedMs;
@@ -850,7 +1011,10 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     );
   }
 
-  void _togglePause() => setState(() => _isPaused = !_isPaused);
+  void _togglePause() {
+    _sessionLog.event(_isPaused ? 'resume' : 'pause');
+    setState(() => _isPaused = !_isPaused);
+  }
 
   Future<void> _encodeAndSend(CameraImage image) async {
     try {
@@ -1204,6 +1368,15 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                         ),
                       ),
                       IconButton(
+                        tooltip: AppLocale.t('analyze_copy_log'),
+                        onPressed: _copySessionLog,
+                        icon: const Icon(
+                          Icons.content_copy_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      IconButton(
                         onPressed: _togglePause,
                         icon: Icon(
                           _isPaused
@@ -1308,6 +1481,45 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (_quality.issue != null)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.orangeAccent),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _quality.issue == CaptureIssue.lowLight
+                                    ? Icons.light_mode_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: Colors.orangeAccent,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  AppLocale.t(
+                                    _quality.issue == CaptureIssue.lowLight
+                                        ? 'analyze_issue_low_light'
+                                        : 'analyze_issue_angle_lost',
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       if (_transientError != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),

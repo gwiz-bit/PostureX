@@ -309,6 +309,13 @@ class AppLocale {
       'analyze_init_error':
           'Could not start the camera or reach the server.',
       'analyze_paused': 'PAUSED',
+      'analyze_copy_log': 'Copy session log',
+      'analyze_log_copied': 'Log copied ({n} lines) — paste it into the chat.',
+      'analyze_issue_low_light':
+          'Too dark — move to a brighter spot or turn on a light.',
+      'analyze_issue_angle_lost':
+          "Can't measure your joints — step back so your whole body is in "
+              "frame and nothing (machine, bench) is blocking it.",
       'analyze_reps_label': 'REPS',
       'analyze_end_session': 'End Session',
       'analyze_similarity_label': 'MATCH',
@@ -647,6 +654,13 @@ class AppLocale {
       'analyze_close': 'Đóng',
       'analyze_init_error': 'Không thể khởi động camera hoặc kết nối máy chủ.',
       'analyze_paused': 'TẠM DỪNG',
+      'analyze_copy_log': 'Sao chép log phiên',
+      'analyze_log_copied': 'Đã sao chép log ({n} dòng) — hãy dán vào chat.',
+      'analyze_issue_low_light':
+          'Quá tối — hãy ra chỗ sáng hơn hoặc bật thêm đèn.',
+      'analyze_issue_angle_lost':
+          'Không đo được khớp của bạn — hãy lùi ra để thấy đủ người và '
+              'không bị máy móc/ghế che khuất.',
       'analyze_reps_label': 'REPS',
       'analyze_end_session': 'Kết thúc',
       'analyze_similarity_label': 'GIỐNG MẪU',

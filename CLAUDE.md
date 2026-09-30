@@ -104,6 +104,29 @@ nghi phạm mạnh của hụt rep và lời nhắc "chưa đủ sâu" oan.
   (`_onSocketEvent` không ghi đè `_keypoints` khi `_useOnDevicePose`). Đường ảnh
   JPEG dự phòng giữ nguyên. Làm mượt vẽ chỉ ở client, α=0,6 (ƯỚC LƯỢNG, chưa đo
   người thật) — không ảnh hưởng góc/đếm rep vì server vẫn tự làm mượt riêng.
+- **Cảnh báo chất lượng ghi hình (`lib/utils/capture_quality.dart`).** Analyzer bỏ
+  qua LẶNG LẼ mọi frame không đo được góc (góc `None`, rep đứng yên, không lỗi nào
+  báo), nên thiếu sáng hay khớp bị máy/ghế che trông hệt như "app hỏng". Màn phân
+  tích nay hiện banner cam ở dưới: (1) **thiếu sáng** — độ sáng trung bình mặt phẳng
+  Y của `CameraImage` (lấy mẫu thưa ~2 lần/giây, cả hai đường nhận diện), ngưỡng vào
+  45/ra 60 có hysteresis; (2) **mất góc** — frame CÓ người nhưng không đo được góc
+  nào (`hasMeasuredAngle`) liên tục ~18 frame. Cố ý KHÔNG đếm số khớp nhìn rõ: bài
+  chỉ cần nửa thân trên (Curl) sẽ báo nhầm vì chân ngoài khung. `backAngle` tính là
+  "đo được" (Plank/Cat-Cow chỉ báo góc thân) nên Squat gối bị che nhưng lưng thấy
+  sẽ không bị báo. Toàn bộ ngưỡng là ƯỚC LƯỢNG — độ sáng trung bình còn phụ thuộc
+  cảnh; hiệu chỉnh theo dòng log `[capture-quality]` (in ~mỗi 5 giây). Chỉ đổi
+  client, không cần deploy backend.
+- **Nút "Sao chép log phiên" (`lib/utils/session_log.dart`).** Test ở phòng tập:
+  điện thoại không cắm máy tính (không có `adb logcat`) và kênh gửi duy nhất là
+  chat văn bản (video quay màn hình không gửi được). Nút biểu tượng sao chép ở
+  thanh trên của màn phân tích đưa vào clipboard một log CSV: dòng `#` là siêu dữ
+  liệu (bài, chế độ, camera, thời gian ML Kit/round-trip trung bình/lớn nhất), dòng
+  `R,...` mẫu mỗi 0,25 giây (pha, rep, 11 cột góc khớp, điểm giống bài mẫu, độ
+  sáng, cảnh báo), dòng `E,...` sự kiện (rep đổi kèm góc, cảnh báo mới, lỗi nhắc,
+  pause/resume, fallback). Trần 3000 dòng, đầy thì bỏ dòng cũ nhất. **BẪY: các dòng
+  log `[pose-ondevice] ML Kit ... avg ...ms` chỉ in khi `kDebugMode`** — bản release
+  (APK phát cho người test) KHÔNG in chúng; số đo ML Kit/round-trip trong log phiên
+  được đếm riêng (`_noteDetectTime`/`_noteRoundTrip`) nên có cả ở bản release.
 - ⚠️ Chưa chạy trên người thật. 499 test backend xanh (thêm test góc thật trên 4
   tỉ lệ ảnh × 6 hướng xoay, parse/từ chối `aspect`, `aspect` đi hết đường ống tới
   `key_angles`), 92 test Flutter xanh, `ruff`/`flutter analyze` không lỗi mới.
