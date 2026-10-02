@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 # Gemini free tier thỉnh thoảng trả 503 "model đang quá tải" khi nhu cầu
 # toàn cầu tăng đột biến — lỗi tạm thời, thử lại sau vài giây thường sẽ qua.
-# KHÔNG retry cho lỗi khác (400 sai tham số, 429 hết quota, 404 model cũ...)
-# vì thử lại cùng model cũng không giúp ích — thay vào đó thử model dự phòng.
+# KHÔNG retry cho lỗi khác (400 sai tham số, 429 hết quota...) vì thử lại
+# cũng không giúp ích, chỉ làm user đợi lâu hơn cho một lỗi không tự khỏi.
 _RETRYABLE_CODE = 503
 _MAX_ATTEMPTS = 3
 _RETRY_DELAYS_SECONDS = (1, 3)
@@ -27,8 +27,8 @@ _FALLBACK_MODELS = ('gemini-2.0-flash', 'gemini-1.5-flash')
 
 async def _generate_with_retry(**kwargs):
     """Gọi `generate_content`, tự thử lại tối đa 2 lần nếu Gemini báo 503.
-    Nếu model bị 400/404 (không hỗ trợ tham số / đã bị tắt) hoặc 429 (hết
-    quota free tier), tự động chuyển sang model dự phòng tiếp theo."""
+    Nếu model bị 404 (đã bị Google tắt) hoặc 400 INVALID_ARGUMENT (model không
+    hỗ trợ tham số thinking_budget), tự động chuyển sang model dự phòng."""
     client = _client()
     primary = kwargs.pop('model', settings.GEMINI_MODEL)
     models_to_try = [primary] + [m for m in _FALLBACK_MODELS if m != primary]
@@ -39,9 +39,9 @@ async def _generate_with_retry(**kwargs):
             try:
                 return await client.aio.models.generate_content(model=model, **kwargs)
             except genai_errors.APIError as e:
-                if e.code in (400, 404, 429):
+                if e.code in (404, 400):
                     logger.warning(
-                        "Model %s trả HTTP %d — thử model dự phòng tiếp theo",
+                        "Model %s không hỗ trợ yêu cầu (HTTP %d) — thử model dự phòng tiếp theo",
                         model, e.code,
                     )
                     last_err = e
