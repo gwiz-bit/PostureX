@@ -64,6 +64,56 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 04/10/2026
+
+**Chuẩn bị phát hành Google Play — domain HTTPS, ký release key thật, icon,
+trang Privacy Policy, tài khoản demo cho reviewer.**
+
+- `lib/config/api_config.dart` — `_defaultBaseUrl` đổi từ IP trần
+  (`http://103.82.21.150:9000`) sang `https://api.posturex1.com` (Nginx
+  reverse-proxy + Let's Encrypt trên cùng VPS). Lý do: Google Play/App Store
+  yêu cầu HTTPS cho bản phát hành thật, và đổi máy chủ sau này chỉ cần trỏ
+  lại DNS thay vì build lại app. Nginx có bật header `Upgrade`/`Connection`
+  cho WebSocket (route phân tích real-time) — thiếu phần này `wss://` sẽ
+  không kết nối được dù HTTP thường vẫn chạy bình thường.
+- `android/app/build.gradle.kts` — thêm `signingConfigs.release` đọc từ
+  `android/key.properties` (gitignore, không đi kèm repo). Trước đó bản
+  release ký bằng **debug key** — Google Play từ chối thẳng file ký debug
+  key, đây là lỗi chặn cứng bước upload đầu tiên. Máy nào chưa có
+  `key.properties` thì tự rơi về debug key (không phá `flutter run
+  --release`).
+- `android/app/src/main/res/mipmap-*/ic_launcher.png` — icon tạm (chữ "P"
+  nền cam `AppColors.primary`), thay icon mặc định Flutter — Play Console
+  thường từ chối app dùng icon mặc định ở bước review thủ công. Nên thay
+  bằng thiết kế chính thức khi có.
+- **Trang Privacy Policy công khai** tại `https://api.posturex1.com/privacy`
+  (file tĩnh `docs/privacy-policy.html`, Nginx phục vụ qua `location
+  /privacy` — không cần domain/cert riêng, dùng chung với API). Nội dung
+  lấy nguyên từ `lib/screens/privacy_policy_screen.dart` (đã có sẵn, dịch
+  sang tiếng Việt) — bắt buộc phải có link này mới điền được mục Privacy
+  Policy trên Play Console.
+- **Tài khoản demo cho Google reviewer** (`reviewer.posturex@gmail.com`) —
+  tạo trực tiếp trong DB production (`is_email_verified=True` ngay từ đầu,
+  bỏ qua OTP vì không kiểm soát được hộp thư đó) để dán vào mục "App access"
+  — app bắt buộc đăng nhập mới xem được tính năng, Google review cần tài
+  khoản thật để duyệt.
+- Phát hiện lại đúng lỗi **thiếu cột DB** đã ghi nhận trước (17/09, 24/09):
+  `_migrate_v2_columns.py` lúc trước chưa từng chạy được trên production
+  (lần upload file đó qua `scp` trước đó bị chặn bởi auto-mode classifier,
+  chỉ đưa hướng dẫn cho người dùng chứ chưa xác nhận file thật sự tồn tại
+  trên server) — khiến Exercises/AI Coach/sinh giáo án cá nhân hoá tiếp tục
+  lỗi 500 thêm vài ngày sau lần "sửa" trước đó. Đã chạy lại thành công
+  (phát hiện 12/14 cột đã có sẵn từ trước — có khả năng ai đó đã tự chạy
+  SQL thủ công; chỉ thiếu ràng buộc UNIQUE `Slug` + khoá ngoại
+  `MovementRoleId`, đã thêm). ⚠️ Bài học: khi hướng dẫn người dùng tự chạy
+  một script, xác nhận file đã thật sự có trên đích trước khi coi là "đã
+  bàn giao", không chỉ đưa lệnh rồi giả định đã chạy.
+
+⚠️ **Chưa commit `key.properties`/`posturex-release.jks` — đúng chủ đích**,
+nhưng nghĩa là máy nào khác muốn build release cũng phải tự tạo keystore
+riêng hoặc được chia sẻ file đó ngoài git (đã sao lưu vào OneDrive cá nhân
+của người dùng, không đi kèm repo).
+
 ### 30/09/2026
 
 **Góc khớp bị MÉO theo tỉ lệ khung ảnh — đã sửa bằng `Keypoint.aspect`.** Toạ độ
