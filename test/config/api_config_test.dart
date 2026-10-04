@@ -15,7 +15,7 @@ void main() {
     test('defaults to the real server when no --dart-define is passed', () {
       // Run without --dart-define (the normal case for `flutter test`), so
       // this asserts the compiled-in fallback, not an override.
-      expect(ApiConfig.baseUrl, 'http://103.82.21.150:9000');
+      expect(ApiConfig.baseUrl, 'https://api.posturex1.com');
       expect(
         ApiConfig.baseUrl,
         isNot(contains('10.0.2.2')),
@@ -29,7 +29,12 @@ void main() {
       final ws = Uri.parse(ApiConfig.wsUrl);
 
       expect(ws.host, base.host);
-      expect(ws.port, base.port);
+      // `Uri.port` chỉ biết cổng mặc định cho http/https, không biết ws/wss —
+      // so `hasPort` (có ghi cổng tường minh trong chuỗi URL hay không) thay
+      // vì so số `.port`, để không vỡ khi baseUrl không ghi cổng (domain thật
+      // dùng cổng mặc định 443, khác lúc trước dùng IP:9000 tường minh).
+      expect(ws.hasPort, base.hasPort);
+      if (base.hasPort) expect(ws.port, base.port);
       expect(ws.scheme, base.scheme == 'https' ? 'wss' : 'ws');
     });
   });
