@@ -1,10 +1,49 @@
 """Helper dùng chung cho mọi analyzer bài tập — tách ra từ squat.py để 8+
 analyzer sau này không copy-paste lại cùng 3 hàm nhỏ này."""
 
+import math
+
 from app.ml.pose_estimator import Keypoint
 from app.schemas.analysis import Point
 
 VISIBILITY_THRESHOLD = 0.5  # Chỉ xét khớp nếu độ tin cậy đủ cao
+
+# Gối được phép vượt mũi chân tối đa bao nhiêu LẦN chiều dài chân (hông → cổ chân).
+# 0,15 = đúng mức ngưỡng cũ (5% chiều rộng khung) quy ra cho người cỡ trung bình
+# (chân chiếm ~1/3 chiều cao khung), nên bật cơ chế mới không đổi hành vi với người
+# đứng ở khoảng cách bình thường. ƯỚC LƯỢNG, chưa đo trên người thật.
+KNEE_OVERSHOOT_LEG_RATIO = 0.15
+
+
+def knee_passes_toe(
+    knee: Keypoint,
+    foot: Keypoint,
+    hip: Keypoint,
+    ankle: Keypoint,
+    *,
+    outward: int,
+    max_ratio: float,
+) -> bool:
+    """Gối có vượt mũi chân quá `max_ratio` × chiều dài chân không.
+
+    Ngưỡng cũ là tỉ lệ theo CHIỀU RỘNG KHUNG HÌNH (0,05), nên phụ thuộc người đứng gần
+    hay xa, to hay nhỏ: cùng một lỗi kỹ thuật, người chiếm nhiều khung bị báo khi gối
+    chỉ vượt 10% chiều dài chân, người chiếm ít khung phải vượt tới 31% (đo bằng mô
+    phỏng 01/10/2026). Đo theo chiều dài chân của CHÍNH người đó thì không còn phụ
+    thuộc kích thước hay khoảng cách.
+
+    Mọi khoảng cách đều nhân `aspect` cho x (xem `angle_utils`) để hai trục cùng thang
+    pixel — nếu không, cùng một người ở khung dọc và khung ngang cho kết quả khác nhau.
+
+    `outward`: +1 cho chân trái (mũi chân ở bên +x của gối), −1 cho chân phải — người
+    quay mặt vào camera nên hai chân đối xứng.
+    """
+    s = knee.aspect
+    leg_length = math.hypot((hip.x - ankle.x) * s, hip.y - ankle.y)
+    if leg_length < 1e-6:
+        return False
+    overshoot = (knee.x - foot.x) * outward * s
+    return overshoot > max_ratio * leg_length
 
 
 def is_visible(*kps: Keypoint) -> bool:

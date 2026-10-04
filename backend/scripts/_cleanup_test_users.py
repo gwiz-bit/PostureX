@@ -1,5 +1,7 @@
 import asyncio
+
 from sqlalchemy import text
+
 from app.core.database import AsyncSessionLocal
 
 TEST_EMAILS = ("vdqv1132003@gmail.com", "testdev@example.com")
@@ -8,7 +10,7 @@ TEST_EMAILS = ("vdqv1132003@gmail.com", "testdev@example.com")
 async def cleanup() -> None:
     async with AsyncSessionLocal() as db:
         for email in TEST_EMAILS:
-            r = await db.execute(text(f"SELECT UserId FROM Users WHERE Email = :e"), {"e": email})
+            r = await db.execute(text("SELECT UserId FROM Users WHERE Email = :e"), {"e": email})
             row = r.fetchone()
             if not row:
                 print(f"Not found: {email}")

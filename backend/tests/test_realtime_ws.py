@@ -28,14 +28,39 @@ WS_URL = "/api/v1/ws/analyze"
 
 @pytest.fixture
 def ws_client(monkeypatch):
-    """TestClient với pose estimation giả và scheduler tắt.
+    """TestClient với pose estimation giả, scheduler tắt, và DB không chạm MySQL.
 
     Scheduler bị tắt vì nó là job nền nhắc nghỉ giải lao/tổng kết hằng ngày,
     không liên quan gì tới WebSocket mà lại chạy suốt thời gian test.
+
+    AsyncSessionLocal bị tắt để tránh mở kết nối MySQL thật: realtime.py dùng
+    nó trực tiếp (không qua Depends) để lưu WorkoutSession/SessionRep — nếu
+    không mock thì connection gắn với event loop cũ của test, gây SAWarning và
+    có thể làm vỡ test chạy sau. Tất cả ba nơi gọi AsyncSessionLocal đều được
+    bọc try/except nên RuntimeError ở đây chỉ khiến _ws_session_id giữ nguyên
+    None, bỏ qua toàn bộ lưu DB — đúng hành vi đã kiểm ở test_db_loi_thi_dung_nguong_mac_dinh.
     """
     monkeypatch.setattr("app.main.start_scheduler", lambda: None)
     monkeypatch.setattr("app.main.shutdown_scheduler", lambda: None)
+    _block_real_db(monkeypatch)
     return TestClient(app)
+
+
+def _block_real_db(monkeypatch) -> None:
+    """Chặn route WebSocket chạm MySQL THẬT.
+
+    Route giờ lưu phiên tập/rep/lỗi vào DB qua `AsyncSessionLocal()`. Không chặn thì
+    test ghi vào MySQL thật của máy chạy test (trên VPS là DB production!), và
+    còn để lại kết nối gắn với vòng lặp sự kiện của TestClient trong pool chung —
+    test async sau đó tái dùng nó và vỡ với `'NoneType' object has no attribute
+    'send'` (chỉ khi chạy cả bộ, chạy riêng thì qua). Mọi chỗ lưu DB trong route đều
+    bọc try/except nên ném lỗi ở đây chỉ là bỏ qua phần lưu, đúng như khi mất DB thật.
+    """
+
+    def no_db():
+        raise RuntimeError("test không được chạm MySQL thật")
+
+    monkeypatch.setattr(realtime, "AsyncSessionLocal", no_db)
 
 
 def _feed_angles(monkeypatch, angles: list[float], back_angle: float = 175.0) -> None:

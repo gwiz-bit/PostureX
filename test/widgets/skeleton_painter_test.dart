@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:posturex/models/frame_analysis_result.dart';
@@ -55,6 +57,19 @@ void main() {
       expect(moi.shouldRepaint(cu), isTrue);
     });
 
+    test('shouldRepaint: true khi mirrorX đổi', () {
+      const goc = SkeletonPainter(
+        keypoints: {'left_knee': Point(x: 0.3, y: 0.5, visibility: 1.0)},
+        correct: true,
+      );
+      const lat = SkeletonPainter(
+        keypoints: {'left_knee': Point(x: 0.3, y: 0.5, visibility: 1.0)},
+        correct: true,
+        mirrorX: true,
+      );
+      expect(lat.shouldRepaint(goc), isTrue);
+    });
+
     test('shouldRepaint: false khi keypoints/correct giống hệt nhau', () {
       const cu = SkeletonPainter(
         keypoints: {'left_knee': Point(x: 0.3, y: 0.5, visibility: 1.0)},
@@ -66,6 +81,46 @@ void main() {
       );
 
       expect(moi.shouldRepaint(cu), isFalse);
+    });
+  });
+
+  group('SkeletonPainter.mirrorX — vẽ thật, kiểm tra điểm ảnh', () {
+    // Vẽ MỘT khớp ở x=0.2 lên khung 100x100 rồi xem chấm tròn nằm ở đâu. Đây là
+    // đúng lỗi ảnh chụp 30/09/2026: khung xương là ảnh gương của người thật.
+    Future<(bool atLeft, bool atRight)> paintedAt(
+      WidgetTester tester,
+      bool mirrorX,
+    ) async {
+      late bool left, right;
+      await tester.runAsync(() async {
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder);
+        SkeletonPainter(
+          keypoints: const {
+            'left_knee': Point(x: 0.2, y: 0.5, visibility: 1.0),
+          },
+          correct: true,
+          mirrorX: mirrorX,
+        ).paint(canvas, const Size(100, 100));
+        final image = await recorder.endRecording().toImage(100, 100);
+        final bytes = (await image.toByteData())!;
+        bool painted(int x, int y) => bytes.getUint8((y * 100 + x) * 4 + 3) > 0;
+        left = painted(20, 50);
+        right = painted(80, 50);
+      });
+      return (left, right);
+    }
+
+    testWidgets('mặc định vẽ đúng toạ độ gốc (x = 0,2 → bên trái)', (tester) async {
+      final (left, right) = await paintedAt(tester, false);
+      expect(left, isTrue);
+      expect(right, isFalse);
+    });
+
+    testWidgets('mirrorX lật sang đối xứng (x = 0,2 → 0,8, bên phải)', (tester) async {
+      final (left, right) = await paintedAt(tester, true);
+      expect(left, isFalse);
+      expect(right, isTrue);
     });
   });
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../features/exercises/data/datasources/exercise_remote_data_source.dart';
+import '../features/exercises/domain/entities/exercise.dart';
+import '../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../models/workout_plan.dart';
+import '../services/api_client.dart';
 import '../theme/app_theme.dart';
 import 'app_logo.dart';
 
@@ -174,6 +178,60 @@ class _DayDetailSheetState extends State<_DayDetailSheet> {
   late TextEditingController _sessionNameController;
   List<_ExerciseDraft> _drafts = [];
   String? _error;
+
+  List<Exercise>? _exerciseCache;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefetchExercises();
+  }
+
+  Future<void> _prefetchExercises() async {
+    try {
+      _exerciseCache =
+          await ExerciseRemoteDataSource(ApiClient.instance).fetchExercises();
+      if (mounted) setState(() {});
+    } catch (_) {
+      // cache stays null — navigation falls back to name-only
+    }
+  }
+
+  Future<void> _openExercise(String name) async {
+    Exercise exercise;
+    if (_exerciseCache != null) {
+      exercise = _exerciseCache!.firstWhere(
+        (e) => e.name.toLowerCase() == name.toLowerCase(),
+        orElse: () => Exercise(
+          id: 0, name: name, description: null,
+          category: null, difficulty: null, demoVideoUrl: null,
+        ),
+      );
+    } else {
+      // Cache not ready yet — fetch on demand
+      try {
+        final list =
+            await ExerciseRemoteDataSource(ApiClient.instance).fetchExercises();
+        _exerciseCache = list;
+        exercise = list.firstWhere(
+          (e) => e.name.toLowerCase() == name.toLowerCase(),
+          orElse: () => Exercise(
+            id: 0, name: name, description: null,
+            category: null, difficulty: null, demoVideoUrl: null,
+          ),
+        );
+      } catch (_) {
+        exercise = Exercise(
+          id: 0, name: name, description: null,
+          category: null, difficulty: null, demoVideoUrl: null,
+        );
+      }
+    }
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ExerciseDetailScreen(exercise: exercise)),
+    );
+  }
 
   String get _dateLabel {
     final date = _day.date;
@@ -349,7 +407,7 @@ class _DayDetailSheetState extends State<_DayDetailSheet> {
     return [
       for (var i = 0; i < _day.exercises.length; i++) ...[
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
             children: [
               const AppLogo(size: 18, color: AppColors.primary),
@@ -371,6 +429,18 @@ class _DayDetailSheetState extends State<_DayDetailSheet> {
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: () => _openExercise(_day.exercises[i].name),
+                icon: const Icon(
+                  Icons.open_in_new_rounded,
+                  size: 16,
+                ),
+                color: AppColors.primary,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                tooltip: 'Xem trong thư viện',
               ),
             ],
           ),

@@ -267,23 +267,23 @@ def test_moi_analyzer_dem_rep_deu_co_cap_thu_tu_bao_ve() -> None:
 # ─────────────────────────────────────────────────────────────────────
 
 def test_knee_overshoot_khai_dung_don_vi_va_buoc() -> None:
-    """Ngưỡng này là tỉ lệ theo chiều rộng khung hình, không phải độ.
+    """Ngưỡng này là tỉ lệ theo chiều dài chân, không phải độ.
 
     Dùng chung đơn vị "°" và bước 1.0 như các ngưỡng góc sẽ cho một thanh
-    trượt vô dụng: khoảng hợp lệ chỉ 0–0.3, bước 1.0 nghĩa là chỉ nhảy được
+    trượt vô dụng: khoảng hợp lệ chỉ 0–0.6, bước 1.0 nghĩa là chỉ nhảy được
     giữa 0 và 1 — không chọn được giá trị nào có nghĩa.
     """
     for analyzer in ("SquatAnalyzer", "LungeAnalyzer", "DeadliftAnalyzer"):
-        t = next(x for x in tunables_for(analyzer) if x.key == "knee_overshoot")
+        t = next(x for x in tunables_for(analyzer) if x.key == "knee_overshoot_leg")
         assert t.unit == "", f"{analyzer}: không được gắn đơn vị độ cho một tỉ lệ"
         assert t.step == 0.01
-        assert t.default == 0.05
+        assert t.default == 0.15
 
 
 def test_moi_nguong_goc_van_dung_don_vi_do() -> None:
     for ten, group in TUNABLES.items():
         for t in group:
-            if t.key == "knee_overshoot":
+            if t.key == "knee_overshoot_leg":
                 continue
             assert t.unit == "°", f"{ten}.{t.key} thiếu đơn vị độ"
             assert t.step == 1.0
@@ -308,7 +308,7 @@ def test_knee_overshoot_khong_nam_trong_cap_thu_tu() -> None:
     """Nó không phải một đầu của rep nào — ràng buộc thứ tự không áp cho nó."""
     trong_cap = {k for pair in ORDERED_PAIRS for k in pair}
 
-    assert "knee_overshoot" not in trong_cap
+    assert "knee_overshoot_leg" not in trong_cap
 
 
 # ─────────────────────────────────────────────────────────────────────

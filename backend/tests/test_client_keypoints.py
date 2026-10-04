@@ -19,6 +19,7 @@ from app.main import app
 from app.ml.client_keypoints import LANDMARK_COUNT, parse_client_keypoints
 from tests.pose_builders import squat_pose
 from tests.test_analyzers import rep_sequence
+from tests.test_realtime_ws import _block_real_db
 
 WS_URL = "/api/v1/ws/analyze"
 
@@ -141,6 +142,8 @@ def ws_client(monkeypatch):
         return {}
 
     monkeypatch.setattr(realtime, "_load_exercise_thresholds", no_thresholds)
+    # Route WebSocket lưu phiên vào MySQL thật nếu không chặn — xem `_block_real_db`.
+    _block_real_db(monkeypatch)
     return TestClient(app)
 
 
