@@ -114,6 +114,36 @@ nhưng nghĩa là máy nào khác muốn build release cũng phải tự tạo k
 riêng hoặc được chia sẻ file đó ngoài git (đã sao lưu vào OneDrive cá nhân
 của người dùng, không đi kèm repo).
 
+### 01/10/2026 (3)
+
+**Kết quả test thật đầu tiên trên điện thoại (Android, camera trước, Behind The Neck Press, bản
+APK 00:33) + việc làm tiếp.**
+
+- ✅ **Khung xương khớp người** ở camera trước với mặc định `pluginMirrorsFrontPreview=true` (không
+  cần bấm nút sửa; log ghi `mirror_plan: flipWholeStack=false, mirrorSkeleton=true`). Chưa kiểm
+  chứng: camera sau, và máy khác (có thể cần bấm nút lật một lần).
+- ✅ Log phiên tự sao chép khi kết thúc hoạt động; cảnh báo `angleLost` chỉ hiện đúng lúc (tay ra
+  khỏi khung >4 s), không báo nhầm khi đang tập; độ sáng 110–161 (ngưỡng tối 45/60 còn rất xa).
+- ⚠️ **ML Kit trên máy thật: trung bình 239 ms/frame (max 1393 ms lúc nạp model, 3 frame đầu
+  ~0,6–1,4 s) ⇒ chỉ ~3,3 fps thực tế, KHÔNG phải 12 fps** như các ngưỡng/bộ làm mượt giả định;
+  round-trip tới VPS trung bình 30 ms, không frame rớt ⇒ **điểm nghẽn là ML Kit trên điện thoại,
+  không phải server** (số đo VPS: xem mục 30/09/2026 (2)). Hệ quả: mỗi rep chỉ có ~3–4 mẫu; vẫn
+  đếm đúng 5 chu kỳ nhờ nhánh dự phòng FPS thấp của `RepCounter`, nhưng rep nhanh dễ lỡ; hai lỗi
+  nhắc ("chưa khoá tay", "hai tay không đều") rơi đúng đoạn lấy mẫu thưa (khuỷu phải nhảy 98°→180°
+  trong ~0,3 s) — nghi do tốc độ lấy mẫu chứ chưa chắc lỗi kỹ thuật thật (chưa kiểm chứng).
+- **Việc làm tiếp (theo thứ tự):** (1) hỏi số rep thật và model điện thoại; (2) thử hạ
+  `ResolutionPreset.medium` → `low` trong `_newCameraController` rồi so cột `detect_ms` (ML Kit tự
+  co ảnh nhỏ nên ảnh lớn chủ yếu tốn thêm công sao chép; đánh đổi: người nhỏ ít điểm ảnh hơn, đã có
+  cảnh báo "đứng gần hơn" bù); (3) test camera sau, cảnh báo "người quá nhỏ", ngưỡng "gối vượt mũi
+  chân" mới trên Squat/Lunge/Deadlift, các bài máy móc; (4) kiểm VPS có thật sự lưu lịch sử phiên
+  tập (code lưu DB trong `realtime.py` ghi lỗi ở mức `debug` nên có thể hỏng im lặng; chưa kiểm) và
+  dọn ~21 phiên rỗng do benchmark dưới một tài khoản test; (5) ba điểm nhỏ ở code lưu DB: log mức
+  debug, tạo phiên chưa có timeout trước `ready`, chờ DB mỗi khi rep tăng.
+- **Chưa xử lý:** iOS (ML Kit chỉ bật cho Android, pod cần iOS ≥15.5); người béo/gầy/trẻ em/tỉ lệ
+  cơ thể (cần dữ liệu thật); điểm "độ giống bài mẫu" với chuẩn trích lại (chưa xác nhận trên app).
+- **Trạng thái deploy cuối phiên:** VPS, GitHub `main` và `hiep05` cùng ở `abb7b84`; backend đã
+  restart lúc 00:30:54; APK mới nhất build từ đúng commit đó.
+
 ### 01/10/2026 (2)
 
 **Scale theo tạng người (người to/nhỏ, đứng gần/xa) — kiểm bằng mô phỏng qua analyzer thật, sửa

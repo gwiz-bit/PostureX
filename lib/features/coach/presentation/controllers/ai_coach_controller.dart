@@ -130,8 +130,8 @@ class AiCoachController extends ChangeNotifier {
       planMessage = 'ready';
     } on AppFailure catch (e) {
       errorMessage = e.message;
-    } catch (_) {
-      errorMessage = 'Could not reach the server. Check your connection.';
+    } catch (e) {
+      errorMessage = e.toString();
     } finally {
       isGeneratingPlan = false;
       notifyListeners();
