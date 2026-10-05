@@ -16,6 +16,16 @@ def _generate_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
+# Lỗ hổng bảo mật phát hiện qua audit (05/10/2026, xem CHANGELOG): cột
+# `attempts` đã có sẵn từ đầu nhưng CHƯA TỪNG được kiểm tra ở đây — chỉ tăng
+# lên rồi bỏ đó, nên một OTP 6 chữ số (1 triệu khả năng) có thể bị dò không
+# giới hạn số lần cho tới khi hết hạn (mặc định OTP_EXPIRE_MINUTES phút).
+# Kẻ xấu đăng ký trước bằng email người khác rồi brute-force là chiếm được
+# tài khoản. Giới hạn 5 lần thử sai mỗi OTP — hết lượt thì coi như sai luôn
+# (dù sau đó có đoán đúng), buộc phải xin mã mới qua /resend-otp.
+_MAX_VERIFY_ATTEMPTS = 5
+
+
 async def create_otp(db: AsyncSession, user: User) -> EmailOtp:
     """Tạo OTP mới cho user (mỗi lần gọi tạo 1 bản ghi mới, các mã cũ
     chưa dùng vẫn còn trong bảng nhưng sẽ không khớp nữa vì verify_otp
@@ -41,6 +51,11 @@ async def verify_otp(db: AsyncSession, user: User, code: str) -> bool:
     )
     otp = result.scalar_one_or_none()
     if otp is None:
+        return False
+
+    if otp.attempts >= _MAX_VERIFY_ATTEMPTS:
+        # Đã hết lượt thử cho mã này — không tăng attempts thêm nữa (đã ở
+        # mức tối đa), không chấm điểm `code` nữa dù trùng hay không.
         return False
 
     otp.attempts += 1

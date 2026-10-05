@@ -125,6 +125,18 @@ async def test_trang_delete_account_phuc_vu_cong_khai(client):
     assert "Dữ liệu nào được giữ lại" in resp.text
 
 
+async def test_ban_sao_trang_xoa_tai_khoan_trong_docs_khong_lech():
+    """docs/delete-account.html là bản Nginx có thể phục vụ thay cho route FastAPI.
+    Hai bản mà khác nhau thì Play có thể thấy một trang nói khác với chính sách
+    (vd bản cũ ghi "không giữ lại gì" trong khi hoá đơn vẫn được giữ ẩn danh)."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    served = (root / "backend" / "app" / "web" / "delete_account.html").read_text(encoding="utf-8")
+    docs = (root / "docs" / "delete-account.html").read_text(encoding="utf-8")
+    assert served == docs
+
+
 async def test_request_email_la_khong_lo_thong_tin(client, seeded, sent_codes):
     known = await client.post("/api/v1/account-deletion/request", json={"email": "tester@posturex.com"})
     unknown = await client.post("/api/v1/account-deletion/request", json={"email": "ghost@posturex.com"})

@@ -89,6 +89,11 @@ còn 4 lỗ hổng.
   cách nhau ≥60 s) → `POST .../confirm` (đúng mã thì xoá NGAY; mã hết hạn 15 phút, tối đa 5 lần thử,
   10/giờ/IP). Mã lưu dạng HMAC (`account_deletion_requests`). Tài khoản admin không xoá được qua
   đường công khai. Dùng được cho cả tài khoản Google (không có mật khẩu) nhờ xác nhận qua email.
+- **Trang này tồn tại ở HAI nơi, phải giống hệt nhau:** `backend/app/web/delete_account.html` (FastAPI
+  phục vụ) và `docs/delete-account.html` (bản tĩnh VanGiap thêm 05/10 — Nginx có thể đang phục vụ bản này
+  và che mất route FastAPI). Bản cũ của VanGiap ghi "xử lý qua email trong 7 ngày" và "không giữ lại gì",
+  sai với việc giữ hoá đơn ẩn danh nên đã bị thay bằng nội dung này (giữ email liên hệ
+  kazen689588@gmail.com và mục "xoá một phần dữ liệu" của VanGiap). Một test khoá hai file bằng nhau.
 - **Bẫy:** `verify_code` phải `commit()` ngay khi mã sai — route sau đó ném 400 và `get_db` rollback,
   nên không commit thì số lần thử không bao giờ tăng (chống đoán mò vô hiệu). `verify_otp` cũ của luồng
   đăng ký có cùng tật này, chưa sửa.
@@ -102,6 +107,99 @@ còn 4 lỗ hổng.
   bản mặc định, nhưng snapshot tự động của nhà cung cấp VPS thì chưa biết giữ bao lâu).
 - ⚠️ Chưa chạy trên MySQL thật — test dùng SQLite (không ép khoá ngoại). Nên thử xoá một tài khoản test
   có đăng ký gói + video trên VPS rồi kiểm tra DB và thư mục `storage/videos`.
+
+### 05/10/2026 (3)
+
+**AI Coach: lỗi 503 kéo dài giờ chuyển sang model dự phòng thay vì bỏ cuộc
+— vá trước khi mời tester cho Closed testing.** Đọc log production thật
+(`/var/log/posturex-backend.log`) phát hiện Gemini model chính
+(`gemini-3.8-flash`) báo 503 "quá tải" 62 lần trong vài tuần qua (có đợt
+14 lần/giờ) — mỗi lần cả 3 lần retry (~7-8 giây) đều không đủ để model
+hết quá tải, user vẫn nhận lỗi 502.
+
+**Nguyên nhân:** `_generate_with_retry()` (`ai_coach_service.py`) đã có sẵn
+danh sách model dự phòng và logic chuyển model — nhưng CHỈ áp dụng cho lỗi
+400/404/429. Lỗi 503 chỉ retry đúng model đó rồi `raise` thẳng nếu hết lượt
+vẫn 503, không bao giờ rơi xuống thử model dự phòng dù danh sách đã có sẵn.
+
+**Sửa:** hết lượt retry mà 503 vẫn còn thì `break` sang model dự phòng tiếp
+theo (giống hệt nhánh 400/404/429), chỉ `raise` lỗi cuối khi ĐÃ thử hết
+toàn bộ model (chính + dự phòng). `tests/test_ai_coach_fallback.py` (mới,
+3 test, mock sâu `_client()` thay vì mock `ai_coach_service.ask` như
+`test_coach.py`): test chính xác nhận ĐỎ trên code cũ (model chính 503 đủ
+3 lần, model dự phòng trả thành công — code cũ raise lỗi thay vì trả kết
+quả), XANH sau khi sửa; 2 test hồi quy giữ nguyên hành vi 429 (chuyển ngay
+không cần retry) và trường hợp mọi model đều 503 (vẫn raise, không treo vô
+hạn). 558 test backend xanh (từ 555), ruff sạch.
+
+### 05/10/2026 (2)
+
+**Vá lỗ hổng chiếm tài khoản qua brute-force OTP — phát hiện lúc đọc code
+repo landing page riêng (`Landing_page_PostureX`), không phải lỗi mới.**
+`.env.example` của repo đó ghi rõ: web cố tình tắt đăng ký
+(`REGISTRATION_ENABLED=False`) vì backend app chính không giới hạn số lần
+thử OTP — đọc thẳng `crud/otp.py` xác nhận đúng: cột `EmailOtp.attempts`
+đã có sẵn từ đầu nhưng **chỉ tăng lên, không bao giờ được kiểm tra**, và
+route `/auth/verify-otp` **không có `@limiter.limit` nào cả** (khác hẳn
+`/forgot-password`, `/login` đã có). Một mã OTP 6 chữ số (1 triệu khả năng)
+dò được không giới hạn số lần cho tới khi hết hạn — đăng ký trước bằng
+email người khác rồi brute-force là chiếm được tài khoản.
+
+- **`crud/otp.py`** — thêm `_MAX_VERIFY_ATTEMPTS = 5`: `verify_otp()` giờ
+  kiểm tra `otp.attempts >= 5` NGAY ĐẦU, trả `False` luôn (không tăng
+  `attempts` thêm, không chấm `code` nữa) — hết lượt thì dù đoán đúng mã
+  thật sau đó vẫn bị từ chối, phải xin mã mới qua `/resend-otp`.
+- **`routes/auth.py`** — thêm rate limit theo IP: `/verify-otp` 10/giờ,
+  `/resend-otp` 5/giờ (khớp mẫu `/forgot-password` đã có) — lớp phòng thủ
+  THỨ HAI, chặn cả việc liên tục xin mã mới để "làm mới" lượt dò.
+- **`tests/test_otp_security.py`** (mới, 4 test) — khoá đúng hành vi: dò
+  sai đủ 5 lần thì mã ĐÚNG sau đó cũng bị từ chối (ĐỎ trên code cũ, xác
+  nhận lỗ hổng thật trước khi sửa); vài lần sai trong hạn mức vẫn đoán
+  đúng được bình thường (không khoá oan user thật); rate limit 2 route
+  trả đúng 429 sau khi vượt ngưỡng. 555 test backend xanh (từ 551), ruff
+  sạch.
+- ⚠️ **Chưa bật lại `REGISTRATION_ENABLED` ở repo landing page** — cần làm
+  riêng, sau khi xác nhận bản vá này đã chạy ổn định trên production một
+  thời gian.
+
+### 05/10/2026
+
+**Icon app đổi nền đen (thay nền trong suốt) + sửa lỗi video demo đè lên màn
+phân tích real-time + chuẩn bị asset Play Store.**
+
+- **Icon app** (`android/app/src/main/res/mipmap-*/ic_launcher.png`,
+  `docs/play-store-icon-512.png`) — nền đổi từ trong suốt sang màu đặc
+  `#0B0C0D` (`AppColors.background`). Lý do: MIUI (và một số launcher
+  Android khác) tự fill nền TRẮNG cho icon có vùng trong suốt thay vì giữ
+  trong suốt như kỳ vọng — phát hiện qua ảnh chụp thật trên máy test, icon
+  hiện nền trắng dù file gốc không có nền trắng.
+- **Bug thật phát hiện lúc tự động chụp ảnh màn hình cho Play Store**:
+  `ExerciseDetailScreen._startAnalysis()` đẩy sang `AnalyzeSessionScreen`
+  bằng `MaterialPageRoute` thường — mặc định `maintainState: true` giữ màn
+  cũ (và `GuideVideoPlayer` đang phát video mẫu) sống ở nền. Vì
+  `video_player` trên Android dùng `SurfaceView` (vẽ ở lớp native, không
+  phải lớp canvas Flutter), video demo tiếp tục hiển thị ĐÈ LÊN nửa trên
+  màn hình phân tích real-time dù đã điều hướng sang màn khác — xác nhận
+  bằng ảnh chụp thật (`adb screencap`), không phải suy đoán. Sửa bằng
+  `maintainState: false` cho đúng route đó, buộc giải phóng `ExerciseDetailScreen`
+  (và video player bên trong) ngay khi điều hướng đi.
+- **Asset chuẩn bị cho Play Store**: `docs/feature-graphic.png` (banner
+  1024×500, nền tối + logo + tagline "Move better. Stand taller."),
+  `docs/screenshots/*.png` (ảnh chụp thật: Home, Exercises, Workout,
+  Profile, chi tiết bài tập — chụp qua `adb screencap`/`adb shell input`
+  tự động, xác nhận thủ công từng ảnh trước khi lưu).
+- ⚠️ **Phát hiện AI Coach lỗi "Không thể kết nối tới AI Coach lúc này"**
+  lúc thử chụp ảnh màn AI Coach — lặp lại nhiều lần, không phải lỗi mạng
+  tạm thời. Trùng thời điểm với commit "Fix AI Coach: fallback sang model
+  dự phòng khi gặp 429 hết quota" bị REVERT ngay sau đó trong lịch sử git
+  gần đây — nghi vấn chính là Gemini API hết quota và bản fix fallback đã
+  bị revert. **Chưa xác nhận được qua log server** (mạng bị chặn lúc kiểm
+  tra). Cần xem lại `/var/log/posturex-backend.log` lọc theo "coach"/"429"/
+  "quota" khi mạng thông, và quyết định có nên un-revert bản fix fallback
+  hay không.
+- `docs/screenshots/4-progress-empty.png` — chụp lúc tài khoản demo chưa có
+  dữ liệu tiến trình thật (toàn số 0) — giữ lại để tham khảo nhưng KHÔNG
+  dùng cho Store listing, cần ảnh có dữ liệu thật trông sống động hơn.
 
 ### 04/10/2026
 
