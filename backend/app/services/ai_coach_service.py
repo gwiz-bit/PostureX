@@ -13,9 +13,18 @@ from app.schemas.coach import AiPlanResponse, ChatMessage
 logger = logging.getLogger(__name__)
 
 # Gemini free tier thỉnh thoảng trả 503 "model đang quá tải" khi nhu cầu
-# toàn cầu tăng đột biến — lỗi tạm thời, thử lại sau vài giây thường sẽ qua.
-# KHÔNG retry cho lỗi khác (400 sai tham số, 429 hết quota, 404 model cũ...)
-# vì thử lại cùng model cũng không giúp ích — thay vào đó thử model dự phòng.
+# toàn cầu tăng đột biến — lỗi tạm thời, thử lại sau vài giây THƯỜNG sẽ qua,
+# nên retry cùng model vài lần trước (khác 400/404/429 bên dưới — sai tham
+# số/hết quota/model đã tắt thì retry cùng model chắc chắn vẫn sai, chuyển
+# model dự phòng ngay không cần thử lại).
+#
+# Sửa 05/10/2026 (audit thật trên production, xem CHANGELOG): "thường sẽ
+# qua" không phải lúc nào cũng đúng — log thật ghi nhận 62 lần 503 lặp lại
+# trong vài tuần, có đợt tới 14 lần/giờ, và cả 3 lần retry (~7-8 giây) đều
+# không đủ để model chính hết quá tải. Trước đây hết lượt retry mà vẫn 503
+# thì raise luôn, KHÔNG rơi xuống thử model dự phòng dù danh sách đó đã có
+# sẵn — giờ 503 cũng chuyển model dự phòng sau khi hết lượt retry, giống hệt
+# 400/404/429, chỉ khác ở chỗ 503 có thử lại vài lần trước khi chuyển.
 _RETRYABLE_CODE = 503
 _MAX_ATTEMPTS = 3
 _RETRY_DELAYS_SECONDS = (1, 3)
@@ -26,9 +35,10 @@ _FALLBACK_MODELS = ('gemini-2.0-flash', 'gemini-1.5-flash')
 
 
 async def _generate_with_retry(**kwargs):
-    """Gọi `generate_content`, tự thử lại tối đa 2 lần nếu Gemini báo 503.
-    Nếu model bị 400/404 (không hỗ trợ tham số / đã bị tắt) hoặc 429 (hết
-    quota free tier), tự động chuyển sang model dự phòng tiếp theo."""
+    """Gọi `generate_content`, tự thử lại tối đa 2 lần nếu Gemini báo 503 —
+    hết lượt thử mà vẫn 503 thì chuyển sang model dự phòng tiếp theo, y hệt
+    cách xử lý 400/404 (không hỗ trợ tham số / đã bị tắt) hoặc 429 (hết
+    quota free tier), chỉ khác là 503 có thử lại vài lần trước khi chuyển."""
     client = _client()
     primary = kwargs.pop('model', settings.GEMINI_MODEL)
     models_to_try = [primary] + [m for m in _FALLBACK_MODELS if m != primary]
@@ -46,8 +56,15 @@ async def _generate_with_retry(**kwargs):
                     )
                     last_err = e
                     break  # sang model tiếp theo
-                if e.code != _RETRYABLE_CODE or attempt == _MAX_ATTEMPTS - 1:
+                if e.code != _RETRYABLE_CODE:
                     raise
+                last_err = e
+                if attempt == _MAX_ATTEMPTS - 1:
+                    logger.warning(
+                        "Model %s vẫn 503 sau %d lần thử — thử model dự phòng tiếp theo",
+                        model, _MAX_ATTEMPTS,
+                    )
+                    break  # sang model tiếp theo, không raise ngay
                 delay = _RETRY_DELAYS_SECONDS[attempt]
                 logger.warning(
                     "Gemini 503 (quá tải) — thử lại lần %d/%d sau %ds",

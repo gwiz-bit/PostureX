@@ -64,6 +64,30 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 05/10/2026 (3)
+
+**AI Coach: lỗi 503 kéo dài giờ chuyển sang model dự phòng thay vì bỏ cuộc
+— vá trước khi mời tester cho Closed testing.** Đọc log production thật
+(`/var/log/posturex-backend.log`) phát hiện Gemini model chính
+(`gemini-3.8-flash`) báo 503 "quá tải" 62 lần trong vài tuần qua (có đợt
+14 lần/giờ) — mỗi lần cả 3 lần retry (~7-8 giây) đều không đủ để model
+hết quá tải, user vẫn nhận lỗi 502.
+
+**Nguyên nhân:** `_generate_with_retry()` (`ai_coach_service.py`) đã có sẵn
+danh sách model dự phòng và logic chuyển model — nhưng CHỈ áp dụng cho lỗi
+400/404/429. Lỗi 503 chỉ retry đúng model đó rồi `raise` thẳng nếu hết lượt
+vẫn 503, không bao giờ rơi xuống thử model dự phòng dù danh sách đã có sẵn.
+
+**Sửa:** hết lượt retry mà 503 vẫn còn thì `break` sang model dự phòng tiếp
+theo (giống hệt nhánh 400/404/429), chỉ `raise` lỗi cuối khi ĐÃ thử hết
+toàn bộ model (chính + dự phòng). `tests/test_ai_coach_fallback.py` (mới,
+3 test, mock sâu `_client()` thay vì mock `ai_coach_service.ask` như
+`test_coach.py`): test chính xác nhận ĐỎ trên code cũ (model chính 503 đủ
+3 lần, model dự phòng trả thành công — code cũ raise lỗi thay vì trả kết
+quả), XANH sau khi sửa; 2 test hồi quy giữ nguyên hành vi 429 (chuyển ngay
+không cần retry) và trường hợp mọi model đều 503 (vẫn raise, không treo vô
+hạn). 558 test backend xanh (từ 555), ruff sạch.
+
 ### 05/10/2026 (2)
 
 **Vá lỗ hổng chiếm tài khoản qua brute-force OTP — phát hiện lúc đọc code
