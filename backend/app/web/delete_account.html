@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xoá tài khoản - PostureX</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 720px; margin: 0 auto; padding: 24px 20px 64px; line-height: 1.6; color: #1a1a1a; background: #fff; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  h2 { font-size: 17px; margin-top: 32px; margin-bottom: 8px; }
+  p, li { font-size: 15px; color: #333; }
+  .updated { color: #666; font-size: 14px; margin-bottom: 24px; }
+  a { color: #FF5A3C; }
+  .card { border: 1px solid #ddd; border-radius: 12px; padding: 20px; background: #fafafa; margin-top: 12px; }
+  label { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
+  input { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; }
+  button { margin-top: 16px; padding: 11px 20px; font-size: 15px; font-weight: 600; color: #fff;
+    background: #FF5A3C; border: 0; border-radius: 8px; cursor: pointer; }
+  button.danger { background: #c62828; }
+  button:disabled { opacity: .6; cursor: default; }
+  .msg { margin-top: 14px; font-size: 14px; padding: 10px 12px; border-radius: 8px; }
+  .msg.ok { background: #e8f5e9; color: #1b5e20; }
+  .msg.err { background: #ffebee; color: #b71c1c; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f3f3f3; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <h1>Xoá tài khoản PostureX</h1>
+  <div class="updated">Cập nhật lần cuối: 06/10/2026</div>
+
+  <p>Trang này dành cho bạn muốn xoá tài khoản PostureX và dữ liệu liên quan mà không cần cài hoặc
+  mở ứng dụng. Việc xoá diễn ra <strong>ngay lập tức, vĩnh viễn và không thể khôi phục</strong>,
+  không cần chờ nhân viên xử lý.</p>
+
+  <h2>Cách 1: Xoá ngay trong ứng dụng</h2>
+  <p>Mở ứng dụng PostureX &rarr; tab <strong>Hồ sơ</strong> &rarr; <strong>Cài đặt</strong> &rarr;
+  <strong>Xoá tài khoản</strong> &rarr; xác nhận.</p>
+
+  <h2>Cách 2: Xoá tại trang này</h2>
+  <p>Nhập email bạn đã dùng để đăng ký (hoặc email tài khoản Google nếu bạn đăng nhập bằng Google).
+  Chúng tôi sẽ gửi một mã xác nhận tới email đó để chắc chắn bạn là chủ tài khoản.</p>
+
+  <div class="card">
+    <form id="step1">
+      <label for="email">Email tài khoản</label>
+      <input id="email" type="email" autocomplete="email" required placeholder="ban@example.com">
+      <button id="send" type="submit">Gửi mã xác nhận</button>
+    </form>
+
+    <form id="step2" hidden>
+      <label for="code">Mã xác nhận (6 chữ số) đã gửi tới email của bạn</label>
+      <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="123456">
+      <p style="font-size:13px;color:#b71c1c;margin:10px 0 0">Bấm nút dưới đây sẽ xoá vĩnh viễn tài khoản
+      và dữ liệu của bạn, không thể hoàn tác.</p>
+      <button id="confirm" class="danger" type="submit">Xoá vĩnh viễn tài khoản của tôi</button>
+    </form>
+
+    <div id="msg" class="msg" hidden></div>
+  </div>
+
+  <h2>Dữ liệu nào bị xoá</h2>
+  <p>Khi xoá tài khoản, các dữ liệu sau bị loại bỏ hoàn toàn khỏi hệ thống (không chỉ ẩn hay đánh dấu đã xoá):</p>
+  <ul>
+    <li>Thông tin tài khoản: họ tên, email, số điện thoại (nếu có), mật khẩu đã băm, vai trò, lịch sử đăng nhập.</li>
+    <li>Hồ sơ thể chất và câu trả lời onboarding: giới tính, chiều cao, cân nặng, tuổi, trình độ, mục tiêu.</li>
+    <li>Lịch sử tập luyện: các buổi tập, số lần lặp, điểm chính xác, phản hồi tư thế.</li>
+    <li>Giáo án tập cá nhân hoá.</li>
+    <li>Video buổi tập bạn đã tải lên (cả bản ghi trong cơ sở dữ liệu lẫn file video trên máy chủ) và kết quả phân tích của chúng.</li>
+    <li>Toàn bộ lịch sử trò chuyện với AI Coach.</li>
+    <li>Thông báo, token thông báo đẩy và thông tin thiết bị.</li>
+    <li>Thông tin đăng ký gói cước (gói đang dùng, ngày bắt đầu/kết thúc, trạng thái gia hạn).</li>
+  </ul>
+
+  <h2>Dữ liệu nào được giữ lại, và vì sao</h2>
+  <table>
+    <tr><th>Dữ liệu giữ lại</th><th>Lý do</th><th>Thời hạn</th></tr>
+    <tr>
+      <td>Hoá đơn thanh toán đã hoàn tất hoặc đã hoàn tiền: mã giao dịch, tên gói, số tiền, loại tiền,
+      phương thức thanh toán, thời điểm thanh toán.</td>
+      <td>Tuân thủ nghĩa vụ lưu trữ chứng từ kế toán và thuế theo pháp luật Việt Nam, và để đối soát
+      khi có tranh chấp hoặc khiếu nại về giao dịch.</td>
+      <td>Theo thời hạn lưu trữ chứng từ kế toán theo quy định pháp luật (tối đa 10 năm), sau đó bị xoá.</td>
+    </tr>
+    <tr>
+      <td>Bản sao lưu định kỳ của cơ sở dữ liệu máy chủ.</td>
+      <td>Phục hồi hệ thống khi có sự cố. Không được dùng cho mục đích nào khác.</td>
+      <td>Dữ liệu của bạn có thể còn trong bản sao lưu tối đa 30 ngày kể từ lúc xoá, sau đó các bản sao lưu
+      cũ tự bị xoá/ghi đè.</td>
+    </tr>
+  </table>
+  <p><strong>Hoá đơn được giữ lại ở dạng ẩn danh:</strong> chúng tôi ngắt liên kết với tài khoản của bạn
+  và không giữ tên, email, hay bất kỳ thông tin nào cho phép nhận ra bạn. Đơn thanh toán chưa hoàn tất
+  hoặc thất bại (chưa phát sinh tiền) bị xoá cùng tài khoản. Nhật ký hệ thống nếu có chỉ còn dòng sự kiện
+  đã được cắt mọi liên kết tới bạn. Ngoài ra, đơn vị cung cấp dịch vụ thanh toán (MoMo) có thể lưu giao dịch
+  của bạn theo chính sách và nghĩa vụ pháp lý của họ; chúng tôi không kiểm soát phần đó.</p>
+
+  <h2>Thời gian xử lý</h2>
+  <p>Xoá ngay lập tức sau khi bạn xác nhận (trong ứng dụng hoặc bằng mã gửi qua email). Không có bước chờ
+  duyệt thủ công. Bản sao lưu hệ thống được dọn theo bảng trên (tối đa 30 ngày).</p>
+
+  <h2>Cần trợ giúp?</h2>
+  <p>Nếu không nhận được email, hãy kiểm tra thư rác, hoặc liên hệ vietvdq1132003@gmail.com.
+  Xem thêm <a href="/privacy">Chính sách bảo mật</a>.</p>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var msg = $('msg');
+  function show(text, ok) { msg.textContent = text; msg.className = 'msg ' + (ok ? 'ok' : 'err'); msg.hidden = false; }
+  function post(path, body) {
+    return fetch('/api/v1/account-deletion/' + path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) {
+          var d = j.detail;
+          throw new Error(typeof d === 'string' ? d : (r.status === 422 ? 'Dữ liệu nhập chưa hợp lệ.' : 'Có lỗi xảy ra, vui lòng thử lại.'));
+        }
+        return j;
+      });
+    });
+  }
+  $('step1').addEventListener('submit', function (e) {
+    e.preventDefault();
+    $('send').disabled = true;
+    post('request', { email: $('email').value.trim() }).then(function (j) {
+      show(j.message, true); $('step2').hidden = false; $('code').focus();
+    }).catch(function (err) { show(err.message, false); }).then(function () { $('send').disabled = false; });
+  });
+  $('step2').addEventListener('submit', function (e) {
+    e.preventDefault();
+    $('confirm').disabled = true;
+    post('confirm', { email: $('email').value.trim(), code: $('code').value.trim() }).then(function (j) {
+      show(j.message, true); $('step1').hidden = true; $('step2').hidden = true;
+    }).catch(function (err) { show(err.message, false); $('confirm').disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>

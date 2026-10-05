@@ -64,6 +64,45 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 06/10/2026
+
+**Xoá tài khoản đáp ứng chính sách Google Play — xoá thật, có trang web công khai, giữ hoá đơn
+ẩn danh.** Rà theo yêu cầu "Account deletion" của Play: trước đó nút xoá trong app có nhưng
+còn 4 lỗ hổng.
+
+- **Lỗi cũ đã sửa:** (1) app `catch (_) {}` nuốt lỗi rồi vẫn đăng xuất ⇒ xoá thất bại mà người
+  dùng tưởng đã xoá — nay chỉ đăng xuất khi server trả thành công, lỗi thì hiện SnackBar; (2)
+  `DELETE /users/me` chỉ xoá dòng DB, **file video trên ổ đĩa vẫn còn** — nay xoá cả file (chỉ file
+  nằm trong thư mục lưu video, và chỉ SAU khi DB commit thành công); (3) phụ thuộc `ON DELETE
+  CASCADE` của DB production chưa kiểm chứng — nay xoá tường minh Notifications/Payments/
+  UserSubscriptions và gỡ liên kết `AuditLogs`; (4) không có test — nay có `tests/test_account_deletion.py`.
+- **Logic dùng chung** ở `app/services/account_deletion.py` (`delete_user_account`) cho cả hai đường
+  vào. Xoá user bằng câu lệnh Core `delete(User)`, không qua `db.delete()` (ORM sẽ lazy-load quan hệ
+  `videos`/`workouts` bất đồng bộ).
+- **Giữ hoá đơn, ẩn danh:** hoá đơn `Completed`/`Refunded` được chép sang bảng mới `payment_archive`
+  (không có cột user nào, không khoá ngoại, KHÔNG chép `PaymentGatewayLog` vì có thể chứa thông tin
+  cá nhân). Đơn Pending/Failed bị xoá cùng tài khoản. Phần này **phải khớp** với
+  `docs/privacy-policy.html` và `app/web/delete_account.html` — đổi một nơi thì sửa cả ba.
+- **Luồng web `/delete-account`** (không cần app): trang HTML do FastAPI phục vụ thẳng
+  (`app/web/delete_account.html`, không cần sửa Nginx) → `POST /api/v1/account-deletion/request`
+  (gửi mã 6 số qua email, luôn trả cùng một câu để không dò được email nào có tài khoản; 5/giờ/IP,
+  cách nhau ≥60 s) → `POST .../confirm` (đúng mã thì xoá NGAY; mã hết hạn 15 phút, tối đa 5 lần thử,
+  10/giờ/IP). Mã lưu dạng HMAC (`account_deletion_requests`). Tài khoản admin không xoá được qua
+  đường công khai. Dùng được cho cả tài khoản Google (không có mật khẩu) nhờ xác nhận qua email.
+- **Bẫy:** `verify_code` phải `commit()` ngay khi mã sai — route sau đó ném 400 và `get_db` rollback,
+  nên không commit thì số lần thử không bao giờ tăng (chống đoán mò vô hiệu). `verify_otp` cũ của luồng
+  đăng ký có cùng tật này, chưa sửa.
+- ⚠️ **Cần làm khi deploy:** (1) `git pull`; (2) chạy `scripts/ensure_tables.py` để tạo 2 bảng mới
+  (`account_deletion_requests`, `payment_archive`); (3) restart service; (4) **SMTP trên VPS phải đã cấu hình
+  thật** — nếu chưa, mã chỉ được in ra log chứ không gửi, trang web sẽ im lặng không có email; (5)
+  privacy policy cập nhật qua `docs/privacy-policy.html` (nếu Nginx phục vụ bản chép tay thì chép lại);
+  (6) điền `https://api.posturex1.com/delete-account` vào ô "Delete account URL" trên Play Console.
+- ⚠️ **Hai con số công khai chưa được xác nhận bởi người có chuyên môn:** "tối đa 10 năm" lưu chứng từ kế
+  toán (theo Luật Kế toán VN — nên hỏi kế toán) và "tối đa 30 ngày" cho bản sao lưu (`backup_db.py` giữ 7
+  bản mặc định, nhưng snapshot tự động của nhà cung cấp VPS thì chưa biết giữ bao lâu).
+- ⚠️ Chưa chạy trên MySQL thật — test dùng SQLite (không ép khoá ngoại). Nên thử xoá một tài khoản test
+  có đăng ký gói + video trên VPS rồi kiểm tra DB và thư mục `storage/videos`.
+
 ### 04/10/2026
 
 **Chuẩn bị phát hành Google Play — domain HTTPS, ký release key thật, icon,

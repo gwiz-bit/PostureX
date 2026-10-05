@@ -3,10 +3,11 @@
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.router import api_router
@@ -93,6 +94,18 @@ async def get_exercise_video(
     if storage_dir not in file_path.parents or not file_path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy video.")
     return FileResponse(file_path)
+
+
+# Trang công khai yêu cầu xoá tài khoản (ô "Delete account URL" trên Google Play
+# Console). Phục vụ thẳng từ FastAPI thay vì file tĩnh của Nginx để deploy chỉ
+# là `git pull` — không phải sửa thêm cấu hình Nginx. Không cần đăng nhập: người
+# đã gỡ app vẫn dùng được.
+_DELETE_ACCOUNT_PAGE = Path(__file__).parent / "web" / "delete_account.html"
+
+
+@app.get("/delete-account", response_class=HTMLResponse, include_in_schema=False)
+async def delete_account_page() -> HTMLResponse:
+    return HTMLResponse(_DELETE_ACCOUNT_PAGE.read_text(encoding="utf-8"))
 
 
 @app.get("/health", tags=["health"])

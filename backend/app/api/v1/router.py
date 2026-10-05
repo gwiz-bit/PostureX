@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.routes import (
+    account_deletion,
     admin,
     auth,
     coach,
@@ -19,6 +20,7 @@ from app.api.v1.routes import (
 api_router = APIRouter(prefix="/api/v1")
 
 api_router.include_router(auth.router)
+api_router.include_router(account_deletion.router)
 api_router.include_router(users.router)
 api_router.include_router(videos.router)
 api_router.include_router(workouts.router)

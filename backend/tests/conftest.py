@@ -25,6 +25,7 @@ from app.main import app
 
 # Import mọi model để Base.metadata biết đủ bảng trước khi create_all — thiếu một
 # cái là khoá ngoại trỏ vào bảng không tồn tại và create_all nổ.
+from app.models.account_deletion import AccountDeletionRequest, PaymentArchive  # noqa: F401
 from app.models.achievement import Achievement, UserAchievement  # noqa: F401
 from app.models.ai_qa import AiQaPair, AiSafetyRule  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401

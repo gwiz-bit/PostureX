@@ -403,7 +403,7 @@ class AppLocale {
       'delete_account': 'Delete Account',
       'delete_account_title': 'Delete Account?',
       'delete_account_body':
-          'This will permanently delete your account and all your workout data. This action cannot be undone.',
+          'This will permanently delete your account and all your data (profile, workouts, videos, AI Coach chats). Only anonymized payment invoices are kept, as required by tax and accounting law. This action cannot be undone.',
       'log_out': 'Log out',
       'log_out_title': 'Log out?',
       'log_out_body': "You'll need to log in again to access your posture data.",
@@ -753,7 +753,7 @@ class AppLocale {
       'delete_account': 'Xoá tài khoản',
       'delete_account_title': 'Xoá tài khoản?',
       'delete_account_body':
-          'Thao tác này sẽ xoá vĩnh viễn tài khoản và toàn bộ dữ liệu tập luyện. Không thể hoàn tác.',
+          'Thao tác này sẽ xoá vĩnh viễn tài khoản và toàn bộ dữ liệu của bạn (hồ sơ, lịch sử tập, video, trò chuyện với AI Coach). Chỉ hoá đơn thanh toán được giữ lại ở dạng ẩn danh theo quy định về thuế và kế toán. Không thể hoàn tác.',
       'log_out': 'Đăng xuất',
       'log_out_title': 'Đăng xuất?',
       'log_out_body': 'Bạn sẽ cần đăng nhập lại để truy cập dữ liệu tư thế.',

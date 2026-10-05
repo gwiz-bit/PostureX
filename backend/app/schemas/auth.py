@@ -61,3 +61,12 @@ class ResetPasswordRequest(BaseModel):
         if self.new_password != self.confirm_password:
             raise ValueError("Mật khẩu xác nhận không khớp.")
         return self
+
+
+class AccountDeletionRequestIn(BaseModel):
+    email: EmailStr
+
+
+class AccountDeletionConfirmIn(BaseModel):
+    email: EmailStr
+    code: str

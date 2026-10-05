@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/user_session.dart';
 import '../services/api_client.dart';
+import '../services/api_exception.dart';
 import '../services/google_auth_service.dart';
 import '../services/token_storage.dart';
 import '../theme/app_theme.dart';
@@ -282,9 +283,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (confirmed != true || !context.mounted) return;
+    // Chỉ đăng xuất khi server xác nhận đã xoá. Nuốt lỗi ở đây từng khiến
+    // người dùng tưởng tài khoản đã mất trong khi nó vẫn còn nguyên trên server.
     try {
       await ApiClient.instance.deleteAccount();
-    } catch (_) {}
+    } catch (e) {
+      if (!context.mounted) return;
+      final message =
+          e is ApiException ? e.message : AppLocale.t('error_generic');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
     try {
       await TokenStorage.clear();
     } catch (_) {}

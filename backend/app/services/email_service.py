@@ -78,3 +78,23 @@ async def send_password_changed_email(to_email: str) -> None:
         "Nếu đây không phải là bạn, vui lòng liên hệ hỗ trợ ngay lập tức."
     )
     await asyncio.to_thread(_send_sync, to_email, subject, body)
+
+
+async def send_account_deletion_email(to_email: str, code: str, expire_minutes: int) -> None:
+    """Gửi mã xác nhận xoá tài khoản (luồng web /delete-account).
+
+    Khi SMTP chưa cấu hình (môi trường dev), in mã ra log thay vì gửi email.
+    """
+    if not _smtp_configured():
+        logger.warning("[DEV] SMTP chưa cấu hình — mã xoá tài khoản cho %s là: %s", to_email, code)
+        return
+    subject = "Posture X - Xác nhận xoá tài khoản"
+    body = (
+        f"Mã xác nhận xoá tài khoản Posture X của bạn là: {code}\n\n"
+        f"Mã có hiệu lực trong {expire_minutes} phút. Nhập mã này vào trang yêu cầu xoá "
+        "tài khoản để hoàn tất. Khi xác nhận, tài khoản và dữ liệu của bạn sẽ bị xoá "
+        "vĩnh viễn ngay lập tức và không thể khôi phục.\n\n"
+        "Nếu bạn không yêu cầu xoá tài khoản, hãy bỏ qua email này — tài khoản của bạn "
+        "vẫn nguyên vẹn."
+    )
+    await asyncio.to_thread(_send_sync, to_email, subject, body)
