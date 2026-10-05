@@ -64,6 +64,36 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 05/10/2026 (2)
+
+**Vá lỗ hổng chiếm tài khoản qua brute-force OTP — phát hiện lúc đọc code
+repo landing page riêng (`Landing_page_PostureX`), không phải lỗi mới.**
+`.env.example` của repo đó ghi rõ: web cố tình tắt đăng ký
+(`REGISTRATION_ENABLED=False`) vì backend app chính không giới hạn số lần
+thử OTP — đọc thẳng `crud/otp.py` xác nhận đúng: cột `EmailOtp.attempts`
+đã có sẵn từ đầu nhưng **chỉ tăng lên, không bao giờ được kiểm tra**, và
+route `/auth/verify-otp` **không có `@limiter.limit` nào cả** (khác hẳn
+`/forgot-password`, `/login` đã có). Một mã OTP 6 chữ số (1 triệu khả năng)
+dò được không giới hạn số lần cho tới khi hết hạn — đăng ký trước bằng
+email người khác rồi brute-force là chiếm được tài khoản.
+
+- **`crud/otp.py`** — thêm `_MAX_VERIFY_ATTEMPTS = 5`: `verify_otp()` giờ
+  kiểm tra `otp.attempts >= 5` NGAY ĐẦU, trả `False` luôn (không tăng
+  `attempts` thêm, không chấm `code` nữa) — hết lượt thì dù đoán đúng mã
+  thật sau đó vẫn bị từ chối, phải xin mã mới qua `/resend-otp`.
+- **`routes/auth.py`** — thêm rate limit theo IP: `/verify-otp` 10/giờ,
+  `/resend-otp` 5/giờ (khớp mẫu `/forgot-password` đã có) — lớp phòng thủ
+  THỨ HAI, chặn cả việc liên tục xin mã mới để "làm mới" lượt dò.
+- **`tests/test_otp_security.py`** (mới, 4 test) — khoá đúng hành vi: dò
+  sai đủ 5 lần thì mã ĐÚNG sau đó cũng bị từ chối (ĐỎ trên code cũ, xác
+  nhận lỗ hổng thật trước khi sửa); vài lần sai trong hạn mức vẫn đoán
+  đúng được bình thường (không khoá oan user thật); rate limit 2 route
+  trả đúng 429 sau khi vượt ngưỡng. 555 test backend xanh (từ 551), ruff
+  sạch.
+- ⚠️ **Chưa bật lại `REGISTRATION_ENABLED` ở repo landing page** — cần làm
+  riêng, sau khi xác nhận bản vá này đã chạy ổn định trên production một
+  thời gian.
+
 ### 05/10/2026
 
 **Icon app đổi nền đen (thay nền trong suốt) + sửa lỗi video demo đè lên màn

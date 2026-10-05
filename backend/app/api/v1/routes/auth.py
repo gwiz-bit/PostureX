@@ -66,11 +66,20 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)) -> User
 
 
 @router.post("/verify-otp", response_model=TokenResponse)
+@limiter.limit("10/hour")
 async def verify_otp_endpoint(
-    data: VerifyOtpRequest, db: AsyncSession = Depends(get_db)
+    request: Request, data: VerifyOtpRequest, db: AsyncSession = Depends(get_db)
 ) -> TokenResponse:
     """Xác thực mã OTP để hoàn tất đăng ký — trả về JWT token để đăng nhập
-    luôn sau khi xác thực thành công."""
+    luôn sau khi xác thực thành công.
+
+    Giới hạn 10 lần/giờ theo IP — lớp phòng thủ THỨ HAI, bổ sung cho giới
+    hạn 5 lần thử sai/mã OTP ở `crud/otp.verify_otp` (lớp phòng thủ chính).
+    Phát hiện qua audit repo landing page (05/10/2026): trước đây route này
+    không giới hạn gì cả, và cột `attempts` trong DB chỉ tăng lên chứ không
+    bao giờ được kiểm tra — một OTP 6 chữ số (1 triệu khả năng) dò được
+    không giới hạn số lần, đủ để chiếm tài khoản đăng ký trước bằng email
+    người khác."""
     user = await get_user_by_email(db, data.email)
     if user is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài khoản.")
@@ -173,7 +182,10 @@ async def reset_password(
 
 
 @router.post("/resend-otp", response_model=MessageResponse)
-async def resend_otp(data: ResendOtpRequest, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+@limiter.limit("5/hour")
+async def resend_otp(
+    request: Request, data: ResendOtpRequest, db: AsyncSession = Depends(get_db)
+) -> MessageResponse:
     """Gửi lại mã OTP mới (nếu email chưa được xác thực)."""
     user = await get_user_by_email(db, data.email)
     if user is None:
