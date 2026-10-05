@@ -64,6 +64,45 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 05/10/2026
+
+**Icon app đổi nền đen (thay nền trong suốt) + sửa lỗi video demo đè lên màn
+phân tích real-time + chuẩn bị asset Play Store.**
+
+- **Icon app** (`android/app/src/main/res/mipmap-*/ic_launcher.png`,
+  `docs/play-store-icon-512.png`) — nền đổi từ trong suốt sang màu đặc
+  `#0B0C0D` (`AppColors.background`). Lý do: MIUI (và một số launcher
+  Android khác) tự fill nền TRẮNG cho icon có vùng trong suốt thay vì giữ
+  trong suốt như kỳ vọng — phát hiện qua ảnh chụp thật trên máy test, icon
+  hiện nền trắng dù file gốc không có nền trắng.
+- **Bug thật phát hiện lúc tự động chụp ảnh màn hình cho Play Store**:
+  `ExerciseDetailScreen._startAnalysis()` đẩy sang `AnalyzeSessionScreen`
+  bằng `MaterialPageRoute` thường — mặc định `maintainState: true` giữ màn
+  cũ (và `GuideVideoPlayer` đang phát video mẫu) sống ở nền. Vì
+  `video_player` trên Android dùng `SurfaceView` (vẽ ở lớp native, không
+  phải lớp canvas Flutter), video demo tiếp tục hiển thị ĐÈ LÊN nửa trên
+  màn hình phân tích real-time dù đã điều hướng sang màn khác — xác nhận
+  bằng ảnh chụp thật (`adb screencap`), không phải suy đoán. Sửa bằng
+  `maintainState: false` cho đúng route đó, buộc giải phóng `ExerciseDetailScreen`
+  (và video player bên trong) ngay khi điều hướng đi.
+- **Asset chuẩn bị cho Play Store**: `docs/feature-graphic.png` (banner
+  1024×500, nền tối + logo + tagline "Move better. Stand taller."),
+  `docs/screenshots/*.png` (ảnh chụp thật: Home, Exercises, Workout,
+  Profile, chi tiết bài tập — chụp qua `adb screencap`/`adb shell input`
+  tự động, xác nhận thủ công từng ảnh trước khi lưu).
+- ⚠️ **Phát hiện AI Coach lỗi "Không thể kết nối tới AI Coach lúc này"**
+  lúc thử chụp ảnh màn AI Coach — lặp lại nhiều lần, không phải lỗi mạng
+  tạm thời. Trùng thời điểm với commit "Fix AI Coach: fallback sang model
+  dự phòng khi gặp 429 hết quota" bị REVERT ngay sau đó trong lịch sử git
+  gần đây — nghi vấn chính là Gemini API hết quota và bản fix fallback đã
+  bị revert. **Chưa xác nhận được qua log server** (mạng bị chặn lúc kiểm
+  tra). Cần xem lại `/var/log/posturex-backend.log` lọc theo "coach"/"429"/
+  "quota" khi mạng thông, và quyết định có nên un-revert bản fix fallback
+  hay không.
+- `docs/screenshots/4-progress-empty.png` — chụp lúc tài khoản demo chưa có
+  dữ liệu tiến trình thật (toàn số 0) — giữ lại để tham khảo nhưng KHÔNG
+  dùng cho Store listing, cần ảnh có dữ liệu thật trông sống động hơn.
+
 ### 04/10/2026
 
 **Chuẩn bị phát hành Google Play — domain HTTPS, ký release key thật, icon,

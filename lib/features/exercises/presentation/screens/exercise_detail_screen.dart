@@ -35,6 +35,12 @@ class ExerciseDetailScreen extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AnalyzeSessionScreen(exercise: exercise.name),
+        // false: giải phóng NGAY màn này (và video demo đang phát trong
+        // GuideVideoPlayer) thay vì giữ sống ở nền như mặc định. Thiếu dòng
+        // này, SurfaceView native của video_player trên Android tiếp tục
+        // hiển thị đè lên nửa trên màn phân tích real-time — phát hiện
+        // bằng ảnh chụp thật, không phải lỗi mô phỏng (xem CHANGELOG).
+        maintainState: false,
       ),
     );
   }
