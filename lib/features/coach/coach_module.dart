@@ -4,6 +4,7 @@ import 'data/repositories/coach_repository_impl.dart';
 import 'domain/repositories/coach_repository.dart';
 import 'domain/usecases/clear_coach_history.dart';
 import 'domain/usecases/fetch_coach_history.dart';
+import 'domain/usecases/report_coach_message.dart';
 import 'domain/usecases/send_coach_message.dart';
 import 'presentation/controllers/ai_coach_controller.dart';
 
@@ -20,6 +21,7 @@ class CoachModule {
       sendCoachMessage: SendCoachMessage(repository),
       fetchCoachHistory: FetchCoachHistory(repository),
       clearCoachHistory: ClearCoachHistory(repository),
+      reportCoachMessage: ReportCoachMessage(repository),
     );
   }
 }

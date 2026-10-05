@@ -47,4 +47,17 @@ class CoachRepositoryImpl implements CoachRepository {
       throw const NetworkFailure();
     }
   }
+
+  @override
+  Future<void> reportMessage({required String reason, required String content}) async {
+    try {
+      await _remote.reportMessage(reason: reason, content: content);
+    } on ApiException catch (e) {
+      throw ServerFailure(e.message);
+    } on AppFailure {
+      rethrow;
+    } catch (_) {
+      throw const NetworkFailure();
+    }
+  }
 }

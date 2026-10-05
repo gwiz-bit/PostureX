@@ -422,6 +422,16 @@ class AppLocale {
       'coach_clear_confirm_title': 'Clear conversation?',
       'coach_clear_confirm_body': 'This permanently deletes your chat history with AI Coach.',
       'coach_history_load_failed': 'Could not load chat history.',
+      'coach_disclaimer':
+          'AI Coach is an AI assistant that gives general fitness information. It is not a doctor and does not replace professional medical advice. If you have an injury or health condition, consult a doctor before training.',
+      'coach_report': 'Report this reply',
+      'coach_report_title': 'Report this reply',
+      'coach_report_body': 'What is wrong with this reply?',
+      'coach_report_inappropriate': 'Inappropriate or offensive',
+      'coach_report_inaccurate': 'Inaccurate or misleading',
+      'coach_report_unsafe': 'Unsafe or harmful advice',
+      'coach_report_other': 'Something else',
+      'coach_report_sent': 'Thanks — your report has been sent.',
 
       // Privacy Policy
       'privacy_title': 'Privacy Policy',
@@ -430,6 +440,7 @@ class AppLocale {
       'privacy_section_sharing': 'Data sharing',
       'privacy_section_storage': 'Data storage & security',
       'privacy_section_rights': 'Your rights',
+      'privacy_section_ai': 'AI content & health',
     },
 
     // ── Vietnamese ─────────────────────────────────────────────────────
@@ -772,6 +783,16 @@ class AppLocale {
       'coach_clear_confirm_title': 'Xoá cuộc trò chuyện?',
       'coach_clear_confirm_body': 'Toàn bộ lịch sử trò chuyện với AI Coach sẽ bị xoá vĩnh viễn.',
       'coach_history_load_failed': 'Không tải được lịch sử trò chuyện.',
+      'coach_disclaimer':
+          'AI Coach là trợ lý AI, chỉ cung cấp thông tin tập luyện chung. AI Coach không phải bác sĩ và không thay thế tư vấn y tế. Nếu bạn có chấn thương hoặc bệnh lý, hãy hỏi bác sĩ trước khi tập.',
+      'coach_report': 'Báo cáo câu trả lời này',
+      'coach_report_title': 'Báo cáo câu trả lời',
+      'coach_report_body': 'Câu trả lời này có vấn đề gì?',
+      'coach_report_inappropriate': 'Không phù hợp hoặc xúc phạm',
+      'coach_report_inaccurate': 'Sai hoặc gây hiểu lầm',
+      'coach_report_unsafe': 'Lời khuyên không an toàn, có hại',
+      'coach_report_other': 'Vấn đề khác',
+      'coach_report_sent': 'Cảm ơn bạn, báo cáo đã được gửi.',
 
       // Privacy Policy
       'privacy_title': 'Chính sách bảo mật',
@@ -780,6 +801,7 @@ class AppLocale {
       'privacy_section_sharing': 'Chia sẻ dữ liệu',
       'privacy_section_storage': 'Lưu trữ & bảo mật dữ liệu',
       'privacy_section_rights': 'Quyền của bạn',
+      'privacy_section_ai': 'Nội dung AI & sức khoẻ',
     },
   };
 }

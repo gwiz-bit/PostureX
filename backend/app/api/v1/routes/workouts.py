@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.crud.notification import TYPE_WORKOUT, create_notification
 from app.crud.subscription import is_premium
@@ -64,9 +65,10 @@ async def create_workout(
 ) -> WorkoutOut:
     """Lưu một buổi tập vào lịch sử.
 
-    User gói Free bị chặn sau buổi thứ [FREE_DAILY_WORKOUT_LIMIT] trong ngày.
+    Khi PAYMENTS_ENABLED bật, user gói Free bị chặn sau buổi thứ
+    [FREE_DAILY_WORKOUT_LIMIT] trong ngày. Khi tắt (mặc định) thì không giới hạn.
     """
-    premium = await is_premium(db, current_user.id)
+    premium = not settings.PAYMENTS_ENABLED or await is_premium(db, current_user.id)
     if not premium:
         done_today = await _count_workouts_today(db, current_user.id)
         if done_today >= FREE_DAILY_WORKOUT_LIMIT:

@@ -70,6 +70,44 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
     if (confirmed == true) await _controller.clear();
   }
 
+  Future<void> _reportMessage(String content) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          AppLocale.t('coach_report_title'),
+          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Text(
+              AppLocale.t('coach_report_body'),
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          for (final r in const ['inappropriate', 'inaccurate', 'unsafe', 'other'])
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(r),
+              child: Text(
+                AppLocale.t('coach_report_$r'),
+                style: const TextStyle(color: AppColors.textPrimary),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (reason == null || !mounted) return;
+    final sent = await _controller.report(reason: reason, content: content);
+    if (sent && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocale.t('coach_report_sent'))),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
@@ -140,6 +178,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
                 backgroundColor: AppColors.surface,
                 minHeight: 2,
               ),
+            const _DisclaimerBanner(),
             Expanded(
               child: messages.isEmpty
                   ? _EmptyState(onSuggestionTap: (text) {
@@ -160,7 +199,11 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
                             _controller.generatePlan();
                           });
                         }
-                        return _ChatBubble(message: messages[index]);
+                        final message = messages[index];
+                        return _ChatBubble(
+                          message: message,
+                          onReport: message.isUser ? null : () => _reportMessage(message.content),
+                        );
                       },
                     ),
             ),
@@ -220,36 +263,93 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
 }
 
 class _ChatBubble extends StatelessWidget {
-  const _ChatBubble({required this.message});
+  const _ChatBubble({required this.message, this.onReport});
 
   final ChatMessage message;
+
+  /// Set only for AI replies — opens the report dialog (Google Play requires an
+  /// in-app way to report AI-generated content).
+  final VoidCallback? onReport;
 
   @override
   Widget build(BuildContext context) {
     final isUser = message.isUser;
+    final bubble = Container(
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isUser ? AppColors.primary : AppColors.surface,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(18),
+          topRight: const Radius.circular(18),
+          bottomLeft: Radius.circular(isUser ? 18 : 4),
+          bottomRight: Radius.circular(isUser ? 4 : 18),
+        ),
+      ),
+      child: Text(
+        message.content,
+        style: TextStyle(
+          color: isUser ? AppColors.onPrimary : AppColors.textPrimary,
+          fontSize: 14,
+          height: 1.4,
+        ),
+      ),
+    );
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isUser ? AppColors.primary : AppColors.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: Radius.circular(isUser ? 18 : 4),
-            bottomRight: Radius.circular(isUser ? 4 : 18),
-          ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            bubble,
+            if (onReport != null)
+              Tooltip(
+                message: AppLocale.t('coach_report'),
+                child: InkWell(
+                  onTap: onReport,
+                  borderRadius: BorderRadius.circular(12),
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(6, 6, 10, 2),
+                    child: Icon(Icons.flag_outlined, size: 16, color: AppColors.textSecondary),
+                  ),
+                ),
+              ),
+          ],
         ),
-        child: Text(
-          message.content,
-          style: TextStyle(
-            color: isUser ? AppColors.onPrimary : AppColors.textPrimary,
-            fontSize: 14,
-            height: 1.4,
+      ),
+    );
+  }
+}
+
+/// Always-visible notice that AI Coach is an AI, not a doctor — Google Play's
+/// health/AI content policies expect this on a health-adjacent AI chatbot.
+class _DisclaimerBanner extends StatelessWidget {
+  const _DisclaimerBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              AppLocale.t('coach_disclaimer'),
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11.5, height: 1.4),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

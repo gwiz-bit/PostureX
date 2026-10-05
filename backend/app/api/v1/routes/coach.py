@@ -16,6 +16,7 @@ from app.crud.exercise import get_active_exercises, get_muscle_groups_by_exercis
 from app.crud.profile import get_profile
 from app.ml.analyzers.registry import supports_analysis
 from app.models.coach_message import CoachMessage
+from app.models.coach_report import CoachReport
 from app.models.user import User
 from app.models.workout import Workout
 from app.schemas.auth import MessageResponse
@@ -25,6 +26,7 @@ from app.schemas.coach import (
     CoachChatRequest,
     CoachChatResponse,
     CoachMessageOut,
+    CoachReportIn,
 )
 from app.services import ai_coach_service
 from app.utils.deps import get_current_user
@@ -282,6 +284,24 @@ async def get_history(
     """Toàn bộ lịch sử chat của user, cũ trước — gọi lúc mở màn AI Coach để
     khôi phục lại cuộc hội thoại thay vì luôn bắt đầu trắng."""
     return await coach_message_crud.get_all_messages(db, current_user.id)
+
+
+@router.post("/report", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/hour")
+async def report_message(
+    request: Request,
+    data: CoachReportIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MessageResponse:
+    """Báo cáo một câu trả lời của AI Coach (nội dung không phù hợp, sai, hoặc
+    không an toàn) — cơ chế báo cáo trong app mà Google Play yêu cầu với chatbot AI.
+
+    Xem chú thích ở `chat` về lý do bắt buộc có `request: Request`.
+    """
+    db.add(CoachReport(user_id=current_user.id, reason=data.reason, message_content=data.message_content))
+    await db.flush()
+    return MessageResponse(message="Cảm ơn bạn, chúng tôi đã ghi nhận báo cáo.")
 
 
 @router.delete("/history", response_model=MessageResponse)

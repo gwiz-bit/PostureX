@@ -5,6 +5,7 @@ import '../../../../utils/ai_plan_apply.dart';
 import '../../domain/entities/chat_message.dart';
 import '../../domain/usecases/clear_coach_history.dart';
 import '../../domain/usecases/fetch_coach_history.dart';
+import '../../domain/usecases/report_coach_message.dart';
 import '../../domain/usecases/send_coach_message.dart';
 
 class AiCoachController extends ChangeNotifier {
@@ -12,6 +13,7 @@ class AiCoachController extends ChangeNotifier {
     required this._sendCoachMessage,
     required this._fetchCoachHistory,
     required this._clearCoachHistory,
+    required this._reportCoachMessage,
   }) {
     _loadHistory();
   }
@@ -19,6 +21,7 @@ class AiCoachController extends ChangeNotifier {
   final SendCoachMessage _sendCoachMessage;
   final FetchCoachHistory _fetchCoachHistory;
   final ClearCoachHistory _clearCoachHistory;
+  final ReportCoachMessage _reportCoachMessage;
 
   final List<ChatMessage> messages = [];
   bool isLoadingHistory = true;
@@ -97,6 +100,21 @@ class AiCoachController extends ChangeNotifier {
   /// exactly once instead of re-showing it on every unrelated rebuild.
   void clearPlanMessage() {
     planMessage = null;
+  }
+
+  /// Reports an AI reply. Returns true if the server recorded it, so the
+  /// screen can confirm to the user; false (with [errorMessage] set) otherwise.
+  Future<bool> report({required String reason, required String content}) async {
+    try {
+      await _reportCoachMessage(reason: reason, content: content);
+      return true;
+    } on AppFailure catch (e) {
+      errorMessage = e.message;
+    } catch (_) {
+      errorMessage = 'Could not reach the server. Check your connection.';
+    }
+    notifyListeners();
+    return false;
   }
 
   Future<void> clear() async {

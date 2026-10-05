@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/app_features.dart';
 import '../models/user_session.dart';
 import '../services/api_client.dart';
 import '../services/api_exception.dart';
@@ -89,43 +90,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           // ── Premium ───────────────────────────────────────────────────
           const SizedBox(height: 28),
-          Text(
-            AppLocale.t('premium'),
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              child: Row(
-                children: [
-                  const Icon(Icons.workspace_premium_outlined,
-                      color: AppColors.primary, size: 20),
-                  const SizedBox(width: 12),
-                  Text(
-                    AppLocale.t('subscribe'),
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.chevron_right_rounded,
-                      color: AppColors.textSecondary, size: 20),
-                ],
+          if (AppFeatures.paymentsEnabled) ...[
+            Text(
+              AppLocale.t('premium'),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+            SectionCard(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Row(
+                  children: [
+                    const Icon(Icons.workspace_premium_outlined,
+                        color: AppColors.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      AppLocale.t('subscribe'),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: AppColors.textSecondary, size: 20),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           SectionCard(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             onTap: () => Navigator.of(context).push(

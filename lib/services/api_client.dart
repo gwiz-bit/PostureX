@@ -612,6 +612,19 @@ class ApiClient {
     return (json as List).map((e) => ChatMessage.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Reports an AI Coach reply ([reason]: inappropriate | inaccurate | unsafe |
+  /// other). Google Play requires an in-app way to report AI-generated content.
+  Future<void> reportCoachMessage({
+    required String reason,
+    required String content,
+  }) async {
+    await _post(
+      '/api/v1/coach/report',
+      auth: true,
+      body: {'reason': reason, 'message_content': content},
+    );
+  }
+
   /// Permanently deletes the user's AI Coach chat history.
   Future<void> clearCoachHistory() async {
     await _delete('/api/v1/coach/history', auth: true);

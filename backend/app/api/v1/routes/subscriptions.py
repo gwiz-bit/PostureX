@@ -141,6 +141,11 @@ async def checkout(
     current_user: User = Depends(get_current_user),
 ) -> CheckoutOut:
     """Tạo đơn chờ thanh toán và trả về URL thanh toán MoMo."""
+    if not settings.PAYMENTS_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Thanh toán hiện chưa mở. Mọi tính năng đang miễn phí.",
+        )
     if not settings.momo_configured:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

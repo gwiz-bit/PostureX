@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.account_deletion import AccountDeletionRequest, PaymentArchive
+from app.models.coach_report import CoachReport
 from app.models.notification import Notification
 from app.models.subscription import (
     PAYMENT_PAID,
@@ -103,6 +104,7 @@ async def delete_user_account(db: AsyncSession, user: User) -> None:
     # Các bảng này có cascade trong schema SQL, nhưng DB thật có thể lệch so với
     # file schema; xoá tường minh để việc xoá không phụ thuộc vào điều đó.
     await db.execute(delete(AccountDeletionRequest).where(AccountDeletionRequest.user_id == uid))
+    await db.execute(delete(CoachReport).where(CoachReport.user_id == uid))
     await db.execute(delete(Notification).where(Notification.user_id == uid))
     sub_ids = select(UserSubscription.id).where(UserSubscription.user_id == uid)
     await db.execute(delete(Payment).where(Payment.user_subscription_id.in_(sub_ids)))

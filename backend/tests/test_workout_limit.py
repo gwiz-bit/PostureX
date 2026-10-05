@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.routes.workouts import FREE_DAILY_WORKOUT_LIMIT
 from app.models.subscription import SUBSCRIPTION_ACTIVE, UserSubscription
 
+pytestmark = pytest.mark.usefixtures("payments_enabled")
+
 WORKOUT = {
     "exercise": "squat",
     "total_reps": 10,

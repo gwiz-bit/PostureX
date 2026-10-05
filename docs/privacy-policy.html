@@ -50,7 +50,9 @@ Hồ sơ thể chất: giới tính, chiều cao, cân nặng, tuổi, trình đ
 
 Dữ liệu tư thế và buổi tập: số lần lặp (rep), điểm chính xác và phản hồi góc khớp được tạo ra từ việc phân tích chuyển động của bạn.
 
-Camera và video: trong lúc tập luyện trực tiếp, khung hình camera được xử lý theo thời gian thực để nhận diện tư thế và KHÔNG được lưu lại sau đó. Nếu bạn tải lên video buổi tập để xem lại phân tích, video đó sẽ được lưu trữ để phục vụ phân tích.
+Camera và video: trong lúc tập luyện trực tiếp, khung hình camera được xử lý ngay trên thiết bị của bạn để nhận diện tư thế; chỉ toạ độ các khớp (không phải hình ảnh) được gửi tới máy chủ để chấm kỹ thuật. Trên một số thiết bị hoặc khi chế độ này không khả dụng, khung hình có thể được gửi tạm tới máy chủ để xử lý theo thời gian thực. Trong mọi trường hợp, khung hình KHÔNG được lưu lại sau đó. Nếu bạn tải lên video buổi tập để xem lại phân tích, video đó sẽ được lưu trữ để phục vụ phân tích.
+
+Tin nhắn AI Coach: nội dung bạn trò chuyện với AI Coach được lưu để bạn xem lại lịch sử, và các báo cáo bạn gửi về câu trả lời của AI (nếu có).
 
 Thông tin thiết bị: token thông báo đẩy, chỉ khi bạn bật tính năng nhắc nhở.</p>
 
@@ -58,7 +60,15 @@ Thông tin thiết bị: token thông báo đẩy, chỉ khi bạn bật tính n
   <p>Để cá nhân hoá giáo án tập và phản hồi tư thế, theo dõi tiến trình của bạn theo thời gian, và gửi thông báo nhắc nhở tuỳ chọn (nhắc nghỉ giải lao, tổng kết hàng ngày) nếu bạn bật tính năng này.</p>
 
   <h2>3. Chia sẻ dữ liệu</h2>
-  <p>Chúng tôi không bán dữ liệu của bạn. Nếu bạn đăng nhập bằng Google, chúng tôi chỉ nhận tên và email mà bạn đồng ý chia sẻ. Thanh toán được xử lý bởi đơn vị cung cấp dịch vụ thanh toán của chúng tôi - họ chỉ nhận thông tin giao dịch, không bao giờ nhận dữ liệu tư thế hoặc thể chất của bạn.</p>
+  <p>Chúng tôi không bán dữ liệu của bạn. Dữ liệu chỉ được chuyển tới các nhà cung cấp dịch vụ sau, và chỉ để ứng dụng hoạt động:
+
+Google (Gemini API) - AI Coach và giáo án do AI tạo: khi bạn trò chuyện với AI Coach hoặc bấm tạo giáo án bằng AI, nội dung tin nhắn của bạn cùng thông tin hồ sơ (tên, tuổi, giới tính, chiều cao, cân nặng, BMI, mức độ tập luyện, mục tiêu hàng tuần) và bản tóm tắt lịch sử tập (số buổi, độ chính xác trung bình, các bài đã tập) được gửi tới Google để tạo câu trả lời. Chúng tôi không gửi email, mật khẩu hay video của bạn. Google xử lý dữ liệu theo chính sách của họ.
+
+Google Sign-In: nếu bạn đăng nhập bằng Google, chúng tôi chỉ nhận tên và email mà bạn đồng ý chia sẻ.
+
+Dịch vụ gửi email: địa chỉ email của bạn được dùng để gửi mã xác nhận (đăng ký, đặt lại mật khẩu, xoá tài khoản).
+
+Thanh toán: hiện tại ứng dụng không bán gói trả phí và không thu thập thông tin thanh toán. Dữ liệu giao dịch phát sinh từ các phiên bản trước (nếu có) được xử lý qua MoMo, đơn vị này chỉ nhận thông tin giao dịch, không bao giờ nhận dữ liệu tư thế hoặc thể chất của bạn.</p>
 
   <h2>4. Lưu trữ dữ liệu</h2>
   <p>Dữ liệu của bạn được lưu trong cơ sở dữ liệu của chúng tôi, kết nối luôn được mã hoá (HTTPS/WSS). Token phiên đăng nhập được lưu trong bộ nhớ an toàn của thiết bị (Android Keystore / iOS Keychain), không bao giờ lưu dưới dạng văn bản thuần trong bộ nhớ ứng dụng.</p>
@@ -74,7 +84,14 @@ Dữ liệu bị xoá: thông tin tài khoản, hồ sơ thể chất, lịch s�
 
 Dữ liệu được giữ lại: hoá đơn thanh toán đã hoàn tất hoặc đã hoàn tiền (mã giao dịch, tên gói, số tiền, phương thức, thời điểm thanh toán), ở dạng ẩn danh — không còn liên kết với bạn, không kèm tên hay email — để tuân thủ nghĩa vụ lưu trữ chứng từ kế toán và thuế theo pháp luật Việt Nam, trong thời hạn pháp luật yêu cầu (tối đa 10 năm). Các bản sao lưu định kỳ của máy chủ có thể còn chứa dữ liệu của bạn tối đa 30 ngày sau khi xoá, rồi tự bị xoá. Chi tiết xem tại trang xoá tài khoản ở trên.</p>
 
-  <h2>6. Liên hệ</h2>
+  <h2>6. Nội dung do AI tạo và lưu ý về sức khoẻ</h2>
+  <p>AI Coach là trợ lý trí tuệ nhân tạo, chỉ cung cấp thông tin tập luyện và dinh dưỡng mang tính tham khảo chung. AI Coach không phải bác sĩ, không chẩn đoán hay điều trị bệnh và không thay thế tư vấn y tế chuyên môn. Câu trả lời của AI có thể chưa chính xác. Nếu bạn có chấn thương, bệnh lý hoặc cảm thấy đau khi tập, hãy ngừng tập và hỏi ý kiến bác sĩ.
+
+Phản hồi tư thế của ứng dụng là gợi ý tự động dựa trên phân tích hình ảnh, không phải đánh giá của huấn luyện viên hay chuyên gia vật lý trị liệu.
+
+Nếu một câu trả lời của AI không phù hợp, sai hoặc không an toàn, bạn có thể báo cáo ngay trong ứng dụng bằng biểu tượng lá cờ dưới câu trả lời đó.</p>
+
+  <h2>7. Liên hệ</h2>
   <p>Nếu bạn có câu hỏi về chính sách bảo mật này, vui lòng liên hệ: kazen689588@gmail.com</p>
 </body>
 </html>

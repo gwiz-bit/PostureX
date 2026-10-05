@@ -24,6 +24,8 @@ from app.models.subscription import (
 )
 from app.services import momo
 
+pytestmark = pytest.mark.usefixtures("payments_enabled")
+
 ORDER_INFO = "Thanh toan goi Premium"
 
 

@@ -21,6 +21,7 @@ from app.models import (  # noqa: F401 đăng ký hết model để Base.metadat
     audit_log,
     body_measurement,
     coach_message,
+    coach_report,
     device,
     device_token,
     email_otp,

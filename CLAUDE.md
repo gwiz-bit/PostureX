@@ -64,6 +64,47 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 06/10/2026 (2)
+
+**Rà yêu cầu Google Play lần 2: bỏ thanh toán, khai báo Gemini, AI Coach có disclaimer + nút báo cáo,
+siết cleartext.** Quyết định: bản lên Play KHÔNG bán gì ⇒ không phải dùng Google Play Billing (chính
+sách Payments của Play chỉ áp dụng khi app bán tính năng số) và mọi người tập mọi bài.
+
+- **Tắt bán hàng bằng cờ, không xoá code:** backend `PAYMENTS_ENABLED` (mặc định `False`, `config.py`) —
+  tắt thì `create_workout` bỏ giới hạn 3 buổi/ngày của gói Free và `POST /subscriptions/checkout` trả 403;
+  Flutter `AppFeatures.paymentsEnabled = false` (`lib/config/app_features.dart`, hằng biên dịch) ẩn mục
+  Premium trong Settings. Màn admin Revenue/Plans vẫn còn (chỉ hiện số 0). Test cũ về gói Free/checkout dùng
+  fixture `payments_enabled` (conftest). ⚠️ **Bật lại bán hàng thì phải chuyển sang Google Play Billing**
+  trước khi phát hành lên Play, không dùng MoMo. Cấu hình MoMo mặc định vẫn là khoá sandbox công khai.
+- **Privacy policy (web `docs/privacy-policy.html` + màn trong app) viết lại cho khớp thực tế:** khai báo
+  rằng AI Coach/giáo án gửi sang **Google Gemini** tên, tuổi, giới tính, chiều cao, cân nặng, BMI, mức tập,
+  mục tiêu, tóm tắt lịch sử tập và nội dung chat (KHÔNG gửi email/mật khẩu/video — đã đối chiếu với
+  `_build_user_context` trong `routes/coach.py`; thêm trường vào đó thì phải sửa lại chính sách); ML Kit xử lý
+  trên máy, chỉ toạ độ khớp lên server; không còn bán gói trả phí; mục xoá tài khoản đúng với thực tế (cũ ghi
+  "liên hệ hỗ trợ"); mục mới "Nội dung AI & sức khoẻ". Màn trong app chỉ có nội dung tiếng Anh (có từ trước).
+- **AI Coach:** banner disclaimer luôn hiện ("không phải bác sĩ, không thay thế tư vấn y tế") + nút lá cờ
+  dưới mỗi câu trả lời của AI → `POST /coach/report` (bảng mới `coach_reports`, lưu ảnh chụp nội dung chứ không
+  khoá ngoại tới `coach_messages` vì user có thể xoá chat ngay sau khi báo cáo; xoá theo user khi xoá tài
+  khoản; 20/giờ). Đây là cơ chế báo cáo trong app mà chính sách AI-Generated Content của Play đòi. Báo cáo chỉ
+  nằm trong DB — chưa có màn admin xem chúng.
+- **`network_security_config.xml`:** bỏ ngoại lệ cleartext cho IP VPS, nay `cleartextTrafficPermitted=false`.
+  Bản debug có file riêng nên chạy backend local không ảnh hưởng.
+- ⚠️ **Deploy:** `git pull` + `ensure_tables.py` (bảng `coach_reports`) + restart; **chép đè lại
+  `/var/www/posturex/privacy.html` và `delete-account.html`** (Nginx dùng bản chép tay) — xem mục 06/10/2026.
+  Không cần sửa `.env` (`PAYMENTS_ENABLED` mặc định đã tắt).
+
+#### Còn nợ để lên Play (ghi 06/10/2026)
+
+- **Build Android App Bundle (.aab)** — Play bắt buộc `.aab`, repo mới chỉ có luồng APK
+  (`scripts/publish_apk.ps1`). Lệnh: `flutter build appbundle --release` (dùng `android/key.properties`,
+  kết quả ở `build/app/outputs/bundle/release/app-release.aab`). Chưa ai build/thử `.aab`; cần kiểm tra
+  `versionCode` (pubspec đang `1.0.0+6`, mỗi lần nộp phải tăng) và rằng proguard-rules vẫn đúng với `.aab`.
+- Bọc các dòng log debug (`[analyze-geometry]`, `[rep-count]`, `[analyze-latency]`) sau `kDebugMode` trước
+  bản phát hành (xem mục 17/09/2026).
+- Điền form Data safety / Health apps declaration / Content rating trên Play Console (gợi ý nội dung ở
+  hội thoại ngày 06/10); icon app chính thức; ảnh Store có dữ liệu thật (`4-progress-empty.png` toàn số 0).
+- Chưa thử luồng email của `/delete-account` với SMTP thật (xem mục dưới).
+
 ### 06/10/2026
 
 **Xoá tài khoản đáp ứng chính sách Google Play — xoá thật, có trang web công khai, giữ hoá đơn

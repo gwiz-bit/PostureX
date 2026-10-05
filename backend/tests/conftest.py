@@ -31,6 +31,7 @@ from app.models.ai_qa import AiQaPair, AiSafetyRule  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.body_measurement import BodyMeasurement  # noqa: F401
 from app.models.coach_message import CoachMessage  # noqa: F401
+from app.models.coach_report import CoachReport  # noqa: F401
 from app.models.device import Device  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.movement_role import MovementRole  # noqa: F401
@@ -164,3 +165,12 @@ async def client(db_session: AsyncSession) -> AsyncClient:
 def auth(seeded: dict) -> dict[str, str]:
     """Header Authorization của user trong `seeded`."""
     return {"Authorization": f"Bearer {create_access_token(str(seeded['user'].id))}"}
+
+
+@pytest.fixture
+def payments_enabled(monkeypatch) -> None:
+    """Bật lại bán hàng (PAYMENTS_ENABLED) — mặc định của app đã TẮT để lên Google
+    Play không cần Play Billing. Test về gói Free/checkout dùng fixture này."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "PAYMENTS_ENABLED", True)

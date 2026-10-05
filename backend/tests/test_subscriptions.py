@@ -13,6 +13,8 @@ from app.models.subscription import (
     UserSubscription,
 )
 
+pytestmark = pytest.mark.usefixtures("payments_enabled")
+
 TODAY = date.today()
 
 

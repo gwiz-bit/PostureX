@@ -11,4 +11,8 @@ abstract class CoachRepository {
 
   /// Permanently deletes the user's chat history.
   Future<void> clearHistory();
+
+  /// Reports an AI reply. [reason] is one of `inappropriate`, `inaccurate`,
+  /// `unsafe`, `other`.
+  Future<void> reportMessage({required String reason, required String content});
 }

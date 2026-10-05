@@ -13,4 +13,8 @@ class CoachRemoteDataSource {
   Future<List<ChatMessage>> fetchHistory() => _client.fetchCoachHistory();
 
   Future<void> clearHistory() => _client.clearCoachHistory();
+
+  Future<void> reportMessage({required String reason, required String content}) {
+    return _client.reportCoachMessage(reason: reason, content: content);
+  }
 }

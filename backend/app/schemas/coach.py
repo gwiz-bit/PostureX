@@ -54,3 +54,10 @@ class AiPlanResponse(BaseModel):
     dựa trên hồ sơ thể chất + lịch sử tập thật — thay cho lịch mẫu cố định
     sinh ở client lúc onboarding."""
     days: list[PlanDayOut] = Field(min_length=7, max_length=7)
+
+
+class CoachReportIn(BaseModel):
+    """Báo cáo một câu trả lời của AI Coach. Gửi kèm nội dung câu trả lời (không
+    phải id) — xem chú thích ở models/coach_report.py."""
+    reason: str = Field(pattern="^(inappropriate|inaccurate|unsafe|other)$")
+    message_content: str = Field(min_length=1, max_length=4000)

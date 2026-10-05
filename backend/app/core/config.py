@@ -71,6 +71,13 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
+    # Tat toan bo ban hang (goi Premium qua MoMo). Mac dinh TAT: ban dua len Google
+    # Play khong ban tinh nang so nen khong phai dung Play Billing, va moi nguoi
+    # tap khong gioi han. Bat lai (PAYMENTS_ENABLED=true trong .env) se bat lai
+    # gioi han 3 buoi/ngay cua goi Free va route checkout. LUU Y: dua ban co
+    # thanh toan len Play thi phai dung Google Play Billing, khong phai MoMo.
+    PAYMENTS_ENABLED: bool = False
+
     # MoMo (AIO v2) — cong thanh toan dang dung.
     #
     # Gia tri mac dinh la BO KHOA SANDBOX CONG KHAI cua MoMo, lay tu repo mau
