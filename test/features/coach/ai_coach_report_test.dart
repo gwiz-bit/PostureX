@@ -5,7 +5,7 @@ import 'package:posturex/features/coach/domain/repositories/coach_repository.dar
 import 'package:posturex/features/coach/domain/usecases/clear_coach_history.dart';
 import 'package:posturex/features/coach/domain/usecases/fetch_coach_history.dart';
 import 'package:posturex/features/coach/domain/usecases/report_coach_message.dart';
-import 'package:posturex/features/coach/domain/usecases/send_coach_message.dart';
+import 'package:posturex/features/coach/domain/usecases/send_coach_message_stream.dart';
 import 'package:posturex/features/coach/presentation/controllers/ai_coach_controller.dart';
 
 class _FakeRepository implements CoachRepository {
@@ -24,6 +24,11 @@ class _FakeRepository implements CoachRepository {
   Future<String> sendMessage({required String message}) async => 'reply';
 
   @override
+  Stream<String> sendMessageStream({required String message}) async* {
+    yield 'reply';
+  }
+
+  @override
   Future<List<ChatMessage>> fetchHistory() async => const [];
 
   @override
@@ -31,7 +36,7 @@ class _FakeRepository implements CoachRepository {
 }
 
 AiCoachController _controller(CoachRepository repo) => AiCoachController(
-      sendCoachMessage: SendCoachMessage(repo),
+      sendCoachMessageStream: SendCoachMessageStream(repo),
       fetchCoachHistory: FetchCoachHistory(repo),
       clearCoachHistory: ClearCoachHistory(repo),
       reportCoachMessage: ReportCoachMessage(repo),

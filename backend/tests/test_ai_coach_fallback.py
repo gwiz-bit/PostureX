@@ -85,6 +85,26 @@ async def test_429_van_chuyen_model_ngay_khong_can_retry(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_loi_mang_chuyen_model_du_phong(monkeypatch) -> None:
+    """Network error (timeout, SSL...) cũng phải thử model dự phòng thay vì
+    raise ngay — không chỉ APIError mới được hưởng fallback."""
+    fake_response = object()
+    client = _fake_client({
+        "gemini-3.8-flash": [ConnectionError("network unreachable")],
+        "gemini-2.0-flash": [fake_response],
+    })
+    monkeypatch.setattr(ai_coach_service, "_client", lambda: client)
+    monkeypatch.setattr(ai_coach_service.settings, "GEMINI_MODEL", "gemini-3.8-flash")
+    monkeypatch.setattr(ai_coach_service, "_RETRY_DELAYS_SECONDS", (0, 0))
+
+    result = await ai_coach_service._generate_with_retry(
+        model="gemini-3.8-flash", contents=[]
+    )
+
+    assert result is fake_response
+
+
+@pytest.mark.asyncio
 async def test_tat_ca_model_deu_503_thi_raise_loi_cuoi(monkeypatch) -> None:
     """Không treo vô hạn, không nuốt lỗi âm thầm: nếu CẢ model chính lẫn
     toàn bộ model dự phòng đều 503 hết lượt — raise lỗi 503 cuối cùng."""

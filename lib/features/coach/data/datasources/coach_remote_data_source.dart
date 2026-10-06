@@ -10,6 +10,10 @@ class CoachRemoteDataSource {
     return _client.sendCoachMessage(message: message);
   }
 
+  Stream<String> sendMessageStream({required String message}) {
+    return _client.sendCoachMessageStream(message: message);
+  }
+
   Future<List<ChatMessage>> fetchHistory() => _client.fetchCoachHistory();
 
   Future<void> clearHistory() => _client.clearCoachHistory();

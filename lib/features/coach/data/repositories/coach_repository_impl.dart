@@ -23,6 +23,19 @@ class CoachRepositoryImpl implements CoachRepository {
   }
 
   @override
+  Stream<String> sendMessageStream({required String message}) async* {
+    try {
+      yield* _remote.sendMessageStream(message: message);
+    } on ApiException catch (e) {
+      throw ServerFailure(e.message);
+    } on AppFailure {
+      rethrow;
+    } catch (_) {
+      throw const NetworkFailure();
+    }
+  }
+
+  @override
   Future<List<ChatMessage>> fetchHistory() async {
     try {
       return await _remote.fetchHistory();

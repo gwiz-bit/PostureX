@@ -69,7 +69,7 @@ class Settings(BaseSettings):
 
     # AI Coach chat — Gemini API key from aistudio.google.com/apikey.
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-2.0-flash"
 
     # Tat toan bo ban hang (goi Premium qua MoMo). Mac dinh TAT: ban dua len Google
     # Play khong ban tinh nang so nen khong phai dung Play Billing, va moi nguoi

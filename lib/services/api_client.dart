@@ -126,7 +126,7 @@ class ApiClient {
     } on TimeoutException {
       throw ApiException(
         timeoutStatusCode,
-        'The server took too long to respond. Please try again.',
+        'Server phản hồi quá chậm. Vui lòng thử lại.',
       );
     }
   }
@@ -140,7 +140,7 @@ class ApiClient {
     } on TimeoutException {
       throw ApiException(
         timeoutStatusCode,
-        'The upload took too long. Check your connection and try again.',
+        'Upload mất quá nhiều thời gian. Kiểm tra kết nối và thử lại.',
       );
     }
   }
@@ -603,6 +603,69 @@ class ApiClient {
       body: {'message': message},
     );
     return (json as Map<String, dynamic>)['reply'] as String;
+  }
+
+  /// Streaming version of [sendCoachMessage] — yields text chunks as Gemini
+  /// generates them so the UI can show text appearing word-by-word (~1 second
+  /// to first token) instead of waiting 10-20 seconds for the full reply.
+  ///
+  /// Parsed from Server-Sent Events (SSE): each event is
+  /// `data: {"t":"<chunk>"}\n\n`, terminated by `data: {"done":true}\n\n`.
+  Stream<String> sendCoachMessageStream({required String message}) async* {
+    final req = http.Request('POST', _uri('/api/v1/coach/chat/stream'));
+    req.headers.addAll(_headers(auth: true));
+    req.body = jsonEncode({'message': message});
+
+    late final http.StreamedResponse response;
+    try {
+      response = await _http.send(req).timeout(_aiTimeout);
+    } on TimeoutException {
+      throw ApiException(
+        timeoutStatusCode,
+        'Server phản hồi quá chậm. Vui lòng thử lại.',
+      );
+    } on SocketException {
+      throw ApiException(0, 'Không thể kết nối. Kiểm tra mạng và thử lại.');
+    }
+
+    if (response.statusCode != 200) {
+      final bytes = await response.stream.toBytes();
+      String detail = 'Không thể kết nối tới AI Coach lúc này. Thử lại sau.';
+      try {
+        detail =
+            (jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>)['detail']
+                ?.toString() ??
+            detail;
+      } catch (_) {}
+      throw ApiException(response.statusCode, detail);
+    }
+
+    // SSE events are delimited by '\n\n'. HTTP chunked transfer may split
+    // them arbitrarily, so we buffer until a complete event is available.
+    var partial = '';
+    await for (final rawChunk in response.stream.transform(utf8.decoder)) {
+      partial += rawChunk;
+      while (partial.contains('\n\n')) {
+        final boundary = partial.indexOf('\n\n');
+        final event = partial.substring(0, boundary);
+        partial = partial.substring(boundary + 2);
+        if (!event.startsWith('data: ')) continue;
+        final payload = event.substring(6);
+        late final Map<String, dynamic> decoded;
+        try {
+          decoded = jsonDecode(payload) as Map<String, dynamic>;
+        } catch (_) {
+          continue;
+        }
+        if (decoded.containsKey('t')) {
+          yield decoded['t'] as String;
+        } else if (decoded.containsKey('e')) {
+          throw ApiException(502, decoded['e'] as String);
+        } else if (decoded['done'] == true) {
+          return;
+        }
+      }
+    }
   }
 
   /// Full chat history, oldest first — call on opening the AI Coach screen

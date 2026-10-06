@@ -12,7 +12,7 @@ sealed class AppFailure implements Exception {
 
 /// The request never reached the server (no connection, DNS, timeout...).
 class NetworkFailure extends AppFailure {
-  const NetworkFailure([super.message = 'Could not reach the server. Check your connection.']);
+  const NetworkFailure([super.message = 'Không thể kết nối. Kiểm tra mạng và thử lại.']);
 }
 
 /// The server responded but rejected the request — [message] is already

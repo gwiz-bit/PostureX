@@ -6,11 +6,11 @@ import '../../domain/entities/chat_message.dart';
 import '../../domain/usecases/clear_coach_history.dart';
 import '../../domain/usecases/fetch_coach_history.dart';
 import '../../domain/usecases/report_coach_message.dart';
-import '../../domain/usecases/send_coach_message.dart';
+import '../../domain/usecases/send_coach_message_stream.dart';
 
 class AiCoachController extends ChangeNotifier {
   AiCoachController({
-    required this._sendCoachMessage,
+    required this._sendCoachMessageStream,
     required this._fetchCoachHistory,
     required this._clearCoachHistory,
     required this._reportCoachMessage,
@@ -18,7 +18,7 @@ class AiCoachController extends ChangeNotifier {
     _loadHistory();
   }
 
-  final SendCoachMessage _sendCoachMessage;
+  final SendCoachMessageStream _sendCoachMessageStream;
   final FetchCoachHistory _fetchCoachHistory;
   final ClearCoachHistory _clearCoachHistory;
   final ReportCoachMessage _reportCoachMessage;
@@ -29,6 +29,11 @@ class AiCoachController extends ChangeNotifier {
   bool isGeneratingPlan = false;
   String? errorMessage;
   String? planMessage;
+
+  /// Accumulates AI reply chunks during streaming. Non-null while streaming
+  /// is in progress so the screen can show a live-updating bubble; set to
+  /// null when the stream completes and the message is moved to [messages].
+  String? streamingText;
 
   /// True khi tin nhắn user vừa gửi chứa intent xin lịch tập —
   /// screen sẽ hiện nút "Áp dụng vào lịch tập" dưới reply AI cuối.
@@ -55,19 +60,27 @@ class AiCoachController extends ChangeNotifier {
 
     messages.add(ChatMessage(role: 'user', content: text));
     isSending = true;
-    showPlanSuggestion = false; // reset trước mỗi lần gửi
+    streamingText = null;
+    showPlanSuggestion = false;
     errorMessage = null;
     notifyListeners();
 
     try {
-      final reply = await _sendCoachMessage(message: text);
-      messages.add(ChatMessage(role: 'model', content: reply));
-      showPlanSuggestion = _isPlanRequest(text);
+      await for (final chunk in _sendCoachMessageStream(message: text)) {
+        streamingText = (streamingText ?? '') + chunk;
+        notifyListeners();
+      }
+      final reply = streamingText ?? '';
+      if (reply.isNotEmpty) {
+        messages.add(ChatMessage(role: 'model', content: reply));
+        showPlanSuggestion = _isPlanRequest(text);
+      }
     } on AppFailure catch (e) {
       errorMessage = e.message;
     } catch (_) {
-      errorMessage = 'Could not reach the server. Check your connection.';
+      errorMessage = 'Không thể kết nối. Kiểm tra mạng và thử lại.';
     } finally {
+      streamingText = null;
       isSending = false;
       notifyListeners();
     }
@@ -111,7 +124,7 @@ class AiCoachController extends ChangeNotifier {
     } on AppFailure catch (e) {
       errorMessage = e.message;
     } catch (_) {
-      errorMessage = 'Could not reach the server. Check your connection.';
+      errorMessage = 'Không thể kết nối. Kiểm tra mạng và thử lại.';
     }
     notifyListeners();
     return false;
@@ -125,7 +138,7 @@ class AiCoachController extends ChangeNotifier {
     } on AppFailure catch (e) {
       errorMessage = e.message;
     } catch (_) {
-      errorMessage = 'Could not reach the server. Check your connection.';
+      errorMessage = 'Không thể kết nối. Kiểm tra mạng và thử lại.';
     } finally {
       notifyListeners();
     }

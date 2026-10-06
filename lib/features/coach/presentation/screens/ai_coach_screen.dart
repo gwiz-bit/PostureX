@@ -193,7 +193,18 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
                           (showPlanButton ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index >= messages.length) {
-                          if (_controller.isSending) return const _TypingBubble();
+                          if (_controller.isSending) {
+                            final partial = _controller.streamingText;
+                            if (partial != null && partial.isNotEmpty) {
+                              // Stream has started — show accumulating text.
+                              return _ChatBubble(
+                                message: ChatMessage(role: 'model', content: partial),
+                                onReport: null,
+                              );
+                            }
+                            // Still waiting for the first chunk.
+                            return const _TypingBubble();
+                          }
                           return _ApplyPlanButton(onTap: () {
                             _controller.dismissPlanSuggestion();
                             _controller.generatePlan();

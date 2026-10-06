@@ -56,8 +56,18 @@ async def _generate_with_retry(**kwargs):
                     )
                     last_err = e
                     break  # sang model tiếp theo
-                if e.code != _RETRYABLE_CODE:
+                if e.code in (401, 403):
+                    # API key sai/hết hạn — mọi model dùng chung key này đều
+                    # sẽ trả cùng lỗi, không có ích khi thử tiếp.
                     raise
+                if e.code != _RETRYABLE_CODE:
+                    # Lỗi HTTP không xác định — thử model dự phòng, không raise ngay.
+                    logger.warning(
+                        "Model %s trả HTTP %d — thử model dự phòng tiếp theo",
+                        model, e.code,
+                    )
+                    last_err = e
+                    break
                 last_err = e
                 if attempt == _MAX_ATTEMPTS - 1:
                     logger.warning(
@@ -71,6 +81,15 @@ async def _generate_with_retry(**kwargs):
                     attempt + 2, _MAX_ATTEMPTS, delay,
                 )
                 await asyncio.sleep(delay)
+            except Exception as e:
+                # Network error, SSL error, timeout, v.v. — không phải lỗi
+                # API, nhưng vẫn nên thử model dự phòng trước khi bỏ cuộc.
+                logger.warning(
+                    "Model %s: lỗi kết nối (%s: %s) — thử model dự phòng tiếp theo",
+                    model, type(e).__name__, e,
+                )
+                last_err = e
+                break  # sang model tiếp theo
 
     if last_err is not None:
         raise last_err
@@ -199,6 +218,32 @@ def _to_contents(history: list[ChatMessage], message: str) -> list[types.Content
     ]
     contents.append(types.Content(role="user", parts=[types.Part(text=message)]))
     return contents
+
+
+async def ask_stream(
+    *, message: str, history: list[ChatMessage], user_context: str
+):
+    """Như ask() nhưng yield từng đoạn text ngay khi Gemini trả về.
+
+    Dùng cho endpoint SSE /chat/stream — token đầu tiên về trong ~1 giây
+    thay vì chờ toàn bộ response (10-20 giây).
+
+    Không có retry/fallback: một khi đã bắt đầu yield thì không thể quay đầu
+    sang model dự phòng mà không xoá những gì client đã nhận. Nếu lỗi trước
+    chunk đầu tiên, exception lan truyền lên route; nếu lỗi giữa chừng, route
+    gửi event lỗi rồi đóng stream."""
+    client = _client()
+    async for chunk in client.aio.models.generate_content_stream(
+        model=settings.GEMINI_MODEL,
+        contents=_to_contents(history, message),
+        config=types.GenerateContentConfig(
+            system_instruction=_SYSTEM_PROMPT.format(user_context=user_context),
+            temperature=0.6,
+            max_output_tokens=3072,
+        ),
+    ):
+        if chunk.text:
+            yield chunk.text
 
 
 async def ask(*, message: str, history: list[ChatMessage], user_context: str) -> str:

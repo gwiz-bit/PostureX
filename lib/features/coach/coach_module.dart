@@ -5,7 +5,7 @@ import 'domain/repositories/coach_repository.dart';
 import 'domain/usecases/clear_coach_history.dart';
 import 'domain/usecases/fetch_coach_history.dart';
 import 'domain/usecases/report_coach_message.dart';
-import 'domain/usecases/send_coach_message.dart';
+import 'domain/usecases/send_coach_message_stream.dart';
 import 'presentation/controllers/ai_coach_controller.dart';
 
 /// Manual composition root for the AI Coach feature.
@@ -18,7 +18,7 @@ class CoachModule {
   static AiCoachController controller() {
     final repository = _repository();
     return AiCoachController(
-      sendCoachMessage: SendCoachMessage(repository),
+      sendCoachMessageStream: SendCoachMessageStream(repository),
       fetchCoachHistory: FetchCoachHistory(repository),
       clearCoachHistory: ClearCoachHistory(repository),
       reportCoachMessage: ReportCoachMessage(repository),

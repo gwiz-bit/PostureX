@@ -6,6 +6,11 @@ abstract class CoachRepository {
   /// longer track/pass it.
   Future<String> sendMessage({required String message});
 
+  /// Streaming version: yields text chunks as the AI generates them.
+  /// First token arrives in ~1 second; history is saved server-side after
+  /// the stream completes, same as [sendMessage].
+  Stream<String> sendMessageStream({required String message});
+
   /// Full chat history, oldest first.
   Future<List<ChatMessage>> fetchHistory();
 

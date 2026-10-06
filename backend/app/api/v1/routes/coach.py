@@ -1,10 +1,12 @@
 """Endpoint chat với AI Coach — tư vấn tập luyện/dinh dưỡng cá nhân hóa."""
 
+import json
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -261,7 +263,17 @@ async def chat(
             message=data.message, history=history, user_context=user_context
         )
     except Exception as e:
-        logger.warning("AI Coach request failed: %s", e)
+        code = getattr(e, "code", None)
+        if code == 401 or code == 403:
+            logger.error(
+                "AI Coach: Gemini API key không hợp lệ hoặc hết hạn (HTTP %s) — "
+                "kiểm tra GEMINI_API_KEY trong .env: %s",
+                code, e,
+            )
+        elif code == 429:
+            logger.warning("AI Coach: Gemini quota exhausted (HTTP 429) — %s", e)
+        else:
+            logger.warning("AI Coach request failed (code=%s): %s", code, e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Không thể kết nối tới AI Coach lúc này. Thử lại sau.",
@@ -274,6 +286,75 @@ async def chat(
     await coach_message_crud.add_message(db, current_user.id, "model", reply)
 
     return CoachChatResponse(reply=reply)
+
+
+@router.post("/chat/stream")
+@limiter.limit("10/minute;100/hour")
+async def chat_stream(
+    request: Request,
+    data: CoachChatRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Streaming version của /chat — yields SSE chunks ngay khi Gemini trả về.
+
+    Người dùng thấy text xuất hiện dần (token đầu ~1 giây) thay vì chờ màn
+    hình trống 10-20 giây. Cùng rate limit với /chat vì cùng tốn Gemini quota.
+
+    Format SSE: ``data: {"t":"<đoạn text>"}\\n\\n`` cho mỗi chunk,
+    ``data: {"done":true}\\n\\n`` khi xong,
+    ``data: {"e":"<lỗi>"}\\n\\n`` khi lỗi.
+
+    Xem chú thích ở `chat` về lý do bắt buộc có `request: Request`.
+    """
+    if not settings.GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI Coach chưa được cấu hình trên server.",
+        )
+
+    user_context = await _build_user_context(db, current_user)
+    history_rows = await coach_message_crud.get_recent_messages(db, current_user.id)
+    history = [ChatMessage(role=m.role, content=m.content) for m in history_rows]
+
+    collected: list[str] = []
+
+    async def generate():
+        try:
+            async for chunk in ai_coach_service.ask_stream(
+                message=data.message, history=history, user_context=user_context
+            ):
+                collected.append(chunk)
+                yield f"data: {json.dumps({'t': chunk}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            code = getattr(e, "code", None)
+            if code in (401, 403):
+                logger.error(
+                    "AI Coach stream: Gemini API key không hợp lệ (HTTP %s): %s", code, e
+                )
+            elif code == 429:
+                logger.warning("AI Coach stream: Gemini quota exhausted (HTTP 429): %s", e)
+            else:
+                logger.warning("AI Coach stream failed (code=%s): %s", code, e)
+            err_msg = "Không thể kết nối tới AI Coach lúc này. Thử lại sau."
+            yield f"data: {json.dumps({'e': err_msg}, ensure_ascii=False)}\n\n"
+            return
+
+        # Lưu sau khi stream hoàn tất — không lưu trước vì nếu stream lỗi
+        # giữa chừng sẽ để lại câu hỏi mồ côi không có câu trả lời.
+        full_reply = "".join(collected)
+        if full_reply:
+            await coach_message_crud.add_message(db, current_user.id, "user", data.message)
+            await coach_message_crud.add_message(db, current_user.id, "model", full_reply)
+            await db.commit()
+
+        yield f"data: {json.dumps({'done': True})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+    )
 
 
 @router.get("/history", response_model=list[CoachMessageOut])
