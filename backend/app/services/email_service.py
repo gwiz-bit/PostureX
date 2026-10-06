@@ -4,6 +4,7 @@ thread pool để không chặn event loop async."""
 import asyncio
 import logging
 import smtplib
+import time
 from email.mime.text import MIMEText
 
 from app.core.config import settings
@@ -12,13 +13,31 @@ logger = logging.getLogger(__name__)
 
 _PLACEHOLDER = "youraccount@gmail.com"
 
+# Phát hiện qua log production thật (05-06/10/2026): SMTP tới Gmail thỉnh
+# thoảng báo "Connection unexpectedly closed" (SMTPServerDisconnected) dù
+# tài khoản/mật khẩu đúng — lỗi mạng/Gmail tạm thời, không phải lỗi cấu hình,
+# nên retry ngắn là đủ (khớp lỗi 503 tạm thời của Gemini đã xử lý tương tự
+# trong ai_coach_service.py). KHÔNG dùng OSError trần: mọi lỗi của smtplib
+# (kể cả SMTPAuthenticationError — sai mật khẩu ứng dụng, thử lại vô ích)
+# đều kế thừa từ OSError trong Python 3, nên liệt kê đích danh từng lỗi
+# cấp kết nối/giao thức thay vì bắt rộng.
+_MAX_ATTEMPTS = 3
+_RETRY_DELAYS_SECONDS = (1, 3)
+_RETRYABLE_ERRORS = (
+    smtplib.SMTPServerDisconnected,
+    smtplib.SMTPConnectError,
+    smtplib.SMTPHeloError,
+    TimeoutError,
+    ConnectionError,
+)
+
 
 def _smtp_configured() -> bool:
     """Trả về True khi SMTP đã được điền thông tin thật (không phải placeholder)."""
     return bool(settings.SMTP_USER) and settings.SMTP_USER != _PLACEHOLDER
 
 
-def _send_sync(to_email: str, subject: str, body: str) -> None:
+def _send_once(to_email: str, subject: str, body: str) -> None:
     msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
     msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_USER}>"
@@ -28,6 +47,24 @@ def _send_sync(to_email: str, subject: str, body: str) -> None:
         server.starttls()
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.send_message(msg)
+
+
+def _send_sync(to_email: str, subject: str, body: str) -> None:
+    for attempt in range(_MAX_ATTEMPTS):
+        try:
+            _send_once(to_email, subject, body)
+            return
+        except _RETRYABLE_ERRORS as e:
+            if attempt == _MAX_ATTEMPTS - 1:
+                logger.error(
+                    "Gửi email tới %s thất bại sau %d lần thử: %s", to_email, _MAX_ATTEMPTS, e
+                )
+                raise
+            logger.warning(
+                "Gửi email tới %s lỗi tạm thời (lần %d/%d): %s — thử lại",
+                to_email, attempt + 1, _MAX_ATTEMPTS, e,
+            )
+            time.sleep(_RETRY_DELAYS_SECONDS[attempt])
 
 
 async def send_otp_email(to_email: str, otp_code: str) -> None:
