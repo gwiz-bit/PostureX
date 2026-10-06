@@ -247,7 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (confirmed != true || !context.mounted) return;
     try {
-      await TokenStorage.clear();
+      await TokenStorage.clearSession();
     } catch (_) {}
     await GoogleAuthService.disconnect();
     UserSession.logOut();

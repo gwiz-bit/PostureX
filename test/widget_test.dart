@@ -30,6 +30,9 @@ class _FakeSecureStorageBackend implements SecureStorageBackend {
   }
 
   @override
+  Future<void> delete({required String key}) async => _values.remove(key);
+
+  @override
   Future<void> deleteAll() async => _values.clear();
 }
 

@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 abstract class SecureStorageBackend {
   Future<String?> read({required String key});
   Future<void> write({required String key, required String value});
+  Future<void> delete({required String key});
   Future<void> deleteAll();
 }
 
@@ -22,6 +23,9 @@ class _FlutterSecureStorageBackend implements SecureStorageBackend {
   @override
   Future<void> write({required String key, required String value}) =>
       _storage.write(key: key, value: value);
+
+  @override
+  Future<void> delete({required String key}) => _storage.delete(key: key);
 
   @override
   Future<void> deleteAll() => _storage.deleteAll();
@@ -71,8 +75,47 @@ class TokenStorage {
     return StoredSession(accessToken: token, userId: parsedId, email: email);
   }
 
+  /// Clears only auth credentials (token, userId, email).
+  /// Plan params and completed-exercises data are intentionally kept so they
+  /// survive logout and are available immediately when the user signs back in.
+  static Future<void> clearSession() async {
+    await Future.wait([
+      backend.delete(key: _tokenKey),
+      backend.delete(key: _userIdKey),
+      backend.delete(key: _emailKey),
+    ]);
+  }
+
+  /// Clears ALL stored data — used only when permanently deleting an account.
   static Future<void> clear() async {
     await backend.deleteAll();
+  }
+
+  static const _completedExercisesKey = 'completed_exercises_today';
+
+  static String _todayDateKey() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  static Future<void> saveCompletedExercises({required Set<String> names}) async {
+    await backend.write(
+      key: _completedExercisesKey,
+      value: '${_todayDateKey()}:${names.join(",")}',
+    );
+  }
+
+  /// Returns the completed exercise names for today, or `null` if none saved
+  /// or if the stored data is from a previous day (auto-expires).
+  static Future<Set<String>?> readCompletedExercises() async {
+    final raw = await backend.read(key: _completedExercisesKey);
+    if (raw == null) return null;
+    final idx = raw.indexOf(':');
+    if (idx == -1) return null;
+    if (raw.substring(0, idx) != _todayDateKey()) return null;
+    final names = raw.substring(idx + 1);
+    if (names.isEmpty) return {};
+    return names.split(',').toSet();
   }
 
   static Future<void> savePlanParams({

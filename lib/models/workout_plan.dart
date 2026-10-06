@@ -50,25 +50,25 @@ class _SessionTemplate {
 }
 
 const _fullBody = _SessionTemplate('Full Body Strength', [
-  'Back Squat',
+  'Barbell Squat',
   'Barbell Bench Press',
-  'Bent-Over Barbell Row',
-  'Forearm Plank',
+  'Barbell Bent Over Row',
+  'Plank',
 ]);
 const _push = _SessionTemplate('Upper Body — Push', [
   'Barbell Bench Press',
-  'Standing Overhead Press',
-  'Forearm Plank',
+  'Barbell Overhead Press',
+  'Plank',
 ]);
 const _pull = _SessionTemplate('Upper Body — Pull', [
-  'Conventional Deadlift',
-  'Bent-Over Barbell Row',
-  'Forearm Plank',
+  'Barbell Deadlift',
+  'Barbell Bent Over Row',
+  'Plank',
 ]);
 const _lower = _SessionTemplate('Lower Body & Core', [
-  'Back Squat',
-  'Conventional Deadlift',
-  'Forearm Plank',
+  'Barbell Squat',
+  'Barbell Deadlift',
+  'Plank',
 ]);
 
 // Muscle-group keyword lists for dynamic exercise selection.
