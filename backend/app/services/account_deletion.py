@@ -110,12 +110,13 @@ async def delete_user_account(db: AsyncSession, user: User) -> None:
     await db.execute(delete(Payment).where(Payment.user_subscription_id.in_(sub_ids)))
     await db.execute(delete(UserSubscription).where(UserSubscription.user_id == uid))
 
-    # Nhật ký hệ thống: giữ dòng log nhưng cắt mọi liên kết tới người dùng.
+    # Nhật ký hệ thống: giữ dòng log nhưng cắt liên kết tới người dùng.
+    # AuditLogs chỉ có UserId làm cột định danh người dùng (xem
+    # sql/postureX123_schema.sql) — EntityName/EntityId/Details mô tả đối tượng
+    # bị tác động (ví dụ "Users"/<id>), không phải thông tin cá nhân của người
+    # thực hiện hành động, nên không cần xoá.
     await db.execute(
-        text(
-            "UPDATE AuditLogs SET UserId = NULL, IpAddress = NULL, UserAgent = NULL "
-            "WHERE UserId = :uid"
-        ),
+        text("UPDATE AuditLogs SET UserId = NULL WHERE UserId = :uid"),
         {"uid": uid},
     )
 
