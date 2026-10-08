@@ -37,6 +37,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/coach", tags=["coach"])
 
+# Số câu hỏi tối đa mỗi tài khoản được hỏi AI Coach trong một ngày (giờ VN).
+DAILY_CHAT_LIMIT = 5
+
 # Số bài tập tối đa gửi kèm prompt cho MỖI nhóm cơ.
 #
 # Trước đây gửi thẳng cả thư viện. Hồi đó chỉ có 6 bài nên không sao, nhưng
@@ -255,6 +258,13 @@ async def chat(
             detail="AI Coach chưa được cấu hình trên server.",
         )
 
+    questions_today = await coach_message_crud.count_questions_today(db, current_user.id)
+    if questions_today >= DAILY_CHAT_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Bạn đã dùng hết {DAILY_CHAT_LIMIT} câu hỏi miễn phí hôm nay. Quay lại vào ngày mai nhé!",
+        )
+
     user_context = await _build_user_context(db, current_user)
     history_rows = await coach_message_crud.get_recent_messages(db, current_user.id)
     history = [ChatMessage(role=m.role, content=m.content) for m in history_rows]
@@ -311,6 +321,13 @@ async def chat_stream(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI Coach chưa được cấu hình trên server.",
+        )
+
+    questions_today = await coach_message_crud.count_questions_today(db, current_user.id)
+    if questions_today >= DAILY_CHAT_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Bạn đã dùng hết {DAILY_CHAT_LIMIT} câu hỏi miễn phí hôm nay. Quay lại vào ngày mai nhé!",
         )
 
     user_context = await _build_user_context(db, current_user)

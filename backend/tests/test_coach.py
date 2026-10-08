@@ -210,6 +210,56 @@ async def test_sinh_lich_gui_kem_ngu_canh_chat_gan_nhat(
     assert "đau lưng" in captured["chat_context"]
 
 
+# ─────────────────────────────────────────────────────────────────────
+# Giới hạn 5 câu hỏi / ngày / tài khoản
+# ─────────────────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_cau_thu_6_bi_tu_choi_429(
+    client: AsyncClient, auth: dict, monkeypatch
+) -> None:
+    """Sau 5 câu hỏi thành công, câu thứ 6 trong ngày phải trả 429."""
+    async def fake_ask(*, message, history, user_context):
+        return "ok"
+
+    monkeypatch.setattr(coach_routes.ai_coach_service, "ask", fake_ask)
+
+    for i in range(coach_routes.DAILY_CHAT_LIMIT):
+        resp = await client.post(
+            "/api/v1/coach/chat", json={"message": f"câu {i + 1}"}, headers=auth
+        )
+        assert resp.status_code == 200, f"câu {i + 1} phải đi qua được"
+
+    resp = await client.post(
+        "/api/v1/coach/chat", json={"message": "câu vượt giới hạn"}, headers=auth
+    )
+    assert resp.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_cau_thu_5_van_di_qua_duoc(
+    client: AsyncClient, auth: dict, monkeypatch
+) -> None:
+    """Câu thứ 5 (đúng bằng giới hạn) vẫn phải được chấp nhận — chỉ từ câu
+    thứ 6 mới bị chặn."""
+    async def fake_ask(*, message, history, user_context):
+        return "ok"
+
+    monkeypatch.setattr(coach_routes.ai_coach_service, "ask", fake_ask)
+
+    for i in range(coach_routes.DAILY_CHAT_LIMIT - 1):
+        await client.post(
+            "/api/v1/coach/chat", json={"message": f"câu {i + 1}"}, headers=auth
+        )
+
+    resp = await client.post(
+        "/api/v1/coach/chat",
+        json={"message": f"câu {coach_routes.DAILY_CHAT_LIMIT}"},
+        headers=auth,
+    )
+    assert resp.status_code == 200
+
+
 @pytest.mark.asyncio
 async def test_sinh_lich_khong_loi_khi_chua_chat_lan_nao(
     client: AsyncClient, auth: dict, monkeypatch

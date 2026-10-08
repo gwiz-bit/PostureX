@@ -1,9 +1,13 @@
 """CRUD cho bảng coach_messages — lịch sử hội thoại AI Coach."""
 
-from sqlalchemy import delete, select
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.coach_message import CoachMessage
+
+_VIETNAM_TZ = timezone(timedelta(hours=7))
 
 # Số tin nhắn gần nhất đưa vào ngữ cảnh khi gọi Gemini — cùng giới hạn 20 lượt
 # mà `CoachChatRequest.history` từng áp trước khi có bảng này (xem
@@ -53,6 +57,26 @@ async def get_all_messages(db: AsyncSession, user_id: int) -> list[CoachMessage]
         )
     ).scalars().all()
     return list(rows)
+
+
+async def count_questions_today(db: AsyncSession, user_id: int) -> int:
+    """Số câu hỏi (role='user') user đã gửi từ 00:00 giờ Việt Nam (UTC+7) hôm nay.
+
+    Dùng để kiểm tra giới hạn hàng ngày trước khi gọi Gemini — tính theo múi
+    giờ VN để "ngày mới" khớp với đồng hồ của người dùng, không phải UTC."""
+    now_vn = datetime.now(_VIETNAM_TZ)
+    midnight_vn = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
+    midnight_utc = midnight_vn.astimezone(timezone.utc)
+    result = await db.execute(
+        select(func.count())
+        .select_from(CoachMessage)
+        .where(
+            CoachMessage.user_id == user_id,
+            CoachMessage.role == "user",
+            CoachMessage.created_at >= midnight_utc,
+        )
+    )
+    return result.scalar_one()
 
 
 async def clear_messages(db: AsyncSession, user_id: int) -> None:
