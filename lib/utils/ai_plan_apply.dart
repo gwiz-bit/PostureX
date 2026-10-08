@@ -1,6 +1,7 @@
 import '../models/user_session.dart';
 import '../models/workout_plan.dart';
 import '../services/api_client.dart';
+import '../services/token_storage.dart';
 
 /// Calls `POST /api/v1/coach/plan` and applies the result onto
 /// [UserSession.plan] — the exact same "Personalize with AI" logic that used
@@ -25,4 +26,7 @@ Future<void> generateAndApplyAiPlan() async {
         nutritionTip: day.nutritionTip,
       ),
   ]);
+  UserSession.planVersion.value++;
+  // Persist so the AI-modified days survive an app kill while session is valid.
+  await TokenStorage.saveAiPlanDays(UserSession.plan.days);
 }

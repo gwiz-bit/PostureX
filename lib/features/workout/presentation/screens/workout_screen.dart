@@ -25,6 +25,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> with AppLocaleMixin {
   void initState() {
     super.initState();
     _loadCompleted();
+    UserSession.planVersion.addListener(_onPlanChanged);
+  }
+
+  void _onPlanChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    UserSession.planVersion.removeListener(_onPlanChanged);
+    super.dispose();
   }
 
   Future<void> _loadCompleted() async {

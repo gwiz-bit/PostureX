@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../models/workout_plan.dart';
 
 /// Minimal storage contract [TokenStorage] delegates to. Lets tests inject
 /// an in-memory fake instead of the real [FlutterSecureStorage] plugin
@@ -76,8 +80,9 @@ class TokenStorage {
   }
 
   /// Clears only auth credentials (token, userId, email).
-  /// Plan params and completed-exercises data are intentionally kept so they
-  /// survive logout and are available immediately when the user signs back in.
+  /// Plan params, AI-modified plan days, and completed-exercises data are
+  /// intentionally kept so they survive logout and are available immediately
+  /// when the user signs back in on the same device.
   static Future<void> clearSession() async {
     await Future.wait([
       backend.delete(key: _tokenKey),
@@ -137,6 +142,38 @@ class TokenStorage {
       backend.write(key: _healthIssuesKey, value: healthIssues.join(',')),
     ]);
   }
+
+  // ── AI-modified plan days ─────────────────────────────────────────────────
+
+  static const _aiPlanDaysKey = 'ai_plan_days';
+
+  /// Persists the full 28-day plan after an AI Coach update so it survives
+  /// app kills while the session remains valid.
+  static Future<void> saveAiPlanDays(List<DayPlan> days) async {
+    final json = jsonEncode(days.map((d) => d.toJson()).toList());
+    await backend.write(key: _aiPlanDaysKey, value: json);
+  }
+
+  /// Returns the previously saved AI plan days, or `null` if none saved or
+  /// the stored data is corrupt.
+  static Future<List<DayPlan>?> readAiPlanDays() async {
+    final raw = await backend.read(key: _aiPlanDaysKey);
+    if (raw == null) return null;
+    try {
+      final list = jsonDecode(raw) as List;
+      return list
+          .map((e) => DayPlan.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> deleteAiPlanDays() async {
+    await backend.delete(key: _aiPlanDaysKey);
+  }
+
+  // ── Plan params ───────────────────────────────────────────────────────────
 
   static Future<StoredPlanParams?> readPlanParams() async {
     final days = await backend.read(key: _workoutDaysKey);

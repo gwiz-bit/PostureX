@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../features/exercises/presentation/screens/exercises_screen.dart';
 import '../features/workout/presentation/screens/progress_screen.dart';
 import '../features/workout/presentation/screens/workout_screen.dart';
+import '../models/user_session.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_locale.dart';
 import '../widgets/app_logo.dart';
@@ -51,8 +52,24 @@ class _MainShellState extends State<MainShell> with AppLocaleMixin {
   /// never re-runs its `initState` — without this, data fetched (or
   /// changed, e.g. a newly logged workout) after a tab's first load would
   /// never show up when coming back to it.
+  @override
+  void initState() {
+    super.initState();
+    UserSession.shellTab.addListener(_onShellTabChanged);
+  }
+
+  void _onShellTabChanged() {
+    if (mounted) setState(() => _index = UserSession.shellTab.value);
+  }
+
+  @override
+  void dispose() {
+    UserSession.shellTab.removeListener(_onShellTabChanged);
+    super.dispose();
+  }
+
   void _onTabTap(int i) {
-    setState(() => _index = i);
+    UserSession.shellTab.value = i;
     if (i == 0) _homeKey.currentState?.reload();
     if (i == 3) _progressKey.currentState?.reload();
     if (i == 4) _profileKey.currentState?.reload();

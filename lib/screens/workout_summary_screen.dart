@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_session.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_locale.dart';
 import '../utils/squat_error_tips.dart';
@@ -119,7 +120,12 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  // Go back to the Workout tab (index 2) and clear the
+                  // AnalyzeSessionScreen + ExerciseDetailScreen from the stack.
+                  UserSession.shellTab.value = 2;
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.onPrimary,

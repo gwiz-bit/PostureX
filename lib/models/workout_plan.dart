@@ -17,6 +17,11 @@ class PlannedExercise {
 
   final String name;
   final String setsReps;
+
+  Map<String, dynamic> toJson() => {'n': name, 's': setsReps};
+
+  factory PlannedExercise.fromJson(Map<String, dynamic> j) =>
+      PlannedExercise(name: j['n'] as String, setsReps: j['s'] as String);
 }
 
 /// One day of a [WorkoutPlan] — either a training session or a rest day
@@ -39,6 +44,22 @@ class DayPlan {
   final String? nutritionTip;
 
   bool get isRestDay => exercises.isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        'd': date.toIso8601String(),
+        'sn': sessionName,
+        'ex': exercises.map((e) => e.toJson()).toList(),
+        if (nutritionTip != null) 'nt': nutritionTip,
+      };
+
+  factory DayPlan.fromJson(Map<String, dynamic> j) => DayPlan(
+        date: DateTime.parse(j['d'] as String),
+        sessionName: j['sn'] as String,
+        exercises: (j['ex'] as List)
+            .map((e) => PlannedExercise.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        nutritionTip: j['nt'] as String?,
+      );
 }
 
 // Static fallback templates — used when server exercise list is unavailable.

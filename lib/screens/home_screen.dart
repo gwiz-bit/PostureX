@@ -120,6 +120,17 @@ class HomeScreenState extends State<HomeScreen> with AppLocaleMixin {
     super.initState();
     _load();
     _maybeSendWorkoutReminder();
+    UserSession.planVersion.addListener(_onPlanChanged);
+  }
+
+  void _onPlanChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    UserSession.planVersion.removeListener(_onPlanChanged);
+    super.dispose();
   }
 
   /// If today has a scheduled session in [UserSession.plan], tells the

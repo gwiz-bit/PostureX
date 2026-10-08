@@ -1115,17 +1115,21 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     final messenger = ScaffoldMessenger.of(context);
     if (_sessionLog.lineCount > 0) {
       _sessionLog.event('session_end reps=$_repCount');
-      await Clipboard.setData(ClipboardData(text: _buildSessionLogText()));
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocale.format('analyze_log_autocopied', {
-              'n': '${_sessionLog.lineCount}',
-            }),
+      try {
+        await Clipboard.setData(ClipboardData(text: _buildSessionLogText()));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocale.format('analyze_log_autocopied', {
+                'n': '${_sessionLog.lineCount}',
+              }),
+            ),
+            duration: const Duration(seconds: 6),
           ),
-          duration: const Duration(seconds: 6),
-        ),
-      );
+        );
+      } catch (_) {
+        // Clipboard unavailable on some emulators — skip silently.
+      }
     }
 
     final controller = _controller;

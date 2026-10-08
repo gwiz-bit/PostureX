@@ -98,6 +98,26 @@ class _SplashScreenState extends State<SplashScreen>
           goals: UserSession.goals,
           healthIssues: UserSession.healthIssues,
         );
+        // Re-apply AI Coach modifications saved from the previous session.
+        // Days are matched by date — if the reference week shifted (opened a
+        // week later), dates won't match and this is a safe no-op.
+        final aiDays = await TokenStorage.readAiPlanDays();
+        if (aiDays != null) {
+          final byDate = {
+            for (final d in aiDays)
+              DateTime(d.date.year, d.date.month, d.date.day): d,
+          };
+          final planDays = UserSession.plan.days;
+          for (var i = 0; i < planDays.length; i++) {
+            final key = DateTime(
+              planDays[i].date.year,
+              planDays[i].date.month,
+              planDays[i].date.day,
+            );
+            final saved = byDate[key];
+            if (saved != null) planDays[i] = saved;
+          }
+        }
       } catch (_) {}
       return true;
     } catch (_) {

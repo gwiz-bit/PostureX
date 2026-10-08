@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'onboarding_profile.dart';
 import 'workout_plan.dart';
 
@@ -49,6 +51,16 @@ class UserSession {
     fitnessLevel: _defaultFitnessLevel,
   );
 
+  /// Incremented whenever [plan] is replaced or materially mutated (e.g. by
+  /// AI Coach or onboarding). Screens inside IndexedStack can listen to this
+  /// to rebuild without needing a setState caller to know about them.
+  static final planVersion = ValueNotifier<int>(0);
+
+  /// Controls which tab [MainShell] displays. Set this then call
+  /// `Navigator.popUntil(isFirst)` to jump to a specific tab from deep inside
+  /// the navigation stack (e.g. Done on WorkoutSummaryScreen → Workout tab).
+  static final shellTab = ValueNotifier<int>(0);
+
   /// Date (day-only) the workout-day reminder was last sent to the backend
   /// this run — guards [HomeScreenState] from calling
   /// `sendWorkoutReminder` on every rebuild. Not persisted across app
@@ -79,6 +91,7 @@ class UserSession {
       goals: goals,
       healthIssues: healthIssues,
     );
+    planVersion.value++;
     isSignedIn = true;
     hasCompletedOnboarding = true;
   }
