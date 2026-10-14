@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../services/api_exception.dart';
 import '../../../../utils/ai_plan_apply.dart';
 import '../../domain/entities/chat_message.dart';
 import '../../domain/usecases/clear_coach_history.dart';
@@ -75,6 +76,8 @@ class AiCoachController extends ChangeNotifier {
         messages.add(ChatMessage(role: 'model', content: reply));
         showPlanSuggestion = _isPlanRequest(text);
       }
+    } on ApiException catch (e) {
+      errorMessage = e.message;
     } on AppFailure catch (e) {
       errorMessage = e.message;
     } catch (_) {
