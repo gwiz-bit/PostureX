@@ -31,7 +31,17 @@ _RETRY_DELAYS_SECONDS = (1, 3)
 
 # Khi model chính bị 404 (Google tắt model cũ), tự động thử các model dự
 # phòng theo thứ tự — tránh downtime khi Google deprecate model mà không báo.
-_FALLBACK_MODELS = ('gemini-2.0-flash', 'gemini-1.5-flash')
+#
+# Sửa 14/10/2026: cả 2 model dự phòng cũ (gemini-2.0-flash, gemini-1.5-flash)
+# đã bị Google khai tử (404 "no longer available") — phát hiện qua log
+# production thật, đúng kịch bản mà danh sách này được thêm vào để chống
+# (model chính 503 quá tải → rơi xuống dự phòng → dự phòng CŨNG 404 → vẫn
+# mất dịch vụ). Gemini đổi tên/khai tử model không báo trước, nên danh sách
+# này không "vĩnh viễn đúng" — kiểm tra lại định kỳ bằng gọi generateContent
+# thật (không chỉ tin danh sách ListModels, thấy gemini-2.5-flash vẫn được
+# liệt kê nhưng gọi thật vẫn 404). Chọn 2 model flash ổn định còn hoạt động,
+# không dùng bản preview/tts/image vì không phù hợp chat text.
+_FALLBACK_MODELS = ('gemini-3.7-flash', 'gemini-3.6-flash')
 
 
 async def _generate_with_retry(**kwargs):

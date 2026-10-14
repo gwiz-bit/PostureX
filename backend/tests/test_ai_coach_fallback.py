@@ -51,7 +51,7 @@ async def test_503_lap_lai_het_luot_thi_chuyen_model_du_phong(monkeypatch) -> No
     fake_response = object()
     client = _fake_client({
         "gemini-3.8-flash": [_api_error(503), _api_error(503), _api_error(503)],
-        "gemini-2.0-flash": [fake_response],
+        "gemini-3.7-flash": [fake_response],
     })
     monkeypatch.setattr(ai_coach_service, "_client", lambda: client)
     monkeypatch.setattr(ai_coach_service.settings, "GEMINI_MODEL", "gemini-3.8-flash")
@@ -71,7 +71,7 @@ async def test_429_van_chuyen_model_ngay_khong_can_retry(monkeypatch) -> None:
     fake_response = object()
     client = _fake_client({
         "gemini-3.8-flash": [_api_error(429)],
-        "gemini-2.0-flash": [fake_response],
+        "gemini-3.7-flash": [fake_response],
     })
     monkeypatch.setattr(ai_coach_service, "_client", lambda: client)
     monkeypatch.setattr(ai_coach_service.settings, "GEMINI_MODEL", "gemini-3.8-flash")
@@ -91,7 +91,7 @@ async def test_loi_mang_chuyen_model_du_phong(monkeypatch) -> None:
     fake_response = object()
     client = _fake_client({
         "gemini-3.8-flash": [ConnectionError("network unreachable")],
-        "gemini-2.0-flash": [fake_response],
+        "gemini-3.7-flash": [fake_response],
     })
     monkeypatch.setattr(ai_coach_service, "_client", lambda: client)
     monkeypatch.setattr(ai_coach_service.settings, "GEMINI_MODEL", "gemini-3.8-flash")
@@ -110,8 +110,8 @@ async def test_tat_ca_model_deu_503_thi_raise_loi_cuoi(monkeypatch) -> None:
     toàn bộ model dự phòng đều 503 hết lượt — raise lỗi 503 cuối cùng."""
     client = _fake_client({
         "gemini-3.8-flash": [_api_error(503)] * 3,
-        "gemini-2.0-flash": [_api_error(503)] * 3,
-        "gemini-1.5-flash": [_api_error(503)] * 3,
+        "gemini-3.7-flash": [_api_error(503)] * 3,
+        "gemini-3.6-flash": [_api_error(503)] * 3,
     })
     monkeypatch.setattr(ai_coach_service, "_client", lambda: client)
     monkeypatch.setattr(ai_coach_service.settings, "GEMINI_MODEL", "gemini-3.8-flash")
