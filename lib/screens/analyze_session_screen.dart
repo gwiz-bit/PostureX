@@ -1109,27 +1109,8 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
     if (_isEnding) return;
     setState(() => _isEnding = true);
 
-    // Tự sao chép log vào clipboard TRƯỚC khi rời màn: log chỉ sống trong màn này,
-    // thoát ra là mất hẳn (người test đã lỡ mất log vì quên bấm nút sao chép). Dùng
-    // messenger gốc của MaterialApp để thông báo còn hiện ở màn tổng kết.
-    final messenger = ScaffoldMessenger.of(context);
     if (_sessionLog.lineCount > 0) {
       _sessionLog.event('session_end reps=$_repCount');
-      try {
-        await Clipboard.setData(ClipboardData(text: _buildSessionLogText()));
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocale.format('analyze_log_autocopied', {
-                'n': '${_sessionLog.lineCount}',
-              }),
-            ),
-            duration: const Duration(seconds: 6),
-          ),
-        );
-      } catch (_) {
-        // Clipboard unavailable on some emulators — skip silently.
-      }
     }
 
     final controller = _controller;
