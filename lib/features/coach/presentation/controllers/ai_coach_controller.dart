@@ -28,6 +28,7 @@ class AiCoachController extends ChangeNotifier {
   bool isLoadingHistory = true;
   bool isSending = false;
   bool isGeneratingPlan = false;
+  bool isDailyLimitReached = false;
   String? errorMessage;
   String? planMessage;
 
@@ -78,6 +79,14 @@ class AiCoachController extends ChangeNotifier {
       }
     } on ApiException catch (e) {
       errorMessage = e.message;
+      if (e.statusCode == 429) {
+        isDailyLimitReached = true;
+        // Xóa tin nhắn user vừa thêm — server không xử lý nên giữ lại
+        // trong list sẽ hiện như một câu hỏi không bao giờ được trả lời.
+        if (messages.isNotEmpty && messages.last.isUser) {
+          messages.removeLast();
+        }
+      }
     } on AppFailure catch (e) {
       errorMessage = e.message;
     } catch (_) {

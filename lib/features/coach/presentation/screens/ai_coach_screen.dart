@@ -218,54 +218,58 @@ class _AiCoachScreenState extends State<AiCoachScreen> with AppLocaleMixin {
                       },
                     ),
             ),
-            if (_controller.errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Text(
-                  _controller.errorMessage!,
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+            if (_controller.isDailyLimitReached)
+              _DailyLimitBanner(message: _controller.errorMessage ?? '')
+            else ...[
+              if (_controller.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    _controller.errorMessage!,
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                  ),
                 ),
-              ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _inputController,
-                        style: const TextStyle(color: AppColors.textPrimary),
-                        maxLines: 4,
-                        minLines: 1,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _send(),
-                        decoration: InputDecoration(
-                          hintText: AppLocale.t('coach_hint'),
-                          hintStyle: const TextStyle(color: AppColors.textSecondary),
-                          filled: true,
-                          fillColor: AppColors.surface,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _inputController,
+                          style: const TextStyle(color: AppColors.textPrimary),
+                          maxLines: 4,
+                          minLines: 1,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(),
+                          decoration: InputDecoration(
+                            hintText: AppLocale.t('coach_hint'),
+                            hintStyle: const TextStyle(color: AppColors.textSecondary),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Material(
-                      color: AppColors.primary,
-                      shape: const CircleBorder(),
-                      child: IconButton(
-                        onPressed: _controller.isSending ? null : _send,
-                        icon: const Icon(Icons.send_rounded, color: AppColors.onPrimary),
+                      const SizedBox(width: 8),
+                      Material(
+                        color: AppColors.primary,
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          onPressed: _controller.isSending ? null : _send,
+                          icon: const Icon(Icons.send_rounded, color: AppColors.onPrimary),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -451,6 +455,52 @@ class _SuggestionChip extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         child: Text(text, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+      ),
+    );
+  }
+}
+
+/// Banner thay thế ô nhập liệu khi user đã dùng hết lượt hỏi trong ngày.
+/// Hiển thị thông báo từ server và khoá toàn bộ input cho tới khi user mở
+/// lại app vào ngày hôm sau.
+class _DailyLimitBanner extends StatelessWidget {
+  const _DailyLimitBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.primaryMuted,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 1),
+              child: Icon(Icons.lock_clock_outlined, color: AppColors.primary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13.5,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
