@@ -12,6 +12,11 @@ class UserCreate(BaseModel):
     password: str
     full_name: str | None = None
 
+    @field_validator("password")
+    @classmethod
+    def _validate_strength(cls, v: str) -> str:
+        return validate_password_strength(v)
+
 
 class UserUpdate(BaseModel):
     """User tự chỉnh sửa hồ sơ cá nhân."""
