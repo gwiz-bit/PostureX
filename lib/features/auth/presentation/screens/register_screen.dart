@@ -5,6 +5,7 @@ import '../../../../screens/main_shell.dart';
 import '../../../../screens/onboarding/onboarding_flow.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../utils/app_locale.dart';
+import '../../../../utils/password_rules.dart';
 import '../../../../widgets/auth_text_field.dart';
 import '../../../../widgets/google_sign_in_button.dart';
 import '../../../../widgets/info_tip_card.dart';
@@ -174,8 +175,7 @@ class _RegisterScreenState extends State<RegisterScreen> with AppLocaleMixin {
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.isEmpty) return AppLocale.t('validation_enter_password');
-                  if (value.length < 6) return AppLocale.t('validation_min_6_chars');
-                  return null;
+                  return validateNewPassword(value);
                 },
               ),
               const SizedBox(height: 18),

@@ -6,6 +6,7 @@ import '../services/api_client.dart';
 import '../services/api_exception.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_locale.dart';
+import '../utils/password_rules.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/info_tip_card.dart';
 
@@ -239,8 +240,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                 textInputAction: TextInputAction.next,
                 validator: (value) {
                   if (value == null || value.isEmpty) return null;
-                  if (value.length < 8) return AppLocale.t('validation_min_8_chars');
-                  return null;
+                  return validateNewPassword(value);
                 },
               ),
               const SizedBox(height: 18),

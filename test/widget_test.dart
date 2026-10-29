@@ -195,8 +195,8 @@ void main() {
     expect(fields, findsNWidgets(4));
     await tester.enterText(fields.at(0), 'Jane Doe');
     await tester.enterText(fields.at(1), 'jane@example.com');
-    await tester.enterText(fields.at(2), 'password1');
-    await tester.enterText(fields.at(3), 'password1');
+    await tester.enterText(fields.at(2), 'Password1!');
+    await tester.enterText(fields.at(3), 'Password1!');
     await tester.pump();
 
     expect(find.text('Create account'), findsOneWidget);
@@ -312,8 +312,8 @@ void main() {
     final fields = find.byType(TextFormField);
     await tester.enterText(fields.at(0), 'Plan Tester');
     await tester.enterText(fields.at(1), 'plan@example.com');
-    await tester.enterText(fields.at(2), 'password1');
-    await tester.enterText(fields.at(3), 'password1');
+    await tester.enterText(fields.at(2), 'Password1!');
+    await tester.enterText(fields.at(3), 'Password1!');
     await tester.pump();
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
