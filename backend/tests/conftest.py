@@ -92,6 +92,18 @@ def _reset_rate_limiter() -> None:
     limiter.reset()
 
 
+@pytest.fixture(autouse=True)
+def _realtime_open_by_default() -> Iterator[None]:
+    """Khoá real-time theo gói đọc từ `.env` của máy chạy test — ép TẮT để test không phụ
+    thuộc cấu hình local. Test về khoá tự bật lại bằng monkeypatch riêng."""
+    from app.core.config import settings
+
+    original = settings.REALTIME_PRO_ONLY
+    settings.REALTIME_PRO_ONLY = False
+    yield
+    settings.REALTIME_PRO_ONLY = original
+
+
 @pytest_asyncio.fixture
 async def db_session() -> AsyncSession:
     """DB SQLite trắng, sống trong RAM, riêng cho từng test."""
