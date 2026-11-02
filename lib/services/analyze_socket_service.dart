@@ -13,12 +13,14 @@ import '../models/user_session.dart';
 class AnalyzeSocketEvent {
   const AnalyzeSocketEvent.ready(this.readyMessage, {this.input})
       : frame = null,
-        error = null;
+        error = null,
+        code = null;
   const AnalyzeSocketEvent.frame(FrameAnalysisResult this.frame)
       : readyMessage = null,
         input = null,
-        error = null;
-  const AnalyzeSocketEvent.error(String this.error)
+        error = null,
+        code = null;
+  const AnalyzeSocketEvent.error(String this.error, {this.code})
       : readyMessage = null,
         input = null,
         frame = null;
@@ -32,7 +34,16 @@ class AnalyzeSocketEvent {
   final String? input;
   final FrameAnalysisResult? frame;
   final String? error;
+
+  /// Mã lỗi máy đọc được do server gửi kèm (vd [analyzeCodeProRequired]).
+  final String? code;
+
+  /// Server từ chối phiên vì phân tích thời gian thực chỉ dành cho gói Pro.
+  bool get isProRequired => code == analyzeCodeProRequired;
 }
+
+/// `code` server gửi khi người dùng gói Free mở phân tích thời gian thực.
+const String analyzeCodeProRequired = 'pro_required';
 
 /// Hai cách client đưa tư thế cho server — xem `analyze_realtime` trong
 /// `backend/app/api/v1/routes/realtime.py`.
@@ -99,7 +110,10 @@ class AnalyzeSocketService {
       return;
     }
     if (json.containsKey('error')) {
-      _events?.add(AnalyzeSocketEvent.error(json['error'] as String));
+      _events?.add(AnalyzeSocketEvent.error(
+        json['error'] as String,
+        code: json['code'] as String?,
+      ));
       return;
     }
     if (json.containsKey('rep_count')) {

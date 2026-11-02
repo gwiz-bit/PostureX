@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../utils/app_locale.dart';
 import '../widgets/section_card.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
+import '../features/subscription/domain/entities/user_subscription.dart';
 import '../features/subscription/presentation/screens/subscription_screen.dart';
 import 'privacy_policy_screen.dart';
 
@@ -21,10 +22,39 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  /// Gói đang dùng; null = chưa tải xong / không có gói trả phí (Free).
+  UserSubscription? _subscription;
+
   @override
   void initState() {
     super.initState();
     AppLocale.notifier.addListener(_onLocaleChanged);
+    _loadSubscription();
+  }
+
+  /// Chỉ ĐỂ HIỂN THỊ gói đang dùng (gói Pro có thể được kích hoạt từ nơi khác).
+  /// Không có nút mua nào ở đây — app không bán gói.
+  Future<void> _loadSubscription() async {
+    try {
+      final sub = await ApiClient.instance.fetchMySubscription();
+      if (mounted) setState(() => _subscription = sub);
+    } catch (_) {
+      // Mất mạng/chưa đăng nhập: giữ nguyên, hiện như gói Free.
+    }
+  }
+
+  String _planLabel() {
+    final sub = _subscription;
+    if (sub == null || sub.planName.toLowerCase() == 'free') {
+      return AppLocale.t('plan_free');
+    }
+    final end = sub.endDate;
+    if (end == null) return sub.planName;
+    final d = end.day.toString().padLeft(2, '0');
+    final m = end.month.toString().padLeft(2, '0');
+    return AppLocale.t('plan_until')
+        .replaceFirst('{plan}', sub.planName)
+        .replaceFirst('{date}', '$d/$m/${end.year}');
   }
 
   @override
@@ -88,8 +118,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          // ── Premium ───────────────────────────────────────────────────
+          // ── Gói hiện tại (chỉ hiển thị) ───────────────────────────────
           const SizedBox(height: 28),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  const Icon(Icons.workspace_premium_outlined,
+                      color: AppColors.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Text(
+                    AppLocale.t('current_plan'),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _planLabel(),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Premium ───────────────────────────────────────────────────
+          const SizedBox(height: 12),
           if (AppFeatures.paymentsEnabled) ...[
             Text(
               AppLocale.t('premium'),

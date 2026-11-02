@@ -14,6 +14,7 @@ from app.api.v1.routes import (
     subscriptions,
     users,
     videos,
+    web_subscription,
     workouts,
 )
 
@@ -31,3 +32,4 @@ api_router.include_router(subscriptions.router)
 api_router.include_router(exercises.router)
 api_router.include_router(coach.router)
 api_router.include_router(sessions.router)
+api_router.include_router(web_subscription.router)

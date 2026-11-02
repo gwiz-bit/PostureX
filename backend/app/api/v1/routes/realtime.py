@@ -8,8 +8,11 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.security import decode_token
+from app.crud.subscription import is_premium
+from app.crud.user import get_user_by_id
 from app.crud.session import (
     create_workout_session,
     finalize_session,
@@ -110,6 +113,23 @@ def _decode_frame(data: bytes | str) -> bytes:
     return base64.b64decode(data)
 
 
+PRO_REQUIRED_CODE = "pro_required"
+PRO_REQUIRED_MESSAGE = "Phân tích thời gian thực chỉ có ở gói Pro."
+
+
+async def _can_use_realtime(user_id: int) -> bool:
+    """Pro (con han) hoac admin. Loi DB -> coi la khong co quyen (an toan hon la mo)."""
+    try:
+        async with AsyncSessionLocal() as db:
+            user = await get_user_by_id(db, user_id)
+            if user is not None and user.is_admin:
+                return True
+            return await is_premium(db, user_id)
+    except Exception as exc:
+        logger.warning("Khong kiem tra duoc goi cua user %s: %s", user_id, exc)
+        return False
+
+
 @router.websocket("/ws/analyze")
 async def analyze_realtime(websocket: WebSocket, token: str | None = Query(default=None)) -> None:
     """
@@ -145,6 +165,14 @@ async def analyze_realtime(websocket: WebSocket, token: str | None = Query(defau
         return
 
     user_id: int = int(payload["sub"])
+
+    # Goi Free khong dung duoc real-time (khi bat REALTIME_PRO_ONLY). Tra loi bang
+    # JSON roi dong, de app hien thong bao dung thay vi loi ket noi tro tron.
+    if settings.REALTIME_PRO_ONLY and not await _can_use_realtime(user_id):
+        await websocket.accept()
+        await websocket.send_json({"error": PRO_REQUIRED_MESSAGE, "code": PRO_REQUIRED_CODE})
+        await websocket.close(code=1008, reason=PRO_REQUIRED_CODE)
+        return
 
     await websocket.accept()
     session: SessionState | None = None

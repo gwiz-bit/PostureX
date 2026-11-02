@@ -78,6 +78,18 @@ class Settings(BaseSettings):
     # thanh toan len Play thi phai dung Google Play Billing, khong phai MoMo.
     PAYMENTS_ENABLED: bool = False
 
+    # Goi Pro mua tren WEB (posturex1.com, SePay). Web goi server-to-server toi
+    # POST /api/v1/internal/web-subscription de kich hoat goi trong DB cua app.
+    # Day la khoa dung chung giua 2 server (header X-Web-Key). De TRONG = tat
+    # endpoint do (tra 503). Dat chuoi dai, ngau nhien, giong het ben web (.env
+    # cua web: APP_ACTIVATION_KEY). KHONG dua vao git.
+    WEB_ACTIVATION_KEY: str = ""
+
+    # True = chi goi Pro (hoac admin) moi dung duoc phan tich REAL-TIME (WebSocket
+    # /ws/analyze); Free dung moi tinh nang khac. Mac dinh TAT de khong doi hanh vi
+    # cua ban dang chay — chi bat sau khi web da noi duoc voi app.
+    REALTIME_PRO_ONLY: bool = False
+
     # MoMo (AIO v2) — cong thanh toan dang dung.
     #
     # Gia tri mac dinh la BO KHOA SANDBOX CONG KHAI cua MoMo, lay tu repo mau

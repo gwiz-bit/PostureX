@@ -1095,9 +1095,8 @@ INSERT INTO Roles (RoleName, Description) VALUES
 
 -- 14.2 Gói dịch vụ
 INSERT INTO SubscriptionPlans (Name, PriceMonthly, Currency, Features) VALUES
-('Free',    0,      'VND', N'Phát hiện tư thế cơ bản, giới hạn 3 bài tập/ngày'),
-('Premium', 99000,  'VND', N'Toàn bộ bài tập, phản hồi giọng nói, lịch sử không giới hạn'),
-('Pro',     199000, 'VND', N'Toàn bộ tính năng Premium + chương trình cá nhân hóa AI + phân tích chuyên sâu');
+('Free', 0,     'VND', N'Toàn bộ tính năng và bài tập, không có phân tích tư thế thời gian thực'),
+('Pro',  59000, 'VND', N'Tất cả tính năng của gói Free + phân tích tư thế thời gian thực bằng AI');
 
 -- 14.3 Thành tích
 INSERT INTO Achievements (Code, Name, Description) VALUES

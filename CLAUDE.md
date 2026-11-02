@@ -64,6 +64,36 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 02/11/2026
+
+**Goi Pro mua tren WEB duoc kich hoat trong app; chi con 2 goi Free / Pro 59.000d; real-time chi danh cho Pro (co co).**
+Quyet dinh cua nhom: app KHONG ban goi (`PAYMENTS_ENABLED` van tat, khong co nut mua, khong dan sang web);
+nguoi dung mua tren web (SePay VietQR, repo `PostureX-LandingPage`), web bao sang app, app chi *hien thi* goi va
+mo khoa. **Free** dung moi tinh nang/bai tap tru phan tich tu the THOI GIAN THUC; **Pro** = Free + real-time.
+
+- **Kich hoat tu web (huong 1):** `POST /api/v1/internal/web-subscription` (`routes/web_subscription.py`),
+  xac thuc bang khoa dung chung `WEB_ACTIVATION_KEY` (header `X-Web-Key`, so sanh hang so thoi gian; de trong =
+  503, sai = 401). Body `{user_id, invoice, amount, end_date}`; web tu tinh `end_date` (da cong don khi gia han)
+  nen app chi ghi lai. `crud.activate_from_web` ghi `UserSubscriptions` (Active, `AutoRenew=False`) +
+  `Payments` (`PaymentMethod='WEB_SEPAY'`, `TransactionNo=invoice`), huy goi Active cu. **Idempotent theo ma
+  hoa don** (goi lai khong tao them dong). Tao thong bao "Da kich hoat goi Pro" khi la don moi.
+- **Khoa real-time theo goi:** `REALTIME_PRO_ONLY` (mac dinh **False** de khong doi hanh vi ban dang chay). Bat
+  len thi `/ws/analyze` kiem tra `is_premium` (hoac admin) SAU khi xac thuc token: Free nhan
+  `{"error": "...", "code": "pro_required"}` roi bi dong (1008). Loi DB khi kiem tra = tu choi (an toan). Khoa
+  nam o SERVER, khong chi an nut tren app. Flutter: `AnalyzeSocketEvent.code`/`isProRequired`, man phan tich
+  dung han va hien `realtime_pro_required`.
+- **Cai dat (Flutter):** them dong "Goi hien tai" (Free / `Pro (den dd/mm/yyyy)`) doc tu `GET /subscriptions/me`,
+  CHI hien thi, khong co CTA mua.
+- **DB:** `sql/postureX123_schema.sql` seed chi con Free (0d) + Pro (59.000d). DB dang chay: chay
+  `python scripts/sync_plans.py --dry-run` roi bo `--dry-run` — Pro doi gia ve 59.000d, goi khac (Premium) chi bi
+  tat (`IsActive=0`, KHONG xoa vi user cu co the dang tro toi; `is_premium` chi xet gia > 0 nen ho dung toi het han).
+- **Trinh tu bat tren production:** (1) deploy backend + `sync_plans.py`; (2) dat `WEB_ACTIVATION_KEY` o app va
+  `APP_ACTIVATION_KEY` o web (cung gia tri); (3) web khoi dong lai se tu dong bo bu cac don da tra; (4) khi da
+  chac chan moi nguoi tra tien da thanh Pro trong app thi moi dat `REALTIME_PRO_ONLY=True`.
+- ⚠️ **Rui ro chinh sach Google Play:** mo khoa tinh nang so da mua NGOAI Play co the bi coi la lach Play Billing.
+  Khong dan nguoi dung tu app sang web. Can nguoi phu trach Play xac nhan truoc khi phat hanh ban co bat khoa.
+- Test: `tests/test_web_subscription.py` (11 test), ca bo backend 600 xanh, `flutter test` 152 xanh.
+
 ### 06/10/2026 (2)
 
 **Rà yêu cầu Google Play lần 2: bỏ thanh toán, khai báo Gemini, AI Coach có disclaimer + nút báo cáo,

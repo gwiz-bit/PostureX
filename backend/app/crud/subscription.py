@@ -328,3 +328,91 @@ async def get_expiring_subscriptions(
         )
     )
     return list(result.scalars().all())
+
+
+WEB_PAYMENT_METHOD = "WEB_SEPAY"
+
+
+async def get_pro_plan(db: AsyncSession) -> SubscriptionPlan | None:
+    """Goi tra phi duy nhat dang ban ('Pro')."""
+    result = await db.execute(
+        select(SubscriptionPlan).where(
+            SubscriptionPlan.is_active.is_(True),
+            SubscriptionPlan.price_monthly > 0,
+            func.lower(SubscriptionPlan.name) == "pro",
+        )
+    )
+    return result.scalars().first()
+
+
+async def activate_from_web(
+    db: AsyncSession,
+    user_id: int,
+    plan: SubscriptionPlan,
+    invoice: str,
+    amount: int,
+    end_date: date,
+) -> tuple[UserSubscription, bool]:
+    """Kich hoat goi Pro cho khoan thanh toan da hoan tat tren web.
+
+    Web (SePay) da thu tien va tu tinh `end_date` (cong don khi gia han), nen app
+    chi ghi nhan lai — khong tinh lai ngay. Tra ve `(subscription, created)`.
+
+    **Idempotent theo ma hoa don**: web co the goi lai (IPN lap, thu lai khi mang
+    loi) — cung `invoice` thi khong tao them dong nao, chi chinh `end_date` neu
+    web gui han moi hon.
+    """
+    existing = await db.execute(
+        select(Payment).where(
+            Payment.transaction_no == invoice,
+            Payment.payment_method == WEB_PAYMENT_METHOD,
+        )
+    )
+    paid = existing.scalars().first()
+    if paid is not None:
+        subscription = await get_subscription_by_id(db, paid.user_subscription_id)
+        if subscription is not None and (
+            subscription.end_date is None or end_date > subscription.end_date
+        ):
+            subscription.end_date = end_date
+            await db.flush()
+        return subscription, False
+
+    today = date.today()
+    # Moi user chi co 1 goi Active (schema khong chan, nen tu bao dam).
+    result = await db.execute(
+        select(UserSubscription).where(
+            UserSubscription.user_id == user_id,
+            UserSubscription.status == SUBSCRIPTION_ACTIVE,
+        )
+    )
+    for old in result.scalars().all():
+        old.status = SUBSCRIPTION_CANCELLED
+        old.end_date = today
+
+    subscription = UserSubscription(
+        user_id=user_id,
+        plan_id=plan.id,
+        start_date=today,
+        end_date=end_date,
+        status=SUBSCRIPTION_ACTIVE,
+        # Khong tu thu tien (thanh toan o web), nen khong co "tu gia han".
+        auto_renew=False,
+    )
+    db.add(subscription)
+    await db.flush()
+
+    db.add(
+        Payment(
+            user_subscription_id=subscription.id,
+            transaction_no=invoice,
+            amount=Decimal(amount),
+            currency=plan.currency,
+            payment_method=WEB_PAYMENT_METHOD,
+            status=PAYMENT_PAID,
+            gateway_log="Thanh toan tren web (SePay), kich hoat tu web.",
+            paid_at=datetime.now(timezone.utc),
+        )
+    )
+    await db.flush()
+    return subscription, True

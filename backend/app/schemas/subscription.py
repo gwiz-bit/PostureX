@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PlanOut(BaseModel):
@@ -50,3 +50,14 @@ class PaymentOut(BaseModel):
     status: str
     paid_at: datetime | None
     created_at: datetime
+
+
+class WebActivationIn(BaseModel):
+    """Lenh kich hoat goi Pro do web gui sang (server-to-server)."""
+
+    user_id: int
+    # Ma hoa don ben web (vd "PX9-AB12CD") — dung de chong kich hoat lap.
+    invoice: str = Field(min_length=1, max_length=100)
+    amount: int = Field(ge=0)
+    # Ngay het han do web tinh (da cong don khi gia han).
+    end_date: date

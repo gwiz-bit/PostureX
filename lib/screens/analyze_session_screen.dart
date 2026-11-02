@@ -597,6 +597,18 @@ class _AnalyzeSessionScreenState extends State<AnalyzeSessionScreen>
       return;
     }
 
+    if (event.isProRequired) {
+      // Gói Free không dùng được phân tích thời gian thực: dừng hẳn, hiện thông
+      // báo rõ ràng (không phải lỗi thoáng qua rồi tiếp tục gửi frame vô ích).
+      if (mounted) {
+        setState(() {
+          _status = _SessionStatus.error;
+          _statusMessage = AppLocale.t('realtime_pro_required');
+        });
+      }
+      return;
+    }
+
     if (event.error != null) {
       _awaitingResponse = false;
       // Server trả ĐÚNG MỘT phản hồi cho mỗi frame, kể cả khi lỗi — không rút
