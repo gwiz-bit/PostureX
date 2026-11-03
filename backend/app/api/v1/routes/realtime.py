@@ -11,8 +11,6 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.security import decode_token
-from app.crud.subscription import is_premium
-from app.crud.user import get_user_by_id
 from app.crud.session import (
     create_workout_session,
     finalize_session,
@@ -20,6 +18,8 @@ from app.crud.session import (
     record_feedback,
     record_rep,
 )
+from app.crud.subscription import is_premium
+from app.crud.user import get_user_by_id
 from app.ml.analyzers.base import ExerciseAnalyzer
 from app.ml.analyzers.common import visible_points
 from app.ml.analyzers.registry import ANALYZER_REGISTRY, build_analyzer

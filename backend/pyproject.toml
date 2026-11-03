@@ -15,7 +15,7 @@
 # nhat trong repo la 109 ky tu. Ha xuong 100 se bat 24 dong phai xuong hang
 # ma khong lam code de doc hon.
 line-length = 110
-target-version = "py311"
+target-version = "py313"
 extend-exclude = ["venv", "storage", "__pycache__"]
 
 [tool.ruff.lint]
