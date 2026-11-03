@@ -16,6 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # mediapipe (backend/requirements.txt) dong goi libmediapipe.so lien ket
+      # toi libEGL/libGLESv2/libOpenCL (dong packages do hoa/GPU) - khong co
+      # san tren runner ubuntu-latest (may ao CI thuan, khong co card do hoa).
+      # Thieu may thu vien nay thi "import mediapipe" bao ImportError ngay
+      # luc nap module, truoc khi pytest kip chay bat ky test nao - xac nhan
+      # bang cach tai wheel manylinux that ve soi chuoi ky tu trong file .so.
+      - name: Install system libraries for mediapipe (EGL/GLES/OpenCL)
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgles2 ocl-icd-libopencl1
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
