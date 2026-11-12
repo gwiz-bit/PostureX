@@ -87,20 +87,19 @@ async def send_otp_email(to_email: str, otp_code: str) -> None:
     await asyncio.to_thread(_send_sync, to_email, subject, body)
 
 
-async def send_reset_password_email(to_email: str, reset_code: str) -> None:
-    """Gửi mã 6 số đặt lại mật khẩu tới email người dùng (nhập trên app hoặc
-    trang posturex1.com). Khi SMTP chưa cấu hình (môi trường dev), in mã ra log
-    thay vì gửi email — giống send_otp_email."""
-    if not _smtp_configured():
-        logger.warning(
-            "[DEV] SMTP chưa cấu hình — mã đặt lại mật khẩu cho %s là: %s", to_email, reset_code
-        )
-        return
+async def send_reset_password_email(to_email: str, reset_token: str) -> None:
+    """Gửi token đặt lại mật khẩu tới email người dùng.
+
+    Ứng dụng là app di động thuần (chưa có web/deep-link), nên thay vì
+    một link bấm được, email chứa thẳng token dạng text để người dùng
+    copy vào màn "Reset password" trong app — vẫn cùng token bảo mật
+    (secrets.token_urlsafe) như thiết kế gốc, chỉ khác cách truyền tay.
+    """
     subject = "Posture X - Đặt lại mật khẩu"
     body = (
-        f"Mã đặt lại mật khẩu của bạn là: {reset_code}\n\n"
-        "Nhập mã này trên app Posture X hoặc trang posturex1.com để đặt mật khẩu mới.\n"
-        f"Mã có hiệu lực trong {settings.RESET_CODE_EXPIRE_MINUTES} phút.\n"
+        f"Mã đặt lại mật khẩu của bạn là:\n\n{reset_token}\n\n"
+        "Mở app Posture X, vào màn 'Reset password', dán mã này để đặt mật khẩu mới.\n"
+        f"Mã có hiệu lực trong {settings.RESET_TOKEN_EXPIRE_MINUTES} phút.\n"
         "Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này — "
         "mật khẩu hiện tại của bạn vẫn an toàn."
     )

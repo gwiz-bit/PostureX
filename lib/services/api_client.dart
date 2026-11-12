@@ -259,20 +259,16 @@ class ApiClient {
     return (json as Map<String, dynamic>)['message'] as String;
   }
 
-  /// Completes a password reset using the 6-digit code emailed via
-  /// [forgotPassword] (valid 5 minutes, 10 wrong tries burn it). The code is
-  /// only checked against [email]'s account, so both are required.
-  /// Throws [ApiException] with a specific message on a wrong/expired
-  /// code, a weak password, or a confirm-password mismatch.
+  /// Completes a password reset using the code emailed via [forgotPassword].
+  /// Throws [ApiException] with a specific message on an invalid/expired
+  /// token, a weak password, or a confirm-password mismatch.
   Future<String> resetPassword({
-    required String email,
-    required String code,
+    required String token,
     required String newPassword,
     required String confirmPassword,
   }) async {
     final json = await _post('/api/v1/auth/reset-password', body: {
-      'email': email,
-      'code': code,
+      'token': token,
       'new_password': newPassword,
       'confirm_password': confirmPassword,
     });

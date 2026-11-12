@@ -133,14 +133,12 @@ class SessionRepositoryImpl implements SessionRepository {
 
   @override
   Future<void> resetPassword({
-    required String email,
-    required String code,
+    required String token,
     required String newPassword,
     required String confirmPassword,
   }) {
     return _run(() => _remote.resetPassword(
-          email: email,
-          code: code,
+          token: token,
           newPassword: newPassword,
           confirmPassword: confirmPassword,
         ));

@@ -1,7 +1,6 @@
 """Xử lý JWT và hash mật khẩu."""
 
 import hashlib
-import hmac
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -37,12 +36,10 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 
 
-def hash_reset_code(user_id: int, code: str) -> str:
-    """HMAC-SHA256 (khoá SECRET_KEY) của mã 6 số đặt lại mật khẩu, gắn với user_id.
-
-    Mã 6 số chỉ có 1 triệu khả năng: SHA-256 trần thì ai có bản sao DB cũng dò lại
-    được mã trong tích tắc. Có khoá SECRET_KEY (không nằm trong DB) thì DB bị lộ
-    một mình chưa đủ để dựng lại mã. Gắn user_id để cùng một mã của hai người
-    cho ra hai hash khác nhau."""
-    message = f"{user_id}:{code}".encode()
-    return hmac.new(settings.SECRET_KEY.encode(), message, hashlib.sha256).hexdigest()
+def hash_reset_token(raw_token: str) -> str:
+    """SHA-256 hex digest của raw token đặt lại mật khẩu — dùng để lưu/so
+    khớp trong DB mà không bao giờ lưu token gốc (không dùng bcrypt như mật
+    khẩu vì token đã có entropy cao sẵn từ secrets.token_urlsafe, không cần
+    salt/cost factor — chỉ cần 1 hash nhanh, xác định để tra cứu bằng
+    index)."""
+    return hashlib.sha256(raw_token.encode()).hexdigest()

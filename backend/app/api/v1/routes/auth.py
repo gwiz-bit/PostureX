@@ -12,8 +12,12 @@ from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token, hash_password, verify_password
 from app.crud.otp import create_otp, verify_otp
-from app.crud.password_reset import consume_reset_code, create_reset_token
-from app.crud.user import create_google_user, create_user, get_user_by_email
+from app.crud.password_reset import (
+    create_reset_token,
+    get_valid_reset_token,
+    mark_reset_token_used,
+)
+from app.crud.user import create_google_user, create_user, get_user_by_email, get_user_by_id
 from app.schemas.auth import (
     ForgotPasswordRequest,
     GoogleLoginRequest,
@@ -153,38 +157,20 @@ async def forgot_password(
     return MessageResponse(message=_GENERIC_FORGOT_PASSWORD_MESSAGE)
 
 
-_INVALID_RESET_CODE_MESSAGE = "Mã không đúng hoặc đã hết hạn."
-
-
 @router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(
     data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
 ) -> MessageResponse:
-    """Đặt mật khẩu mới bằng email + mã 6 số nhận qua /forgot-password.
+    """Đặt mật khẩu mới bằng token nhận được qua email từ /forgot-password."""
+    token = await get_valid_reset_token(db, data.token)
+    if token is None:
+        raise HTTPException(status_code=400, detail="Token không hợp lệ hoặc đã hết hạn.")
 
-    Mã chỉ có 6 số nên phải đi kèm email: mỗi mã chỉ thử được cho đúng một tài
-    khoản, tối đa MAX_RESET_ATTEMPTS lần (crud/password_reset.py). Email không tồn
-    tại trả cùng câu lỗi với mã sai — không để lộ email nào đã đăng ký.
-    """
-    if not data.email or not data.code:
-        # App bản cũ (trước 12/11/2026) chỉ gửi `token`, không gửi email.
-        raise HTTPException(
-            status_code=400,
-            detail="Vui lòng cập nhật app lên bản mới nhất, hoặc đặt lại mật khẩu tại posturex1.com.",
-        )
-
-    user = await get_user_by_email(db, data.email)
+    user = await get_user_by_id(db, token.user_id)
     if user is None:
-        raise HTTPException(status_code=400, detail=_INVALID_RESET_CODE_MESSAGE)
-
-    ok = await consume_reset_code(db, user, data.code)
-    if not ok:
-        # Commit TRƯỚC khi ném lỗi: get_db rollback khi có exception, mà số lần
-        # nhập sai (attempts) phải được lưu lại thì giới hạn mới có tác dụng.
-        await db.commit()
-        raise HTTPException(status_code=400, detail=_INVALID_RESET_CODE_MESSAGE)
-
+        raise HTTPException(status_code=400, detail="Token không hợp lệ hoặc đã hết hạn.")
     user.hashed_password = hash_password(data.new_password)
+    await mark_reset_token_used(db, token)
     await db.flush()
 
     try:

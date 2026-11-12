@@ -9,18 +9,20 @@ import '../../../../widgets/info_tip_card.dart';
 import '../../auth_module.dart';
 import 'login_screen.dart';
 
-/// Second (final) step of the password-reset flow — the user types the
-/// 6-digit code emailed by [ForgotPasswordScreen] (`send_reset_password_email`
-/// on the backend, valid 5 minutes, burned after 10 wrong tries), picks a new
-/// password, and submits to `POST /api/v1/auth/reset-password`.
+/// Second (final) step of the password-reset flow — the user pastes the
+/// reset code emailed by [ForgotPasswordScreen] (`send_reset_password_email`
+/// on the backend), picks a new password, and submits to
+/// `POST /api/v1/auth/reset-password`.
 ///
-/// Since 12/11/2026 the backend checks the code against ONE account, so the
-/// request carries the email too. When this screen is opened without one
-/// ("I already have a code" with an empty email box) it shows an email field.
+/// The app has no web page or deep-link handler to receive a clickable
+/// email link, so the token travels as plain text the user copies into
+/// this screen instead — same underlying `secrets.token_urlsafe(32)`
+/// value, just a different delivery UX for a mobile-only app.
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key, this.email});
 
-  /// Email the code was sent to; when null/empty the screen asks for it.
+  /// Only used for the header hint text — the API call itself only needs
+  /// the token, not the email.
   final String? email;
 
   @override
@@ -29,20 +31,16 @@ class ResetPasswordScreen extends StatefulWidget {
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocaleMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _codeController = TextEditingController();
+  final _tokenController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   bool _isSubmitting = false;
   String? _errorMessage;
 
-  bool get _hasEmail => widget.email != null && widget.email!.trim().isNotEmpty;
-
   @override
   void dispose() {
-    _emailController.dispose();
-    _codeController.dispose();
+    _tokenController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -58,8 +56,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocal
 
     try {
       await AuthModule.resetPassword()(
-        email: _hasEmail ? widget.email!.trim() : _emailController.text.trim(),
-        code: _codeController.text.trim(),
+        token: _tokenController.text.trim(),
         newPassword: _passwordController.text,
         confirmPassword: _confirmPasswordController.text,
       );
@@ -108,43 +105,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with AppLocal
               ),
               const SizedBox(height: 8),
               Text(
-                _hasEmail
-                    ? AppLocale.format('reset_subtitle_with_email', {'email': widget.email!.trim()})
-                    : AppLocale.t('reset_subtitle_no_email'),
+                widget.email == null || widget.email!.isEmpty
+                    ? AppLocale.t('reset_subtitle_no_email')
+                    : AppLocale.format('reset_subtitle_with_email', {'email': widget.email!}),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4),
               ),
               const SizedBox(height: 32),
-              if (!_hasEmail) ...[
-                AuthTextField(
-                  label: AppLocale.t('field_email_label'),
-                  hint: AppLocale.t('field_email_hint'),
-                  icon: Icons.mail_outline_rounded,
-                  controller: _emailController,
-                  enabled: !_isSubmitting,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_email');
-                    if (!value.contains('@')) return AppLocale.t('validation_invalid_email');
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 18),
-              ],
               AuthTextField(
                 label: AppLocale.t('reset_code_label'),
                 hint: AppLocale.t('reset_code_hint'),
                 icon: Icons.vpn_key_outlined,
-                controller: _codeController,
+                controller: _tokenController,
                 enabled: !_isSubmitting,
-                keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
-                  final code = value?.trim() ?? '';
-                  if (code.isEmpty) return AppLocale.t('validation_enter_reset_code');
-                  if (!RegExp(r'^\d{6}$').hasMatch(code)) {
-                    return AppLocale.t('validation_reset_code_6_digits');
-                  }
+                  if (value == null || value.trim().isEmpty) return AppLocale.t('validation_enter_reset_code');
                   return null;
                 },
               ),
