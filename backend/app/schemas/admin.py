@@ -185,3 +185,10 @@ class BroadcastHistoryItem(BaseModel):
     body: str | None
     created_at: datetime
     recipients: int
+
+
+class EmailAnnouncementOut(BaseModel):
+    """Kết quả gửi email hàng loạt — khác broadcast in-app (ghi DB, luôn
+    thành công) vì mỗi email là 1 lượt gọi SMTP thật, có thể lỗi riêng lẻ."""
+    sent: int
+    failed: int

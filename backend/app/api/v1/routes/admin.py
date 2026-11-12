@@ -1,5 +1,6 @@
 """Admin endpoints — chỉ user có is_admin=True mới truy cập được."""
 
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
@@ -26,6 +27,7 @@ from app.schemas.admin import (
     BroadcastHistoryItem,
     BroadcastIn,
     BroadcastOut,
+    EmailAnnouncementOut,
     ExerciseRulesOut,
     ExerciseRulesUpdate,
     RevenueByPlan,
@@ -35,11 +37,13 @@ from app.schemas.admin import (
     TunableOut,
 )
 from app.schemas.exercise import ExerciseCreate, ExerciseOut, ExerciseUpdate
+from app.services.email_service import send_play_store_announcement_email
 from app.services.exercise_video_service import exercise_video_service
 from app.services.video_service import video_service
 from app.utils.deps import get_current_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────
@@ -462,6 +466,29 @@ async def admin_send_broadcast(
     user_ids = list(result.scalars().all())
     recipients = await broadcast_notification(db, user_ids, data.title, data.body)
     return BroadcastOut(recipients=recipients)
+
+
+@router.post("/notifications/play-store-email", response_model=EmailAnnouncementOut)
+async def admin_send_play_store_email(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+) -> EmailAnnouncementOut:
+    """Gửi email thông báo "app đã có trên Google Play" cho mọi user active.
+
+    Khác broadcast in-app (chỉ ghi DB, luôn thành công): đây là SMTP thật cho
+    từng người, nên đếm riêng sent/failed thay vì coi cả lô là một lượt.
+    Chạy tuần tự (không gather song song) để không mở hàng chục kết nối SMTP
+    cùng lúc tới cùng một tài khoản Gmail — dễ bị Google tạm chặn."""
+    users = await admin_crud.get_active_users_email_name(db)
+    sent = failed = 0
+    for _user_id, email, full_name in users:
+        try:
+            await send_play_store_announcement_email(email, full_name)
+            sent += 1
+        except Exception as e:
+            failed += 1
+            logger.warning("Gửi email thông báo Play Store tới %s thất bại: %s", email, e)
+    return EmailAnnouncementOut(sent=sent, failed=failed)
 
 
 # ─────────────────────────────────────────────

@@ -117,6 +117,26 @@ async def send_password_changed_email(to_email: str) -> None:
     await asyncio.to_thread(_send_sync, to_email, subject, body)
 
 
+async def send_play_store_announcement_email(to_email: str, full_name: str | None) -> None:
+    """Báo cho user đã đăng ký từ trước (web/app bản chưa lên Play) rằng app
+    giờ đã có chính thức trên Google Play — dùng cho nút gửi hàng loạt của
+    admin (xem routes/admin.py), không phải luồng tự động."""
+    if not _smtp_configured():
+        logger.warning(
+            "[DEV] SMTP chưa cấu hình — bỏ qua gửi email thông báo Play Store cho %s", to_email
+        )
+        return
+    greeting = f"Chào {full_name}," if full_name else "Chào bạn,"
+    subject = "PostureX đã chính thức có trên Google Play!"
+    body = (
+        f"{greeting}\n\n"
+        "PostureX đã chính thức có mặt trên Google Play — tải bản mới nhất tại đây:\n\n"
+        "https://play.google.com/store/apps/details?id=com.posturex.app\n\n"
+        "Cảm ơn bạn đã đồng hành cùng PostureX trong thời gian qua!"
+    )
+    await asyncio.to_thread(_send_sync, to_email, subject, body)
+
+
 async def send_account_deletion_email(to_email: str, code: str, expire_minutes: int) -> None:
     """Gửi mã xác nhận xoá tài khoản (luồng web /delete-account).
 
