@@ -6,12 +6,14 @@ class ResetPassword {
   final SessionRepository _repository;
 
   Future<void> call({
-    required String token,
+    required String email,
+    required String code,
     required String newPassword,
     required String confirmPassword,
   }) {
     return _repository.resetPassword(
-      token: token,
+      email: email,
+      code: code,
       newPassword: newPassword,
       confirmPassword: confirmPassword,
     );

@@ -44,9 +44,19 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str
+    # Từ 12/11/2026: email + mã 6 số (thay cho `token` dài). Hai trường để tuỳ chọn
+    # chỉ để app bản cũ (chỉ gửi `token`) nhận câu "hãy cập nhật app" thay vì lỗi 422
+    # khó hiểu — route bắt buộc phải có cả hai.
+    email: EmailStr | None = None
+    code: str | None = None
+    token: str | None = None  # app bản cũ — bị bỏ qua
     new_password: str
     confirm_password: str
+
+    @field_validator("code")
+    @classmethod
+    def _strip_code(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
 
     @field_validator("new_password")
     @classmethod

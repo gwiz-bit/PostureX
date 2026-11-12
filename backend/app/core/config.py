@@ -59,8 +59,10 @@ class Settings(BaseSettings):
     # OTP
     OTP_EXPIRE_MINUTES: int = 10
 
-    # Dat lai mat khau
-    RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    # Dat lai mat khau — ma 6 so song 5 phut (quyet dinh cua nhom 12/11/2026).
+    # Doi ten tu RESET_TOKEN_EXPIRE_MINUTES (30 phut, token dai) de gia tri cu con
+    # sot trong .env khong de len thoi han moi.
+    RESET_CODE_EXPIRE_MINUTES: int = 5
 
     # Google Sign-In — "Web application" OAuth client ID from Google Cloud
     # Console (NOT the Android client ID). This is the expected `aud` claim

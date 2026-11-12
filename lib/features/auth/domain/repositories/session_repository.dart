@@ -21,7 +21,8 @@ abstract class SessionRepository {
   Future<void> forgotPassword({required String email});
 
   Future<void> resetPassword({
-    required String token,
+    required String email,
+    required String code,
     required String newPassword,
     required String confirmPassword,
   });

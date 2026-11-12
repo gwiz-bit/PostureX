@@ -7,18 +7,21 @@ liệu thật (admin@posturex.com...).
 """
 
 import secrets
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select, update
 
 from app.core.database import AsyncSessionLocal
 from app.core.security import hash_password, verify_password
-from app.crud.password_reset import create_reset_token
+from app.crud.password_reset import MAX_RESET_ATTEMPTS, create_reset_token
 from app.crud.role import get_role_by_name
 from app.main import app
 from app.models import role as _role  # noqa: F401 dang ky model cho relationship
 from app.models import video as _video  # noqa: F401
 from app.models import workout as _workout  # noqa: F401
+from app.models.password_reset_token import PasswordResetToken
 from app.models.role import USER_ROLE_NAME
 from app.models.user import User
 
@@ -60,31 +63,83 @@ async def test_forgot_password_same_message_for_existing_and_missing_email() -> 
     assert resp_existing.json() == resp_missing.json()
 
 
+async def _new_code(user_id: int) -> str:
+    """Sinh mã 6 số cho user (như /forgot-password), trả về mã gốc."""
+    async with AsyncSessionLocal() as db:
+        # Nạp lại user trong session mới để tránh detached-instance khi
+        # dùng chung object giữa 2 async session.
+        fresh_user = (await db.execute(select(User).where(User.id == user_id))).scalar_one()
+        code = await create_reset_token(db, fresh_user)
+        await db.commit()
+        return code
+
+
+def _wrong_code(code: str) -> str:
+    return f"{(int(code) + 1) % 1_000_000:06d}"
+
+
+async def _reset(client: AsyncClient, email: str, code: str, password: str = "BrandNewPassw0rd!"):
+    return await client.post(
+        "/api/v1/auth/reset-password",
+        json={"email": email, "code": code, "new_password": password, "confirm_password": password},
+    )
+
+
+async def _password_of(user_id: int) -> str:
+    async with AsyncSessionLocal() as db:
+        return (await db.execute(select(User).where(User.id == user_id))).scalar_one().hashed_password
+
+
 @pytest.mark.asyncio
-async def test_reset_password_rejects_invalid_token() -> None:
+async def test_reset_code_is_six_digits_and_expires_in_five_minutes() -> None:
+    user = await _create_verified_user(f"reset-test-{secrets.token_hex(4)}@example.com")
+    code = await _new_code(user.id)
+    assert len(code) == 6 and code.isdigit()
+
+    async with AsyncSessionLocal() as db:
+        row = (
+            await db.execute(
+                select(PasswordResetToken).where(
+                    PasswordResetToken.user_id == user.id, PasswordResetToken.used == False  # noqa: E712
+                )
+            )
+        ).scalar_one()
+        lifetime = row.expires_at - row.created_at
+        # Không lưu mã gốc trong DB.
+        assert code not in row.code_hash
+    assert timedelta(minutes=4, seconds=50) <= lifetime <= timedelta(minutes=5, seconds=10)
+
+
+@pytest.mark.asyncio
+async def test_reset_password_rejects_unknown_email_and_wrong_code_with_same_message() -> None:
+    user = await _create_verified_user(f"reset-test-{secrets.token_hex(4)}@example.com")
+    code = await _new_code(user.id)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post(
-            "/api/v1/auth/reset-password",
-            json={
-                "token": "token-khong-ton-tai-" + secrets.token_urlsafe(16),
-                "new_password": "NewPassw0rd!",
-                "confirm_password": "NewPassw0rd!",
-            },
-        )
-    assert resp.status_code == 400
+        wrong = await _reset(client, user.email, _wrong_code(code))
+        unknown = await _reset(client, "khong-ton-tai-xyz@example.com", code)
+    assert wrong.status_code == unknown.status_code == 400
+    assert wrong.json() == unknown.json()
 
 
 @pytest.mark.asyncio
-async def test_reset_password_rejects_weak_password() -> None:
+async def test_reset_password_old_app_sending_only_token_gets_update_message() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
             "/api/v1/auth/reset-password",
             json={
                 "token": secrets.token_urlsafe(16),
-                "new_password": "weak",
-                "confirm_password": "weak",
+                "new_password": "NewPassw0rd!",
+                "confirm_password": "NewPassw0rd!",
             },
         )
+    assert resp.status_code == 400
+    assert "cập nhật" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_reset_password_rejects_weak_password() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await _reset(client, "a@example.com", "123456", password="weak")
     assert resp.status_code == 422
 
 
@@ -94,7 +149,8 @@ async def test_reset_password_rejects_mismatched_confirm() -> None:
         resp = await client.post(
             "/api/v1/auth/reset-password",
             json={
-                "token": secrets.token_urlsafe(16),
+                "email": "a@example.com",
+                "code": "123456",
                 "new_password": "StrongPassw0rd!",
                 "confirm_password": "DifferentPassw0rd!",
             },
@@ -103,50 +159,68 @@ async def test_reset_password_rejects_mismatched_confirm() -> None:
 
 
 @pytest.mark.asyncio
-async def test_reset_password_full_flow_and_token_is_single_use() -> None:
-    """Token hợp lệ đổi được mật khẩu đúng 1 lần — lần thứ 2 dùng lại
-    token cũ phải bị từ chối."""
-    email = f"reset-test-{secrets.token_hex(4)}@example.com"
-    user = await _create_verified_user(email)
-
-    async with AsyncSessionLocal() as db:
-        # Nạp lại user trong session mới để tránh detached-instance khi
-        # dùng chung object giữa 2 async session.
-        from sqlalchemy import select
-
-        result = await db.execute(select(User).where(User.id == user.id))
-        fresh_user = result.scalar_one()
-        raw_token = await create_reset_token(db, fresh_user)
-        await db.commit()
+async def test_reset_password_full_flow_and_code_is_single_use() -> None:
+    """Mã đúng đổi được mật khẩu đúng 1 lần — dùng lại mã đó phải bị từ chối."""
+    user = await _create_verified_user(f"reset-test-{secrets.token_hex(4)}@example.com")
+    code = await _new_code(user.id)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp1 = await client.post(
-            "/api/v1/auth/reset-password",
-            json={
-                "token": raw_token,
-                "new_password": "BrandNewPassw0rd!",
-                "confirm_password": "BrandNewPassw0rd!",
-            },
-        )
+        resp1 = await _reset(client, user.email, f" {code} ")  # khoảng trắng thừa khi dán vẫn nhận
         assert resp1.status_code == 200
-
-        # Dùng lại đúng token đó lần 2 — phải bị từ chối (used=True).
-        resp2 = await client.post(
-            "/api/v1/auth/reset-password",
-            json={
-                "token": raw_token,
-                "new_password": "AnotherPassw0rd!",
-                "confirm_password": "AnotherPassw0rd!",
-            },
-        )
+        resp2 = await _reset(client, user.email, code, password="AnotherPassw0rd!")
         assert resp2.status_code == 400
 
-    async with AsyncSessionLocal() as db:
-        from sqlalchemy import select
+    assert verify_password("BrandNewPassw0rd!", await _password_of(user.id))
 
-        result = await db.execute(select(User).where(User.id == user.id))
-        updated_user = result.scalar_one()
-        assert verify_password("BrandNewPassw0rd!", updated_user.hashed_password)
+
+@pytest.mark.asyncio
+async def test_nine_wrong_attempts_then_correct_code_still_works() -> None:
+    user = await _create_verified_user(f"reset-test-{secrets.token_hex(4)}@example.com")
+    code = await _new_code(user.id)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for _ in range(MAX_RESET_ATTEMPTS - 1):
+            assert (await _reset(client, user.email, _wrong_code(code))).status_code == 400
+        assert (await _reset(client, user.email, code)).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_code_is_burned_after_ten_wrong_attempts() -> None:
+    """Sai đủ 10 lần (số lần sai phải được LƯU dù route trả 400) → mã bị huỷ,
+    nhập đúng sau đó cũng không đổi được mật khẩu."""
+    user = await _create_verified_user(f"reset-test-{secrets.token_hex(4)}@example.com")
+    code = await _new_code(user.id)
+    old_hash = await _password_of(user.id)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for _ in range(MAX_RESET_ATTEMPTS):
+            assert (await _reset(client, user.email, _wrong_code(code))).status_code == 400
+        assert (await _reset(client, user.email, code)).status_code == 400
+    assert await _password_of(user.id) == old_hash
+
+
+@pytest.mark.asyncio
+async def test_expired_code_is_rejected() -> None:
+    user = await _create_verified_user(f"reset-test-{secrets.token_hex(4)}@example.com")
+    code = await _new_code(user.id)
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            update(PasswordResetToken)
+            .where(PasswordResetToken.user_id == user.id)
+            .values(expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+        )
+        await db.commit()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        assert (await _reset(client, user.email, code)).status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_new_code_invalidates_previous_code() -> None:
+    user = await _create_verified_user(f"reset-test-{secrets.token_hex(4)}@example.com")
+    first = await _new_code(user.id)
+    second = await _new_code(user.id)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        if first != second:  # 1/1.000.000 khả năng trùng — khi đó không kiểm được ý này
+            assert (await _reset(client, user.email, first)).status_code == 400
+        assert (await _reset(client, user.email, second)).status_code == 200
 
 
 @pytest.mark.asyncio

@@ -73,7 +73,7 @@ async def test_thanh_cong_ngay_lan_dau_khong_can_thu_lai(monkeypatch) -> None:
     fake, calls = _fake_send([None])
     monkeypatch.setattr(email_service, "_send_once", fake)
 
-    await email_service.send_reset_password_email("tester@posturex.com", "token-abc")
+    await email_service.send_reset_password_email("tester@posturex.com", "123456")
 
     assert calls["n"] == 1
 

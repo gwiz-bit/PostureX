@@ -64,6 +64,29 @@ Cấu hình đọc từ `backend/.env` (xem `.env.example`): kết nối MySQL, 
 Chỉ ghi những thay đổi làm đổi cách hiểu về hệ thống, kèm phần cần lưu ý. Mục
 mới nhất ở trên cùng.
 
+### 12/11/2026
+
+**Quen mat khau: ma 6 so, hieu luc 5 phut, sai 10 lan thi huy ma (yeu cau cua nhom).**
+- Backend: bang MOI `password_reset_codes` (model van ten `PasswordResetToken` trong
+  `models/password_reset_token.py`) co cot `attempts`, cot `code_hash` = HMAC-SHA256(SECRET_KEY,
+  "user_id:ma") khong UNIQUE; bang cu `password_reset_tokens` khong con code nao dung (DROP duoc).
+  `crud/password_reset.py`: `create_reset_token` huy moi ma cu chua dung roi tao ma moi;
+  `consume_reset_code` cham ma moi nhat, `MAX_RESET_ATTEMPTS = 10`. Cau hinh doi ten
+  `RESET_TOKEN_EXPIRE_MINUTES` (30) -> `RESET_CODE_EXPIRE_MINUTES` (5) de gia tri cu trong `.env` khong de len.
+  `POST /auth/reset-password` gio nhan `{email, code, new_password, confirm_password}`; route
+  `db.commit()` TRUOC khi tra 400 (get_db rollback khi co exception, khong commit thi `attempts` khong
+  duoc luu). App ban cu chi gui `token` -> 400 "Vui long cap nhat app...". Email khong ton tai va ma
+  sai tra cung mot cau. `send_reset_password_email` in ma ra log `[DEV]` khi SMTP chua cau hinh.
+- Flutter: chuoi `resetPassword` (api_client -> datasource -> repository -> usecase) them `email` + `code`;
+  `ResetPasswordScreen` tu hien o email khi mo tu "Toi da co ma" ma chua co email, o ma ban phim so,
+  bat buoc 6 so; chuoi i18n 30 phut -> 5 phut.
+- Web (repo landing) cung doi theo (`forgot-password.html`).
+- ⚠️ **Deploy:** `git pull` + `python scripts/ensure_tables.py` (tao `password_reset_codes`) + restart.
+  Backend va APK moi phai len cung dot: app ban cu khong dat lai mat khau duoc trong app (van lam duoc tren web).
+- Test: `tests/test_forgot_password.py` viet lai (17 test backend lien quan xanh, `ruff` sach, `flutter analyze` sach).
+  `flutter test` 158 xanh, 1 do ("Completing onboarding...") do thay doi CHUA COMMIT co san o
+  `lib/screens/onboarding/onboarding_flow.dart` (doi thu tu buoc), khong lien quan.
+
 ### 02/11/2026
 
 **Goi Pro mua tren WEB duoc kich hoat trong app; chi con 2 goi Free / Pro 59.000d; real-time chi danh cho Pro (co co).**

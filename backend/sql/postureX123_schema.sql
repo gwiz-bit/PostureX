@@ -19,7 +19,7 @@
       pháp 1064 ngay ở bảng này. Đã bọc backtick `MinValue` / `MaxValue`.
    2. Thêm 6 bảng do backend quản lý (trước đây tạo qua create_tables.py /
       ensure_tables.py), đúng tên và cột như model SQLAlchemy:
-        videos, workouts, email_otps, password_reset_tokens,
+        videos, workouts, email_otps, password_reset_codes,
         device_tokens, coach_messages
       Các script đó chạy với checkfirst=True nên sẽ bỏ qua, không tạo trùng.
    3. Exercises.Name đổi theo đúng quy tắc sinh tên của
@@ -206,21 +206,22 @@ CREATE TABLE email_otps
 CREATE INDEX ix_email_otps_id      ON email_otps (id);
 CREATE INDEX ix_email_otps_user_id ON email_otps (user_id);
 
--- Token đặt lại mật khẩu, chỉ lưu SHA-256 (app/models/password_reset_token.py)
-CREATE TABLE password_reset_tokens
+-- Mã 6 số đặt lại mật khẩu, chỉ lưu HMAC-SHA256 (app/models/password_reset_token.py).
+-- Thay bảng password_reset_tokens cũ từ 12/11/2026.
+CREATE TABLE password_reset_codes
 (
     id         INT         NOT NULL AUTO_INCREMENT,
     user_id    INT         NOT NULL,
-    token_hash VARCHAR(64) NOT NULL,
+    code_hash  VARCHAR(64) NOT NULL,
     expires_at DATETIME    NOT NULL,
     used       TINYINT(1)  NOT NULL DEFAULT 0,
+    attempts   INT         NOT NULL DEFAULT 0,
     created_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    CONSTRAINT FK_password_reset_tokens_Users FOREIGN KEY (user_id) REFERENCES Users(UserId) ON DELETE CASCADE
+    CONSTRAINT FK_password_reset_codes_Users FOREIGN KEY (user_id) REFERENCES Users(UserId) ON DELETE CASCADE
 );
-CREATE INDEX        ix_password_reset_tokens_id         ON password_reset_tokens (id);
-CREATE INDEX        ix_password_reset_tokens_user_id    ON password_reset_tokens (user_id);
-CREATE UNIQUE INDEX ix_password_reset_tokens_token_hash ON password_reset_tokens (token_hash);
+CREATE INDEX ix_password_reset_codes_id      ON password_reset_codes (id);
+CREATE INDEX ix_password_reset_codes_user_id ON password_reset_codes (user_id);
 
 -- Token FCM cho push notification (app/models/device_token.py).
 -- Lưu ý: bảng Devices (PushToken) của schema gốc hiện KHÔNG được code dùng —

@@ -27,8 +27,8 @@ from app.models import (  # noqa: F401 dang ky model de resolve FK
 # ngoai, dung chung voi schema PostureX (sql/postureX123_schema.sql). Luu y:
 # MySQL o day co lower_case_table_names=1 nen "Users" va "users" la CUNG MOT
 # bang — tuyet doi khong duoc them "users" vao DROP_SQL nay.
-# email_otps, password_reset_tokens va device_tokens KHONG nam trong DROP_SQL
-# (khong drop moi lan chay): xoa email_otps/password_reset_tokens la mat OTP/token
+# email_otps, password_reset_codes va device_tokens KHONG nam trong DROP_SQL
+# (khong drop moi lan chay): xoa email_otps/password_reset_codes la mat OTP/ma
 # dang cho xu ly cua nguoi dung khac; xoa device_tokens la moi thiet bi mat dang ky,
 # nguoi dung ngung nhan push cho toi khi mo lai app.
 DROP_SQL = """
@@ -51,7 +51,7 @@ async def main() -> None:
                 Base.metadata.tables["videos"],
                 Base.metadata.tables["workouts"],
                 Base.metadata.tables["email_otps"],
-                Base.metadata.tables["password_reset_tokens"],
+                Base.metadata.tables["password_reset_codes"],
                 Base.metadata.tables["device_tokens"],
             ],
             checkfirst=True,

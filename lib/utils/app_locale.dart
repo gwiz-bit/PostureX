@@ -122,6 +122,7 @@ class AppLocale {
       'validation_enter_code': 'Enter the code',
       'validation_code_6_digits': 'Code must be 6 digits',
       'validation_enter_reset_code': 'Enter the reset code',
+      'validation_reset_code_6_digits': 'The code has 6 digits',
       'validation_enter_new_password': 'Enter a new password',
 
       // Splash
@@ -174,16 +175,16 @@ class AppLocale {
           "Enter your account email — we'll send you a code to reset your password.",
       'forgot_tip_title': 'Check your inbox',
       'forgot_tip_body':
-          "The reset code expires in 30 minutes. Be sure to check your spam folder if it doesn't show up in a couple of minutes.",
+          "The 6-digit reset code expires in 5 minutes. Be sure to check your spam folder if it doesn't show up in a minute.",
       'forgot_send_button': 'Send reset code',
       'forgot_already_have_code': 'I already have a code',
 
       // Reset password
       'reset_title': 'Reset password',
-      'reset_subtitle_no_email': 'Paste the code from your email and choose a new password.',
-      'reset_subtitle_with_email': 'Paste the code we sent to {email} and choose a new password.',
+      'reset_subtitle_no_email': 'Enter your email, the 6-digit code we sent you and a new password.',
+      'reset_subtitle_with_email': 'Enter the 6-digit code we sent to {email} (valid for 5 minutes) and choose a new password.',
       'reset_code_label': 'Reset code',
-      'reset_code_hint': 'Paste the code from your email',
+      'reset_code_hint': '6-digit code from your email',
       'reset_new_password_label': 'New password',
       'reset_new_password_hint': 'Create a new password',
       'reset_confirm_password_label': 'Confirm new password',
@@ -491,6 +492,7 @@ class AppLocale {
       'validation_enter_code': 'Nhập mã xác thực',
       'validation_code_6_digits': 'Mã phải có 6 chữ số',
       'validation_enter_reset_code': 'Nhập mã đặt lại',
+      'validation_reset_code_6_digits': 'Mã gồm 6 chữ số',
       'validation_enter_new_password': 'Nhập mật khẩu mới',
 
       // Splash
@@ -543,16 +545,16 @@ class AppLocale {
           'Nhập email tài khoản — chúng tôi sẽ gửi mã để đặt lại mật khẩu.',
       'forgot_tip_title': 'Kiểm tra hộp thư đến',
       'forgot_tip_body':
-          'Mã đặt lại có hiệu lực trong 30 phút. Kiểm tra thư rác nếu không thấy.',
+          'Mã đặt lại gồm 6 số, có hiệu lực trong 5 phút. Kiểm tra thư rác nếu không thấy.',
       'forgot_send_button': 'Gửi mã đặt lại',
       'forgot_already_have_code': 'Tôi đã có mã',
 
       // Reset password
       'reset_title': 'Đặt lại mật khẩu',
-      'reset_subtitle_no_email': 'Dán mã từ email và chọn mật khẩu mới.',
-      'reset_subtitle_with_email': 'Dán mã đã gửi đến {email} và chọn mật khẩu mới.',
+      'reset_subtitle_no_email': 'Nhập email, mã 6 số đã gửi cho bạn và mật khẩu mới.',
+      'reset_subtitle_with_email': 'Nhập mã 6 số đã gửi đến {email} (hiệu lực 5 phút) và chọn mật khẩu mới.',
       'reset_code_label': 'Mã đặt lại',
-      'reset_code_hint': 'Dán mã từ email',
+      'reset_code_hint': 'Mã 6 số trong email',
       'reset_new_password_label': 'Mật khẩu mới',
       'reset_new_password_hint': 'Tạo mật khẩu mới',
       'reset_confirm_password_label': 'Xác nhận mật khẩu mới',
