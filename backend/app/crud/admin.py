@@ -23,12 +23,19 @@ async def get_all_users(
     return list(result.scalars().all())
 
 
-async def get_active_users_email_name(db: AsyncSession) -> list[tuple[int, str, str | None]]:
-    """(id, email, full_name) của mọi user đang active — dùng cho gửi email
-    hàng loạt, chỉ lấy đúng cột cần để không nạp thừa cả object User."""
-    result = await db.execute(
-        select(User.id, User.email, User.full_name).where(User.is_active.is_(True))
-    )
+async def get_active_users_email_name(
+    db: AsyncSession, user_ids: list[int] | None = None
+) -> list[tuple[int, str, str | None]]:
+    """(id, email, full_name) của user đang active — dùng cho gửi email hàng
+    loạt, chỉ lấy đúng cột cần để không nạp thừa cả object User.
+
+    `user_ids` rỗng/None = mọi user active. Có danh sách = chỉ đúng những id
+    đó (vẫn bắt buộc is_active=True — chọn nhầm tài khoản đã khoá thì tự
+    bỏ qua, không lỗi)."""
+    stmt = select(User.id, User.email, User.full_name).where(User.is_active.is_(True))
+    if user_ids:
+        stmt = stmt.where(User.id.in_(user_ids))
+    result = await db.execute(stmt)
     return [tuple(row) for row in result.all()]
 
 

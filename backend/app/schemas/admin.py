@@ -187,6 +187,13 @@ class BroadcastHistoryItem(BaseModel):
     recipients: int
 
 
+class EmailAnnouncementIn(BaseModel):
+    """`user_ids` rỗng hoặc bỏ qua = gửi cho MỌI user active (hành vi cũ,
+    giữ tương thích ngược); có danh sách = chỉ gửi đúng những người đó
+    (vẫn lọc thêm is_active, chọn nhầm tài khoản đã khoá thì tự bỏ qua)."""
+    user_ids: list[int] | None = None
+
+
 class EmailAnnouncementOut(BaseModel):
     """Kết quả gửi email hàng loạt — khác broadcast in-app (ghi DB, luôn
     thành công) vì mỗi email là 1 lượt gọi SMTP thật, có thể lỗi riêng lẻ."""

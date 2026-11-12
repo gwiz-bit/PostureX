@@ -45,7 +45,7 @@ async def admin_and_users(db_session: AsyncSession) -> dict:
     )
     db_session.add_all([admin, active1, active2, locked])
     await db_session.commit()
-    return {"admin": admin}
+    return {"admin": admin, "active1": active1, "active2": active2, "locked": locked}
 
 
 async def test_khong_dang_nhap_bi_tu_choi(client) -> None:
@@ -99,3 +99,64 @@ async def test_loi_smtp_mot_nguoi_khong_chan_nguoi_con_lai(
 
     assert resp.status_code == 200
     assert resp.json() == {"sent": 2, "failed": 1}
+
+
+async def test_co_user_ids_chi_gui_dung_nguoi_duoc_chon(
+    client, admin_and_users, monkeypatch
+) -> None:
+    """Web giờ cho chọn từng người — chỉ gửi đúng user_ids được gửi lên,
+    KHÔNG tự động gửi cho mọi user active như khi bỏ trống."""
+    sent_to: list[str] = []
+
+    async def fake_send(to_email: str, full_name: str | None) -> None:
+        sent_to.append(to_email)
+
+    monkeypatch.setattr(
+        "app.api.v1.routes.admin.send_play_store_announcement_email", fake_send
+    )
+
+    from app.core.security import create_access_token
+    admin = admin_and_users["admin"]
+    active1 = admin_and_users["active1"]
+    token = create_access_token(admin.id)
+
+    resp = await client.post(
+        URL,
+        headers={"Authorization": f"Bearer {token}"},
+        json={"user_ids": [active1.id]},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == {"sent": 1, "failed": 0}
+    assert sent_to == ["active1@posturex.com"]
+
+
+async def test_user_ids_chua_tai_khoan_da_khoa_tu_bo_qua(
+    client, admin_and_users, monkeypatch
+) -> None:
+    """Admin lỡ chọn cả 1 tài khoản đã khoá trong danh sách — bị lọc bỏ
+    (is_active vẫn là điều kiện bắt buộc), không raise lỗi, không gửi."""
+    sent_to: list[str] = []
+
+    async def fake_send(to_email: str, full_name: str | None) -> None:
+        sent_to.append(to_email)
+
+    monkeypatch.setattr(
+        "app.api.v1.routes.admin.send_play_store_announcement_email", fake_send
+    )
+
+    from app.core.security import create_access_token
+    admin = admin_and_users["admin"]
+    active1 = admin_and_users["active1"]
+    locked = admin_and_users["locked"]
+    token = create_access_token(admin.id)
+
+    resp = await client.post(
+        URL,
+        headers={"Authorization": f"Bearer {token}"},
+        json={"user_ids": [active1.id, locked.id]},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == {"sent": 1, "failed": 0}
+    assert sent_to == ["active1@posturex.com"]

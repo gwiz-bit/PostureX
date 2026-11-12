@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,7 @@ from app.schemas.admin import (
     BroadcastHistoryItem,
     BroadcastIn,
     BroadcastOut,
+    EmailAnnouncementIn,
     EmailAnnouncementOut,
     ExerciseRulesOut,
     ExerciseRulesUpdate,
@@ -470,16 +471,20 @@ async def admin_send_broadcast(
 
 @router.post("/notifications/play-store-email", response_model=EmailAnnouncementOut)
 async def admin_send_play_store_email(
+    data: EmailAnnouncementIn | None = Body(default=None),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_admin),
 ) -> EmailAnnouncementOut:
-    """Gửi email thông báo "app đã có trên Google Play" cho mọi user active.
+    """Gửi email thông báo "app đã có trên Google Play" — mặc định (không
+    gửi `user_ids` hoặc để rỗng) là mọi user active; web giờ luôn gửi kèm
+    danh sách id đã chọn trên giao diện để chỉ gửi đúng những người đó.
 
     Khác broadcast in-app (chỉ ghi DB, luôn thành công): đây là SMTP thật cho
     từng người, nên đếm riêng sent/failed thay vì coi cả lô là một lượt.
     Chạy tuần tự (không gather song song) để không mở hàng chục kết nối SMTP
     cùng lúc tới cùng một tài khoản Gmail — dễ bị Google tạm chặn."""
-    users = await admin_crud.get_active_users_email_name(db)
+    user_ids = data.user_ids if data else None
+    users = await admin_crud.get_active_users_email_name(db, user_ids=user_ids)
     sent = failed = 0
     for _user_id, email, full_name in users:
         try:
